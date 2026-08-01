@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>D'AMOUR - Sistem IPL Perumahan</title>
+  
+  <!-- Google Fonts & Remix Icons -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
+  
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  
+  <!-- App Styles -->
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <div class="app-container">
+    
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar">
+      <div class="brand-header">
+        <div class="brand-logo">
+          <i class="ri-home-4-line"></i>
+        </div>
+        <div>
+          <div class="brand-title">D'AMOUR</div>
+          <div class="brand-subtitle">Sistem IPL</div>
+        </div>
+      </div>
+      
+      <nav class="nav-menu">
+        <div class="nav-group-title">Menu Utama</div>
+        <a href="#" class="nav-item active" data-view="dashboard">
+          <i class="ri-dashboard-line"></i>
+          <span>Dashboard</span>
+        </a>
+        <a href="#" class="nav-item" data-view="rumah">
+          <i class="ri-home-gear-line"></i>
+          <span>Rumah</span>
+        </a>
+
+        <div class="nav-group-title">Keuangan & IPL</div>
+        <a href="#" class="nav-item" data-view="tagihan">
+          <i class="ri-bill-line"></i>
+          <span>Tagihan & Bayar</span>
+        </a>
+        <a href="#" class="nav-item" data-view="perhitungan">
+          <i class="ri-calculator-line"></i>
+          <span>Perhitungan IPL</span>
+        </a>
+        <a href="#" class="nav-item" data-view="pengeluaran">
+          <i class="ri-wallet-3-line"></i>
+          <span>Pengeluaran</span>
+        </a>
+        <a href="#" class="nav-item" data-view="kas">
+          <i class="ri-bank-card-line"></i>
+          <span>Arus Kas</span>
+        </a>
+
+        <div class="nav-group-title">Master Data</div>
+        <a href="#" class="nav-item" data-view="komponen">
+          <i class="ri-list-check-2"></i>
+          <span>Master Komponen</span>
+        </a>
+        <a href="#" class="nav-item" data-view="target">
+          <i class="ri-money-dollar-circle-line"></i>
+          <span>Setting Target IPL</span>
+        </a>
+        <a href="#" class="nav-item" data-view="pengaturan">
+          <i class="ri-settings-3-line"></i>
+          <span>Pengaturan & Sync</span>
+        </a>
+      </nav>
+    </aside>
+
+    <!-- Main Wrapper -->
+    <div class="main-wrapper">
+      
+      <!-- Top Navbar -->
+      <header class="navbar">
+        <div class="nav-left">
+          <button class="toggle-sidebar-btn" id="toggle-sidebar">
+            <i class="ri-menu-line"></i>
+          </button>
+          <div class="page-breadcrumb" id="page-title-breadcrumb">Dashboard</div>
+        </div>
+
+        <div class="nav-right">
+          <button class="icon-btn" title="Notifikasi">
+            <i class="ri-notification-3-line"></i>
+            <span class="badge-dot"></span>
+          </button>
+
+          <div class="user-profile">
+            <div class="avatar">A</div>
+            <span style="font-weight: 600; font-size: 0.9rem;">Admin</span>
+            <i class="ri-arrow-down-s-line" style="color: var(--text-muted);"></i>
+          </div>
+        </div>
+      </header>
+
+      <!-- Content Body -->
+      <main class="content-body">
+        
+        <!-- 1. DASHBOARD VIEW -->
+        <section id="view-dashboard" class="view-section active">
+          <!-- Stat KPI Cards -->
+          <div class="kpi-grid">
+            <div class="kpi-card">
+              <div class="kpi-info">
+                <p>Total Rumah</p>
+                <div class="kpi-value" id="kpi-total-rumah">31 Unit</div>
+                <span class="kpi-subtext">Unit terdaftar</span>
+              </div>
+              <div class="kpi-icon blue"><i class="ri-home-heart-line"></i></div>
+            </div>
+
+            <div class="kpi-card">
+              <div class="kpi-info">
+                <p>Menunggak / Menunggu</p>
+                <div class="kpi-value" id="kpi-menunggak">5 Unit</div>
+                <span class="kpi-subtext">Perlu ditindaklanjuti</span>
+              </div>
+              <div class="kpi-icon orange"><i class="ri-time-line"></i></div>
+            </div>
+
+            <div class="kpi-card">
+              <div class="kpi-info">
+                <p>Lunas Bulan Ini</p>
+                <div class="kpi-value" id="kpi-lunas">26 Unit</div>
+                <span class="kpi-subtext">Sudah membayar</span>
+              </div>
+              <div class="kpi-icon green"><i class="ri-checkbox-circle-line"></i></div>
+            </div>
+
+            <div class="kpi-card">
+              <div class="kpi-info">
+                <p>Kas Saat Ini</p>
+                <div class="kpi-value" id="kpi-kas">Rp 25.485.000</div>
+                <span class="kpi-subtext">Saldo kas berjalan</span>
+              </div>
+              <div class="kpi-icon slate"><i class="ri-wallet-line"></i></div>
+            </div>
+          </div>
+
+          <!-- Main Dashboard Grid -->
+          <div class="dashboard-grid">
+            <!-- Left Column -->
+            <div>
+              <!-- Ringkasan Bulan Ini -->
+              <div class="card">
+                <div class="card-header">
+                  <div class="card-title">Ringkasan Bulan Ini (Agustus 2025)</div>
+                </div>
+                <div class="summary-highlight-box">
+                  <div class="summary-item">
+                    <h5>Total Tagihan</h5>
+                    <p id="dash-total-tagihan">Rp 5.275.000</p>
+                  </div>
+                  <div class="summary-item">
+                    <h5>Total Pembayaran</h5>
+                    <p id="dash-total-pembayaran" style="color: var(--success);">Rp 4.550.000</p>
+                  </div>
+                  <div class="summary-item">
+                    <h5>Sisa Tagihan</h5>
+                    <p id="dash-sisa-tagihan" style="color: var(--danger);">Rp 725.000</p>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Grafik Pembayaran 6 Bulan Terakhir -->
+              <div class="card">
+                <div class="card-header">
+                  <div class="card-title">Grafik Pembayaran 6 Bulan Terakhir</div>
+                </div>
+                <div style="height: 250px;">
+                  <canvas id="chart-pembayaran-history"></canvas>
+                </div>
+              </div>
+
+              <!-- Pengeluaran Terakhir -->
+              <div class="card">
+                <div class="card-header">
+                  <div class="card-title">Pengeluaran Terakhir</div>
+                  <button class="btn btn-outline btn-sm" onclick="showView('pengeluaran')">Lihat Semua <i class="ri-arrow-right-line"></i></button>
+                </div>
+                <div class="table-responsive">
+                  <table class="table">
+                    <thead>
+                      <tr>
+                        <th>Tanggal</th>
+                        <th>Kategori</th>
+                        <th style="text-align: right;">Nominal</th>
+                      </tr>
+                    </thead>
+                    <tbody id="recent-pengeluaran-tbody">
+                      <!-- Rendered by JS -->
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            <!-- Right Column -->
+            <div>
+              <!-- Status Tagihan Donut Chart -->
+              <div class="card">
+                <div class="card-header">
+                  <div class="card-title">Status Tagihan Bulan Ini</div>
+                </div>
+                <div style="height: 220px; position: relative;">
+                  <canvas id="chart-status-tagihan"></canvas>
+                </div>
+              </div>
+
+              <!-- Tagihan Terakhir -->
+              <div class="card">
+                <div class="card-header">
+                  <div class="card-title">Tagihan Terakhir</div>
+                  <button class="btn btn-outline btn-sm" onclick="showView('tagihan')">Lihat Semua <i class="ri-arrow-right-line"></i></button>
+                </div>
+                <div class="table-responsive">
+                  <table class="table">
+                    <thead>
+                      <tr>
+                        <th>Warga</th>
+                        <th>Status</th>
+                        <th>Tanggal</th>
+                        <th style="text-align: right;">Nominal</th>
+                      </tr>
+                    </thead>
+                    <tbody id="recent-tagihan-tbody">
+                      <!-- Rendered by JS -->
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <!-- Kas Masuk vs Keluar -->
+              <div class="card">
+                <div class="card-header">
+                  <div class="card-title">Kas Masuk vs Keluar</div>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.5rem; text-align: center;">
+                  <div>
+                    <div style="font-size: 0.75rem; color: var(--text-muted);">Masuk</div>
+                    <div id="dash-kas-masuk" style="font-weight: 700; color: var(--success);">Rp 4.550.000</div>
+                  </div>
+                  <div>
+                    <div style="font-size: 0.75rem; color: var(--text-muted);">Keluar</div>
+                    <div id="dash-kas-keluar" style="font-weight: 700; color: var(--danger);">Rp 4.825.000</div>
+                  </div>
+                  <div>
+                    <div style="font-size: 0.75rem; color: var(--text-muted);">Selisih</div>
+                    <div id="dash-kas-selisih" style="font-weight: 700;">- Rp 275.000</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 2. MASTER RUMAH VIEW -->
+        <section id="view-rumah" class="view-section">
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">Master Rumah</div>
+              <button class="btn btn-primary" onclick="openAddRumahModal()"><i class="ri-add-line"></i> Tambah Rumah</button>
+            </div>
+            
+            <div style="margin-bottom: 1rem;">
+              <div class="input-search-wrapper">
+                <i class="ri-search-line"></i>
+                <input type="text" id="search-rumah-input" class="form-control" placeholder="Cari rumah / pemilik / no HP">
+              </div>
+            </div>
+
+            <div class="table-responsive">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>Blok/No</th>
+                    <th>Pemilik</th>
+                    <th>No HP</th>
+                    <th>Status</th>
+                    <th>Kelompok IPL</th>
+                    <th>Aksi</th>
+                  </tr>
+                </thead>
+                <tbody id="master-rumah-tbody">
+                  <!-- Rendered by JS -->
+                </tbody>
+              </table>
+            </div>
+
+            <div class="pagination-wrapper" id="rumah-pagination">
+              <!-- Rendered by JS -->
+            </div>
+          </div>
+        </section>
+
+        <!-- 3. MASTER KOMPONEN IPL VIEW -->
+        <section id="view-komponen" class="view-section">
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">Master Komponen IPL</div>
+              <button class="btn btn-primary" onclick="openAddKomponenModal()"><i class="ri-add-line"></i> Tambah Komponen</button>
+            </div>
+
+            <div class="table-responsive">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>Komponen</th>
+                    <th>Nominal (Total)</th>
+                    <th>Dibayar Oleh</th>
+                    <th>Aktif</th>
+                    <th>Aksi</th>
+                  </tr>
+                </thead>
+                <tbody id="master-komponen-tbody">
+                  <!-- Rendered by JS -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- 4. SETTING TARGET IPL VIEW -->
+        <section id="view-target" class="view-section">
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">Setting Target IPL</div>
+              <button class="btn btn-primary" onclick="openEditTargetModal()"><i class="ri-edit-line"></i> Edit Target</button>
+            </div>
+
+            <div class="table-responsive">
+              <table class="table" style="max-width: 600px;">
+                <thead>
+                  <tr>
+                    <th>Kelompok IPL</th>
+                    <th>Target IPL (Rp)</th>
+                  </tr>
+                </thead>
+                <tbody id="setting-target-tbody">
+                  <!-- Rendered by JS -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- 5. PERHITUNGAN IPL (RINCIAN) VIEW -->
+        <section id="view-perhitungan" class="view-section">
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">Perhitungan IPL (Rincian)</div>
+              <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <span style="font-size: 0.85rem; color: var(--text-muted);">Bulan</span>
+                <select id="perhitungan-month-select" class="form-control" style="width: auto;">
+                  <option value="2025-08">Agustus 2025</option>
+                  <option value="2025-07">Juli 2025</option>
+                  <option value="2025-06">Juni 2025</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="table-responsive">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>Komponen</th>
+                    <th>Total Biaya</th>
+                    <th>Dibayar Oleh</th>
+                    <th>Jml Rumah</th>
+                    <th>Per Rumah (Rp)</th>
+                  </tr>
+                </thead>
+                <tbody id="perhitungan-ipl-tbody">
+                  <!-- Rendered by JS -->
+                </tbody>
+                <tfoot>
+                  <tr style="background: #f1f5f9; font-weight: 700;">
+                    <td colspan="4" style="text-align: uppercase;">Total Per Rumah (Sebelum Bulat)</td>
+                    <td id="perhitungan-grand-total" style="color: #1e3a8a;">175.000,00</td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- 6. TAGIHAN & PEMBAYARAN VIEW -->
+        <section id="view-tagihan" class="view-section">
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">Data Tagihan & Pembayaran IPL</div>
+            </div>
+
+            <div class="table-responsive">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>Blok/No</th>
+                    <th>Pemilik</th>
+                    <th>Kelompok IPL</th>
+                    <th>Nominal</th>
+                    <th>Status</th>
+                    <th>Tanggal Bayar</th>
+                    <th>Aksi</th>
+                  </tr>
+                </thead>
+                <tbody id="tagihan-full-tbody">
+                  <!-- Rendered by JS -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- 7. PENGELUARAN VIEW -->
+        <section id="view-pengeluaran" class="view-section">
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">Data Pengeluaran Kas</div>
+              <button class="btn btn-primary" onclick="openAddPengeluaranModal()"><i class="ri-add-line"></i> Tambah Pengeluaran</button>
+            </div>
+
+            <div class="table-responsive">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>Tanggal</th>
+                    <th>Kategori</th>
+                    <th>Keterangan</th>
+                    <th>Nominal</th>
+                  </tr>
+                </thead>
+                <tbody id="pengeluaran-full-tbody">
+                  <!-- Rendered by JS -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- 8. PENGATURAN & SYNC VIEW -->
+        <section id="view-pengaturan" class="view-section">
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">Pengaturan & Backup Data</div>
+            </div>
+
+            <div style="max-width: 600px;">
+              <div class="form-group">
+                <label>Backup Data (JSON)</label>
+                <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem;">
+                  <button class="btn btn-outline" onclick="exportDataJSON()"><i class="ri-download-line"></i> Download Backup JSON</button>
+                  <label class="btn btn-outline" style="cursor: pointer;">
+                    <i class="ri-upload-line"></i> Restore JSON
+                    <input type="file" accept=".json" onchange="importDataJSON(this)" style="display: none;">
+                  </label>
+                </div>
+              </div>
+
+              <hr style="margin: 1.5rem 0; border: none; border-top: 1px solid var(--border-color);">
+
+              <div class="form-group">
+                <label>Reset System</label>
+                <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.5rem;">Mengembalikan seluruh data transaksi ke keadaan default awal.</p>
+                <button class="btn btn-danger" onclick="resetDataDefault()"><i class="ri-refresh-line"></i> Reset Data Default</button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+      </main>
+    </div>
+  </div>
+
+  <!-- MODALS -->
+
+  <!-- 1. Modal Rumah -->
+  <div class="modal-overlay" id="modal-rumah">
+    <div class="modal-box">
+      <div class="modal-header">
+        <div class="modal-title" id="modal-rumah-title">Tambah Rumah Baru</div>
+        <button class="close-modal-btn" onclick="closeModal('modal-rumah')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="form-rumah-id">
+        <div class="form-group">
+          <label>Blok / Nomor Rumah</label>
+          <input type="text" id="form-rumah-blok" class="form-control" placeholder="Contoh: A01">
+        </div>
+        <div class="form-group">
+          <label>Nama Pemilik</label>
+          <input type="text" id="form-rumah-pemilik" class="form-control" placeholder="Contoh: Pak Budi">
+        </div>
+        <div class="form-group">
+          <label>No HP / WhatsApp</label>
+          <input type="text" id="form-rumah-hp" class="form-control" placeholder="Contoh: 081234567890">
+        </div>
+        <div class="form-group">
+          <label>Kelompok IPL</label>
+          <select id="form-rumah-kelompok" class="form-control">
+            <option value="IPL + Sampah">IPL + Sampah</option>
+            <option value="IPL Tanpa Sampah">IPL Tanpa Sampah</option>
+            <option value="IPL Developer">IPL Developer</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" onclick="closeModal('modal-rumah')">Batal</button>
+        <button class="btn btn-primary" onclick="saveRumah()">Simpan Data</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. Modal Komponen IPL -->
+  <div class="modal-overlay" id="modal-komponen">
+    <div class="modal-box">
+      <div class="modal-header">
+        <div class="modal-title">Tambah / Edit Komponen IPL</div>
+        <button class="close-modal-btn" onclick="closeModal('modal-komponen')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="form-komponen-id">
+        <div class="form-group">
+          <label>Nama Komponen</label>
+          <input type="text" id="form-komponen-nama" class="form-control" placeholder="Contoh: Kebersihan Parkir">
+        </div>
+        <div class="form-group">
+          <label>Nominal Total (Rp)</label>
+          <input type="number" id="form-komponen-nominal" class="form-control" placeholder="0">
+        </div>
+        <div class="form-group">
+          <label>Dibayar Oleh</label>
+          <select id="form-komponen-dibayar" class="form-control">
+            <option value="Semua">Semua</option>
+            <option value="IPL + Sampah">IPL + Sampah</option>
+            <option value="Developer">Developer</option>
+          </select>
+        </div>
+        <div class="form-group" style="display: flex; align-items: center; gap: 0.5rem;">
+          <input type="checkbox" id="form-komponen-autokas" style="width: 18px; height: 18px;">
+          <label for="form-komponen-autokas" style="margin-bottom: 0;">Jadikan Komponen Kas Otomatis (Sisa)</label>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" onclick="closeModal('modal-komponen')">Batal</button>
+        <button class="btn btn-primary" onclick="saveKomponen()">Simpan Komponen</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. Modal Edit Target IPL -->
+  <div class="modal-overlay" id="modal-target">
+    <div class="modal-box">
+      <div class="modal-header">
+        <div class="modal-title">Edit Setting Target IPL</div>
+        <button class="close-modal-btn" onclick="closeModal('modal-target')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>IPL + Sampah (Rp)</label>
+          <input type="number" id="target-val-1" class="form-control">
+        </div>
+        <div class="form-group">
+          <label>IPL Tanpa Sampah (Rp)</label>
+          <input type="number" id="target-val-2" class="form-control">
+        </div>
+        <div class="form-group">
+          <label>IPL Developer (Rp)</label>
+          <input type="number" id="target-val-3" class="form-control">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" onclick="closeModal('modal-target')">Batal</button>
+        <button class="btn btn-primary" onclick="saveSettingTarget()">Simpan Target</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. Modal Bayar Tagihan -->
+  <div class="modal-overlay" id="modal-bayar">
+    <div class="modal-box">
+      <div class="modal-header">
+        <div class="modal-title">Konfirmasi Pembayaran Tagihan</div>
+        <button class="close-modal-btn" onclick="closeModal('modal-bayar')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="bayar-tagihan-id">
+        <p style="font-size: 0.9rem; margin-bottom: 1rem;">Mencatat pembayaran untuk: <br><strong id="bayar-pemilik-info" style="font-size: 1.1rem; color: var(--primary);"></strong></p>
+        <div class="form-group">
+          <label>Metode Pembayaran</label>
+          <select id="bayar-metode" class="form-control">
+            <option value="Transfer Bank">Transfer Bank</option>
+            <option value="Tunai / Kasir RT">Tunai / Kasir RT</option>
+            <option value="QRIS">QRIS</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" onclick="closeModal('modal-bayar')">Batal</button>
+        <button class="btn btn-primary" onclick="confirmPembayaran()">Konfirmasi Lunas</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5. Modal Tambah Pengeluaran -->
+  <div class="modal-overlay" id="modal-pengeluaran">
+    <div class="modal-box">
+      <div class="modal-header">
+        <div class="modal-title">Catat Pengeluaran Baru</div>
+        <button class="close-modal-btn" onclick="closeModal('modal-pengeluaran')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>Kategori Pengeluaran</label>
+          <input type="text" id="form-pgl-kategori" class="form-control" placeholder="Contoh: Perbaikan Lampu Jalan">
+        </div>
+        <div class="form-group">
+          <label>Nominal Pengeluaran (Rp)</label>
+          <input type="number" id="form-pgl-nominal" class="form-control" placeholder="0">
+        </div>
+        <div class="form-group">
+          <label>Keterangan</label>
+          <input type="text" id="form-pgl-keterangan" class="form-control" placeholder="Catatan tambahan">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" onclick="closeModal('modal-pengeluaran')">Batal</button>
+        <button class="btn btn-primary" onclick="savePengeluaran()">Simpan Pengeluaran</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
