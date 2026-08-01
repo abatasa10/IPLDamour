@@ -1,5 +1,6 @@
 /**
- * D'AMOUR Sistem IPL Perumahan - Core Application Logic (Fully Editable Simulasi IPL)
+ * D'AMOUR Sistem IPL Perumahan - Core Application Logic
+ * Feature: Master Event / Biaya Tambahan (THR, Event 17an), Dynamic Sampah Fee, & Custom Bill Breakdown
  */
 
 let appState = null;
@@ -35,12 +36,14 @@ document.addEventListener("DOMContentLoaded", async () => {
   renderDashboard();
   renderMasterRumah();
   renderMasterKomponen();
+  renderMasterEvent();
   renderSettingTarget();
   renderPerhitunganIPL();
   renderDaftarTagihan();
   renderPengeluaranTable();
   renderKasArusKasTable();
   renderSimulasiInputs();
+  renderGenerateTagihanForm();
   runSimulasiIPL();
 });
 
@@ -51,6 +54,7 @@ async function loadAppData() {
     try {
       appState = JSON.parse(saved);
       console.log("Data loaded from LocalStorage.");
+      ensureMasterEventState();
       if (appState.settings && appState.settings.googleSheetApiUrl) {
         const urlInput = document.getElementById("setting-gsheet-url");
         if (urlInput) urlInput.value = appState.settings.googleSheetApiUrl;
@@ -64,10 +68,23 @@ async function loadAppData() {
   try {
     const res = await fetch("data.json");
     appState = await res.json();
+    ensureMasterEventState();
     saveState();
     console.log("Data loaded from data.json.");
   } catch (err) {
     console.error("Error loading data.json:", err);
+  }
+}
+
+function ensureMasterEventState() {
+  if (!appState.masterEvent) {
+    appState.masterEvent = [
+      { id: "evt-1", nama: "Iuran THR Satpam", nominal: 50000, dibayarOleh: "Semua", aktif: true },
+      { id: "evt-2", nama: "Iuran 17 Agustus", nominal: 20000, dibayarOleh: "Semua", aktif: false }
+    ];
+  }
+  if (!appState.biayaSampahDefault) {
+    appState.biayaSampahDefault = 25000;
   }
 }
 
@@ -81,10 +98,15 @@ function clearAllAppData() {
   if (confirm("Apakah Anda yakin ingin mengosongkan SELURUH data? Anda dapat menginput ulang data rumah dan transaksi satu per satu dari awal.")) {
     appState = {
       settings: { appName: "D'AMOUR Sistem IPL", perumahan: "Perumahan D'AMOUR", periodeAktif: "2025-08", googleSheetApiUrl: "" },
+      biayaSampahDefault: 25000,
       targetIPL: [
         { id: "tgt-1", kelompok: "IPL + Sampah", target: 175000, keterangan: "IPL + Sampah" },
         { id: "tgt-2", kelompok: "IPL Tanpa Sampah", target: 150000, keterangan: "IPL Tanpa Sampah" },
         { id: "tgt-3", kelompok: "IPL Developer", target: 166000, keterangan: "IPL Developer" }
+      ],
+      masterEvent: [
+        { id: "evt-1", nama: "Iuran THR Satpam", nominal: 50000, dibayarOleh: "Semua", aktif: true },
+        { id: "evt-2", nama: "Iuran 17 Agustus", nominal: 20000, dibayarOleh: "Semua", aktif: false }
       ],
       komponenIPL: [
         { id: "komp-1", nama: "Satpam 1", nominalTotal: 1750000, isAutoKas: false, dibayarOleh: "Semua", aktif: true },
@@ -134,7 +156,8 @@ function showView(viewId) {
       dashboard: "Dashboard",
       rumah: "Master Rumah",
       komponen: "Master Komponen IPL",
-      target: "Setting Target IPL",
+      event: "Master Event & Biaya Tambahan",
+      target: "Setting Target IPL & Sampah",
       perhitungan: "Perhitungan IPL (Rincian)",
       "generate-tagihan": "Generate Tagihan",
       "daftar-tagihan": "Daftar Tagihan",
@@ -152,9 +175,13 @@ function showView(viewId) {
   if (viewId === "dashboard") renderDashboard();
   if (viewId === "rumah") renderMasterRumah();
   if (viewId === "komponen") renderMasterKomponen();
+  if (viewId === "event") renderMasterEvent();
   if (viewId === "target") renderSettingTarget();
   if (viewId === "perhitungan") renderPerhitunganIPL();
-  if (viewId === "generate-tagihan") updateHouseGroupCounts();
+  if (viewId === "generate-tagihan") {
+    updateHouseGroupCounts();
+    renderGenerateTagihanForm();
+  }
   if (viewId === "daftar-tagihan") renderDaftarTagihan();
   if (viewId === "pengeluaran") renderPengeluaranTable();
   if (viewId === "kas") renderKasArusKasTable();
@@ -590,12 +617,120 @@ function deleteKomponen(id) {
   }
 }
 
+/* ==========================================================================
+   MASTER EVENT & BIAYA TAMBAHAN
+   ========================================================================== */
+function renderMasterEvent() {
+  if (!appState || !appState.masterEvent) return;
+
+  const tbody = document.getElementById("master-event-tbody");
+  if (tbody) {
+    if (appState.masterEvent.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 1.5rem;">Belum ada event / iuran tambahan. Klik tombol <strong>+ Tambah Event Baru</strong> di atas.</td></tr>`;
+    } else {
+      tbody.innerHTML = appState.masterEvent
+        .map(
+          (e) => `
+          <tr>
+            <td><strong>${e.nama}</strong></td>
+            <td style="font-weight: 600;">${formatRp(e.nominal)} / rumah</td>
+            <td>${e.dibayarOleh}</td>
+            <td>
+              <input type="checkbox" ${e.aktif ? "checked" : ""} onchange="toggleEventAktif('${e.id}')" style="width: 18px; height: 18px; cursor: pointer;">
+            </td>
+            <td>
+              <button class="btn btn-outline btn-sm" onclick="editEvent('${e.id}')"><i class="ri-edit-line"></i></button>
+              <button class="btn btn-outline btn-sm" style="color: var(--danger);" onclick="deleteEvent('${e.id}')"><i class="ri-delete-bin-line"></i></button>
+            </td>
+          </tr>
+        `
+        )
+        .join("");
+    }
+  }
+}
+
+function toggleEventAktif(id) {
+  const e = appState.masterEvent.find((item) => item.id === id);
+  if (e) {
+    e.aktif = !e.aktif;
+    saveState();
+    renderMasterEvent();
+    renderGenerateTagihanForm();
+  }
+}
+
+function openAddEventModal() {
+  document.getElementById("form-event-id").value = "";
+  document.getElementById("form-event-nama").value = "";
+  document.getElementById("form-event-nominal").value = "";
+  document.getElementById("form-event-dibayar").value = "Semua";
+  document.getElementById("modal-event-title").textContent = "Tambah Event / Biaya Tambahan";
+  openModal("modal-event");
+}
+
+function editEvent(id) {
+  const e = appState.masterEvent.find((item) => item.id === id);
+  if (!e) return;
+
+  document.getElementById("form-event-id").value = e.id;
+  document.getElementById("form-event-nama").value = e.nama;
+  document.getElementById("form-event-nominal").value = e.nominal;
+  document.getElementById("form-event-dibayar").value = e.dibayarOleh;
+  document.getElementById("modal-event-title").textContent = "Edit Event / Biaya Tambahan";
+  openModal("modal-event");
+}
+
+function saveEvent() {
+  const id = document.getElementById("form-event-id").value;
+  const nama = document.getElementById("form-event-nama").value.trim();
+  const nominal = parseFloat(document.getElementById("form-event-nominal").value) || 0;
+  const dibayar = document.getElementById("form-event-dibayar").value;
+
+  if (!nama || nominal <= 0) {
+    alert("Nama event dan nominal wajib diisi.");
+    return;
+  }
+
+  if (id) {
+    const idx = appState.masterEvent.findIndex((e) => e.id === id);
+    if (idx !== -1) {
+      appState.masterEvent[idx] = { ...appState.masterEvent[idx], nama, nominal, dibayarOleh: dibayar };
+    }
+  } else {
+    appState.masterEvent.push({
+      id: `evt-${Date.now()}`,
+      nama,
+      nominal,
+      dibayarOleh: dibayar,
+      aktif: true
+    });
+  }
+
+  saveState();
+  closeModal("modal-event");
+  renderMasterEvent();
+  renderGenerateTagihanForm();
+}
+
+function deleteEvent(id) {
+  if (confirm("Apakah Anda yakin ingin menghapus event ini?")) {
+    appState.masterEvent = appState.masterEvent.filter((e) => e.id !== id);
+    saveState();
+    renderMasterEvent();
+    renderGenerateTagihanForm();
+  }
+}
+
+/* ==========================================================================
+   SETTING TARGET IPL & SAMPAH
+   ========================================================================== */
 function renderSettingTarget() {
   if (!appState || !appState.targetIPL) return;
 
   const tbody = document.getElementById("setting-target-tbody");
   if (tbody) {
-    tbody.innerHTML = appState.targetIPL
+    const rows = appState.targetIPL
       .map(
         (t) => `
         <tr>
@@ -605,7 +740,23 @@ function renderSettingTarget() {
       `
       )
       .join("");
+
+    const sampahRow = `
+      <tr style="background: #f8fafc;">
+        <td><strong>Biaya Sampah Default (Tambahan)</strong></td>
+        <td style="font-weight: 600; color: var(--primary);">${formatRp(appState.biayaSampahDefault || 25000)} / rumah</td>
+      </tr>
+    `;
+
+    tbody.innerHTML = rows + sampahRow;
   }
+}
+
+function recalcTargetPlusSampah() {
+  const baseVal = parseFloat(document.getElementById("target-val-2").value) || 150000;
+  const sampahVal = parseFloat(document.getElementById("target-val-sampah").value) || 25000;
+
+  document.getElementById("target-val-1").value = baseVal + sampahVal;
 }
 
 function openEditTargetModal() {
@@ -613,8 +764,9 @@ function openEditTargetModal() {
   const targetTanpaSampah = appState.targetIPL.find((t) => t.kelompok === "IPL Tanpa Sampah")?.target || 150000;
   const targetDev = appState.targetIPL.find((t) => t.kelompok === "IPL Developer")?.target || 166000;
 
-  document.getElementById("target-val-1").value = targetStandard;
   document.getElementById("target-val-2").value = targetTanpaSampah;
+  document.getElementById("target-val-sampah").value = appState.biayaSampahDefault || 25000;
+  document.getElementById("target-val-1").value = targetStandard;
   document.getElementById("target-val-3").value = targetDev;
 
   openModal("modal-target");
@@ -624,6 +776,9 @@ function saveSettingTarget() {
   const val1 = parseFloat(document.getElementById("target-val-1").value) || 175000;
   const val2 = parseFloat(document.getElementById("target-val-2").value) || 150000;
   const val3 = parseFloat(document.getElementById("target-val-3").value) || 166000;
+  const valSampah = parseFloat(document.getElementById("target-val-sampah").value) || 25000;
+
+  appState.biayaSampahDefault = valSampah;
 
   appState.targetIPL.forEach((t) => {
     if (t.kelompok === "IPL + Sampah") t.target = val1;
@@ -705,6 +860,34 @@ function updateHouseGroupCounts() {
   if (document.getElementById("cnt-group-3")) document.getElementById("cnt-group-3").textContent = `${g3} Rumah`;
 }
 
+function renderGenerateTagihanForm() {
+  const container = document.getElementById("gen-event-checkboxes-container");
+  if (!container || !appState || !appState.masterEvent) return;
+
+  const activeEvents = appState.masterEvent.filter((e) => e.aktif);
+
+  if (activeEvents.length === 0) {
+    container.innerHTML = `<span style="font-size: 0.85rem; color: var(--text-muted);">Tidak ada event aktif. (Dapat ditambah melalui menu <strong>Master Event & Biaya Tambahan</strong>).</span>`;
+    return;
+  }
+
+  container.innerHTML = activeEvents
+    .map(
+      (e) => `
+      <label class="checkbox-item">
+        <input type="checkbox" class="chk-gen-event" data-id="${e.id}" data-nama="${e.nama}" data-nominal="${e.nominal}" checked>
+        <span><strong>${e.nama}</strong> (+${formatRp(e.nominal)} / rumah)</span>
+      </label>
+    `
+    )
+    .join("");
+
+  const sampahInput = document.getElementById("gen-sampah-nominal");
+  if (sampahInput) {
+    sampahInput.value = appState.biayaSampahDefault || 25000;
+  }
+}
+
 function processGenerateTagihan() {
   if (!appState.rumah || appState.rumah.length === 0) {
     alert("Belum ada data rumah terdaftar. Tambahkan data rumah terlebih dahulu pada menu Master Rumah.");
@@ -728,10 +911,19 @@ function processGenerateTagihan() {
     return;
   }
 
-  const targetMap = {};
-  appState.targetIPL.forEach((t) => {
-    targetMap[t.kelompok] = t.target;
+  const nominalSampahGen = parseFloat(document.getElementById("gen-sampah-nominal")?.value) || 25000;
+
+  // Selected events
+  const selectedEvents = [];
+  document.querySelectorAll(".chk-gen-event:checked").forEach((chk) => {
+    selectedEvents.push({
+      nama: chk.getAttribute("data-nama"),
+      nominal: parseFloat(chk.getAttribute("data-nominal")) || 0
+    });
   });
+
+  const baseTargetTanpaSampah = appState.targetIPL.find((t) => t.kelompok === "IPL Tanpa Sampah")?.target || 150000;
+  const baseTargetDeveloper = appState.targetIPL.find((t) => t.kelompok === "IPL Developer")?.target || 166000;
 
   const matchingHouses = appState.rumah.filter((r) => selectedGroups.includes(r.kelompokIPL));
 
@@ -741,7 +933,28 @@ function processGenerateTagihan() {
     const tagihanId = `TAG-${tahun}${bulan}-${r.blokNo}`;
     const exists = appState.tagihan.find((t) => t.id === tagihanId);
 
-    const nominal = targetMap[r.kelompokIPL] || 175000;
+    const rincianItems = [];
+    let totalNominal = 0;
+
+    if (r.kelompokIPL === "IPL Developer") {
+      rincianItems.push({ nama: "IPL Developer", nominal: baseTargetDeveloper });
+      totalNominal += baseTargetDeveloper;
+    } else {
+      // IPL Tanpa Sampah or IPL + Sampah
+      rincianItems.push({ nama: "IPL Dasar", nominal: baseTargetTanpaSampah });
+      totalNominal += baseTargetTanpaSampah;
+
+      if (r.kelompokIPL === "IPL + Sampah") {
+        rincianItems.push({ nama: "Iuran Sampah", nominal: nominalSampahGen });
+        totalNominal += nominalSampahGen;
+      }
+    }
+
+    // Add selected active events
+    selectedEvents.forEach((evt) => {
+      rincianItems.push({ nama: evt.nama, nominal: evt.nominal });
+      totalNominal += evt.nominal;
+    });
 
     if (!exists) {
       appState.tagihan.unshift({
@@ -753,7 +966,8 @@ function processGenerateTagihan() {
         blokNo: r.blokNo,
         pemilik: r.pemilik,
         kelompokIPL: r.kelompokIPL,
-        nominal: nominal,
+        nominal: totalNominal,
+        rincianItems: rincianItems,
         status: "Menunggu",
         tglBayar: "-",
         metode: "-",
@@ -812,6 +1026,7 @@ function renderDaftarTagihan() {
               <td><span class="badge ${badgeClass}">${t.status}</span></td>
               <td>
                 <button class="btn btn-outline btn-sm" onclick="viewDetailTagihan('${t.id}')" title="Lihat Detail"><i class="ri-eye-line"></i></button>
+                <button class="btn btn-outline btn-sm" onclick="openEditTagihanModal('${t.id}')" title="Edit Nominal Tagihan"><i class="ri-edit-line"></i></button>
                 ${
                   t.status !== "Lunas"
                     ? `<button class="btn btn-primary btn-sm" onclick="openFormPembayaran('${t.id}')" title="Bayar"><i class="ri-checkbox-circle-line"></i></button>`
@@ -841,6 +1056,30 @@ function changeTagihanPage(page) {
   renderDaftarTagihan();
 }
 
+function openEditTagihanModal(id) {
+  const t = appState.tagihan.find((item) => item.id === id);
+  if (!t) return;
+
+  document.getElementById("edit-tagihan-id").value = t.id;
+  document.getElementById("edit-tagihan-warga").value = `${t.blokNo} - ${t.pemilik} (${t.kelompokIPL})`;
+  document.getElementById("edit-tagihan-nominal").value = t.nominal;
+  openModal("modal-edit-tagihan");
+}
+
+function saveEditTagihanNominal() {
+  const id = document.getElementById("edit-tagihan-id").value;
+  const nom = parseFloat(document.getElementById("edit-tagihan-nominal").value) || 0;
+
+  const t = appState.tagihan.find((item) => item.id === id);
+  if (t) {
+    t.nominal = nom;
+    saveState();
+    closeModal("modal-edit-tagihan");
+    renderDaftarTagihan();
+    renderDashboard();
+  }
+}
+
 function viewDetailTagihan(id) {
   const t = appState.tagihan.find((item) => item.id === id);
   if (!t) return;
@@ -857,35 +1096,48 @@ function viewDetailTagihan(id) {
 
   document.getElementById("detail-val-status").innerHTML = `<span class="badge ${badgeClass}">${t.status}</span>`;
 
-  const totalRumah = appState.rumah.length || 31;
   const tbody = document.getElementById("detail-rincian-tbody");
 
   if (tbody) {
-    let fixedSum = 0;
-    const rows = appState.komponenIPL
-      .filter((k) => k.aktif)
-      .map((k) => {
-        if (k.isAutoKas) {
-          const kasPerHome = Math.max(0, t.nominal - fixedSum);
+    if (t.rincianItems && t.rincianItems.length > 0) {
+      tbody.innerHTML = t.rincianItems
+        .map(
+          (item) => `
+          <tr>
+            <td>${item.nama}</td>
+            <td style="text-align: right; font-weight: 600;">${formatRpDecimal(item.nominal)}</td>
+          </tr>
+        `
+        )
+        .join("");
+    } else {
+      const totalRumah = appState.rumah.length || 31;
+      let fixedSum = 0;
+      const rows = appState.komponenIPL
+        .filter((k) => k.aktif)
+        .map((k) => {
+          if (k.isAutoKas) {
+            const kasPerHome = Math.max(0, t.nominal - fixedSum);
+            return `
+              <tr>
+                <td>${k.nama}</td>
+                <td style="text-align: right;">${formatRpDecimal(kasPerHome)}</td>
+              </tr>
+            `;
+          }
+          const c = k.nominalTotal / totalRumah;
+          fixedSum += c;
           return `
             <tr>
               <td>${k.nama}</td>
-              <td style="text-align: right;">${formatRpDecimal(kasPerHome)}</td>
+              <td style="text-align: right;">${formatRpDecimal(c)}</td>
             </tr>
           `;
-        }
-        const c = k.nominalTotal / totalRumah;
-        fixedSum += c;
-        return `
-          <tr>
-            <td>${k.nama}</td>
-            <td style="text-align: right;">${formatRpDecimal(c)}</td>
-          </tr>
-        `;
-      })
-      .join("");
+        })
+        .join("");
 
-    tbody.innerHTML = rows;
+      tbody.innerHTML = rows;
+    }
   }
 
   document.getElementById("detail-val-total-rounded").textContent = formatRp(t.nominal).replace("Rp ", "");
@@ -1235,7 +1487,7 @@ function exportLaporanCSV() {
 }
 
 /* ==========================================================================
-   12. FULLY EDITABLE SIMULASI IPL (EVERY COMPONENT IS AN EDITABLE INPUT)
+   12. FULLY EDITABLE SIMULASI IPL
    ========================================================================== */
 function renderSimulasiInputs() {
   const container = document.getElementById("simulasi-dynamic-inputs-container");
@@ -1246,7 +1498,6 @@ function renderSimulasiInputs() {
   let html = "";
   activeKomponen.forEach((k) => {
     if (k.isAutoKas) {
-      // Kas is the output being calculated, skip input box
       return;
     }
 
@@ -1297,7 +1548,6 @@ function runSimulasiIPL() {
   const target2 = appState && appState.targetIPL ? (appState.targetIPL.find((t) => t.kelompok === "IPL Tanpa Sampah")?.target || 150000) : 150000;
   const target3 = appState && appState.targetIPL ? (appState.targetIPL.find((t) => t.kelompok === "IPL Developer")?.target || 166000) : 166000;
 
-  // Kas calculations for each group matching exact Perhitungan IPL breakdown logic
   const kasGroup1 = Math.round(target1 - (costGeneralPerHome + costSampahPerHome));
   const kasGroup2 = Math.round(target2 - costGeneralPerHome);
   const kasGroup3 = Math.round(target3 - (costGeneralPerHome + costDevPerHome));
@@ -1373,6 +1623,7 @@ function importDataJSON(input) {
       const parsed = JSON.parse(e.target.result);
       if (parsed.rumah && parsed.komponenIPL) {
         appState = parsed;
+        ensureMasterEventState();
         saveState();
         alert("Data berhasil diimport!");
         location.reload();

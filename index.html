@@ -81,6 +81,10 @@
           <i class="ri-list-check-2"></i>
           <span>Master Komponen</span>
         </a>
+        <a href="#" class="nav-item" data-view="event">
+          <i class="ri-calendar-event-line"></i>
+          <span>Master Event & Tambahan</span>
+        </a>
         <a href="#" class="nav-item" data-view="target">
           <i class="ri-money-dollar-circle-line"></i>
           <span>Setting Target IPL</span>
@@ -325,20 +329,45 @@
           </div>
         </section>
 
+        <!-- MASTER EVENT & BIAYA TAMBAHAN VIEW -->
+        <section id="view-event" class="view-section">
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">Master Event & Biaya Tambahan (THR, Event 17an, dll.)</div>
+              <button class="btn btn-primary" onclick="openAddEventModal()"><i class="ri-add-line"></i> Tambah Event Baru</button>
+            </div>
+
+            <div class="table-responsive">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>Nama Event / Tambahan</th>
+                    <th>Nominal Per Rumah</th>
+                    <th>Dibayar Oleh</th>
+                    <th>Status</th>
+                    <th>Aksi</th>
+                  </tr>
+                </thead>
+                <tbody id="master-event-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
         <!-- 4. SETTING TARGET IPL VIEW -->
         <section id="view-target" class="view-section">
           <div class="card">
             <div class="card-header">
-              <div class="card-title">3. Setting Target IPL</div>
-              <button class="btn btn-primary" onclick="openEditTargetModal()"><i class="ri-edit-line"></i> Edit Target</button>
+              <div class="card-title">3. Setting Target IPL & Tarif Sampah</div>
+              <button class="btn btn-primary" onclick="openEditTargetModal()"><i class="ri-edit-line"></i> Edit Target & Sampah</button>
             </div>
 
             <div class="table-responsive">
               <table class="table" style="max-width: 600px;">
                 <thead>
                   <tr>
-                    <th>Kelompok IPL</th>
-                    <th>Target IPL (Rp)</th>
+                    <th>Komponen Target</th>
+                    <th>Nominal (Rp)</th>
                   </tr>
                 </thead>
                 <tbody id="setting-target-tbody"></tbody>
@@ -387,9 +416,9 @@
 
         <!-- 5. GENERATE TAGIHAN VIEW -->
         <section id="view-generate-tagihan" class="view-section">
-          <div class="card" style="max-width: 600px;">
+          <div class="card" style="max-width: 680px;">
             <div class="card-header">
-              <div class="card-title">5. Generate Tagihan</div>
+              <div class="card-title">5. Generate Tagihan Bulanan</div>
             </div>
 
             <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; margin-bottom: 1.25rem;">
@@ -419,7 +448,7 @@
             <hr style="border: none; border-top: 1px solid var(--border-color); margin-bottom: 1rem;">
 
             <div class="form-group">
-              <label>Kelompok IPL</label>
+              <label>Kelompok IPL Sasaran</label>
               <div class="checkbox-group-list">
                 <label class="checkbox-item">
                   <input type="checkbox" id="chk-group-1" checked>
@@ -433,6 +462,21 @@
                   <input type="checkbox" id="chk-group-3" checked>
                   <span>IPL Developer (<strong id="cnt-group-3">2 Rumah</strong>)</span>
                 </label>
+              </div>
+            </div>
+
+            <div class="form-group" style="margin-top: 1rem;">
+              <label>Pengaturan Biaya Sampah (Otomatis Ditambahkan jika IPL + Sampah)</label>
+              <div style="display: flex; align-items: center; gap: 0.75rem;">
+                <input type="number" id="gen-sampah-nominal" class="form-control" style="width: 180px;" value="25000">
+                <span style="font-size: 0.85rem; color: var(--text-muted);">Rp / Rumah (Dapat disesuaikan jika tarif sampah naik)</span>
+              </div>
+            </div>
+
+            <div class="form-group" style="margin-top: 1rem;">
+              <label>Sertakan Event / Biaya Tambahan Khusus Bulan Ini:</label>
+              <div class="checkbox-group-list" id="gen-event-checkboxes-container">
+                <!-- Rendered dynamically by JS -->
               </div>
             </div>
 
@@ -752,7 +796,7 @@
             </div>
 
             <div style="display: grid; grid-template-columns: 1fr 1.2fr; gap: 1.5rem;">
-              <!-- Left Form Inputs (Editable inputs for ALL components in Perhitungan IPL) -->
+              <!-- Left Form Inputs -->
               <div>
                 <h4 style="font-size: 0.95rem; margin-bottom: 1rem; color: var(--text-muted);">Komponen Biaya (Dapat Diedit Bebas)</h4>
                 <div id="simulasi-dynamic-inputs-container">
@@ -905,30 +949,92 @@
     </div>
   </div>
 
+  <!-- Modal Event / Biaya Tambahan -->
+  <div class="modal-overlay" id="modal-event">
+    <div class="modal-box">
+      <div class="modal-header">
+        <div class="modal-title" id="modal-event-title">Tambah Event / Biaya Tambahan</div>
+        <button class="close-modal-btn" onclick="closeModal('modal-event')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="form-event-id">
+        <div class="form-group">
+          <label>Nama Event / Biaya Tambahan</label>
+          <input type="text" id="form-event-nama" class="form-control" placeholder="Contoh: Iuran THR Satpam">
+        </div>
+        <div class="form-group">
+          <label>Nominal Per Rumah (Rp)</label>
+          <input type="number" id="form-event-nominal" class="form-control" placeholder="Contoh: 50000">
+        </div>
+        <div class="form-group">
+          <label>Dibayar Oleh</label>
+          <select id="form-event-dibayar" class="form-control">
+            <option value="Semua">Semua Rumah</option>
+            <option value="IPL + Sampah">Hanya IPL + Sampah</option>
+            <option value="IPL Developer">Hanya IPL Developer</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" onclick="closeModal('modal-event')">Batal</button>
+        <button class="btn btn-primary" onclick="saveEvent()">Simpan Event</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Modal Target IPL -->
   <div class="modal-overlay" id="modal-target">
     <div class="modal-box">
       <div class="modal-header">
-        <div class="modal-title">Edit Setting Target IPL</div>
+        <div class="modal-title">Edit Setting Target IPL & Sampah</div>
         <button class="close-modal-btn" onclick="closeModal('modal-target')">&times;</button>
       </div>
       <div class="modal-body">
         <div class="form-group">
-          <label>IPL + Sampah (Rp)</label>
-          <input type="number" id="target-val-1" class="form-control">
+          <label>Base Target IPL (Tanpa Sampah) (Rp)</label>
+          <input type="number" id="target-val-2" class="form-control" value="150000" oninput="recalcTargetPlusSampah()">
         </div>
         <div class="form-group">
-          <label>IPL Tanpa Sampah (Rp)</label>
-          <input type="number" id="target-val-2" class="form-control">
+          <label>Biaya Sampah Default (Per Rumah) (Rp)</label>
+          <input type="number" id="target-val-sampah" class="form-control" value="25000" oninput="recalcTargetPlusSampah()">
+        </div>
+        <div class="form-group">
+          <label>Target IPL + Sampah (Otomatis Base + Sampah) (Rp)</label>
+          <input type="number" id="target-val-1" class="form-control" value="175000">
         </div>
         <div class="form-group">
           <label>IPL Developer (Rp)</label>
-          <input type="number" id="target-val-3" class="form-control">
+          <input type="number" id="target-val-3" class="form-control" value="166000">
         </div>
       </div>
       <div class="modal-footer">
         <button class="btn btn-outline" onclick="closeModal('modal-target')">Batal</button>
         <button class="btn btn-primary" onclick="saveSettingTarget()">Simpan Target</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Edit Individual Tagihan -->
+  <div class="modal-overlay" id="modal-edit-tagihan">
+    <div class="modal-box">
+      <div class="modal-header">
+        <div class="modal-title">Edit Nominal Tagihan</div>
+        <button class="close-modal-btn" onclick="closeModal('modal-edit-tagihan')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="edit-tagihan-id">
+        <div class="form-group">
+          <label>Rumah / Pemilik</label>
+          <input type="text" id="edit-tagihan-warga" class="form-control" readonly style="background: #f1f5f9;">
+        </div>
+        <div class="form-group">
+          <label>Nominal Total Tagihan (Rp)</label>
+          <input type="number" id="edit-tagihan-nominal" class="form-control">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" onclick="closeModal('modal-edit-tagihan')">Batal</button>
+        <button class="btn btn-primary" onclick="saveEditTagihanNominal()">Simpan Perubahan</button>
       </div>
     </div>
   </div>
