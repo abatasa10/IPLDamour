@@ -29,7 +29,7 @@
     {
       "id": "komp-1",
       "nama": "Satpam",
-      "nominalTotal": 3700000,
+      "nominalTotal": 0,
       "isAutoKas": false,
       "dibayarOleh": "Semua",
       "aktif": true
@@ -45,7 +45,7 @@
     {
       "id": "komp-3",
       "nama": "Sampah",
-      "nominalTotal": 775000,
+      "nominalTotal": 0,
       "isAutoKas": false,
       "dibayarOleh": "IPL + Sampah",
       "aktif": true
@@ -53,153 +53,20 @@
     {
       "id": "komp-4",
       "nama": "Listrik + Wifi",
-      "nominalTotal": 550000,
+      "nominalTotal": 0,
       "isAutoKas": false,
       "dibayarOleh": "Semua",
       "aktif": true
-    },
-    {
-      "id": "komp-5",
-      "nama": "Tambahan Developer",
-      "nominalTotal": 32000,
-      "isAutoKas": false,
-      "dibayarOleh": "Developer",
-      "aktif": true
     }
   ],
-  "rumah": [
-    { "id": "RMH-A01", "blokNo": "A01", "pemilik": "Pak Budi", "noHp": "081298765432", "status": "Aktif", "kelompokIPL": "IPL + Sampah" },
-    { "id": "RMH-A02", "blokNo": "A02", "pemilik": "Bu Ani", "noHp": "081387654321", "status": "Aktif", "kelompokIPL": "IPL Tanpa Sampah" },
-    { "id": "RMH-A03", "blokNo": "A03", "pemilik": "Developer", "noHp": "081476543210", "status": "Aktif", "kelompokIPL": "IPL Developer" },
-    { "id": "RMH-A04", "blokNo": "A04", "pemilik": "Pak Joko", "noHp": "081565432109", "status": "Aktif", "kelompokIPL": "IPL + Sampah" },
-    { "id": "RMH-A05", "blokNo": "A05", "pemilik": "Bu Ratna", "noHp": "081654321098", "status": "Aktif", "kelompokIPL": "IPL + Sampah" },
-    { "id": "RMH-A06", "blokNo": "A06", "pemilik": "Pak Agus", "noHp": "081743210987", "status": "Aktif", "kelompokIPL": "IPL + Sampah" },
-    { "id": "RMH-A07", "blokNo": "A07", "pemilik": "Pak Bambang", "noHp": "081832109876", "status": "Aktif", "kelompokIPL": "IPL + Sampah" },
-    { "id": "RMH-A08", "blokNo": "A08", "pemilik": "Bu Siti", "noHp": "081921098765", "status": "Aktif", "kelompokIPL": "IPL + Sampah" },
-    { "id": "RMH-B01", "blokNo": "B01", "pemilik": "Pak Hendra", "noHp": "081112233445", "status": "Aktif", "kelompokIPL": "IPL + Sampah" },
-    { "id": "RMH-B02", "blokNo": "B02", "pemilik": "Bu Dewi", "noHp": "081223344556", "status": "Aktif", "kelompokIPL": "IPL + Sampah" },
-    { "id": "RMH-B03", "blokNo": "B03", "pemilik": "Pak Dedi", "noHp": "081334455667", "status": "Aktif", "kelompokIPL": "IPL + Sampah" },
-    { "id": "RMH-B04", "blokNo": "B04", "pemilik": "Bu Rina", "noHp": "081445566778", "status": "Aktif", "kelompokIPL": "IPL + Sampah" },
-    { "id": "RMH-B05", "blokNo": "B05", "pemilik": "Pak Rudi", "noHp": "081556677889", "status": "Aktif", "kelompokIPL": "IPL + Sampah" },
-    { "id": "RMH-B06", "blokNo": "B06", "pemilik": "Bu Maya", "noHp": "081667788990", "status": "Aktif", "kelompokIPL": "IPL + Sampah" },
-    { "id": "RMH-B07", "blokNo": "B07", "pemilik": "Pak Eko", "noHp": "081778899001", "status": "Aktif", "kelompokIPL": "IPL + Sampah" },
-    { "id": "RMH-B08", "blokNo": "B08", "pemilik": "Pak Wawan", "noHp": "081889900112", "status": "Aktif", "kelompokIPL": "IPL + Sampah" },
-    { "id": "RMH-C01", "blokNo": "C01", "pemilik": "Bu Yuni", "noHp": "081990011223", "status": "Aktif", "kelompokIPL": "IPL + Sampah" },
-    { "id": "RMH-C02", "blokNo": "C02", "pemilik": "Pak Tri", "noHp": "081101122334", "status": "Aktif", "kelompokIPL": "IPL + Sampah" },
-    { "id": "RMH-C03", "blokNo": "C03", "pemilik": "Bu Indah", "noHp": "081212233445", "status": "Aktif", "kelompokIPL": "IPL + Sampah" },
-    { "id": "RMH-C04", "blokNo": "C04", "pemilik": "Pak Slamet", "noHp": "081323344556", "status": "Aktif", "kelompokIPL": "IPL + Sampah" },
-    { "id": "RMH-C05", "blokNo": "C05", "pemilik": "Pak Ari", "noHp": "081434455667", "status": "Aktif", "kelompokIPL": "IPL + Sampah" },
-    { "id": "RMH-C06", "blokNo": "C06", "pemilik": "Bu Endang", "noHp": "081545566778", "status": "Aktif", "kelompokIPL": "IPL + Sampah" },
-    { "id": "RMH-C07", "blokNo": "C07", "pemilik": "Pak Bayu", "noHp": "081656677889", "status": "Aktif", "kelompokIPL": "IPL + Sampah" },
-    { "id": "RMH-C08", "blokNo": "C08", "pemilik": "Bu Nita", "noHp": "081767788990", "status": "Aktif", "kelompokIPL": "IPL + Sampah" },
-    { "id": "RMH-D01", "blokNo": "D01", "pemilik": "Pak Surya", "noHp": "081878899001", "status": "Aktif", "kelompokIPL": "IPL + Sampah" },
-    { "id": "RMH-D02", "blokNo": "D02", "pemilik": "Bu Laras", "noHp": "081989900112", "status": "Aktif", "kelompokIPL": "IPL Tanpa Sampah" },
-    { "id": "RMH-D03", "blokNo": "D03", "pemilik": "Pak Totok", "noHp": "081190011223", "status": "Aktif", "kelompokIPL": "IPL Tanpa Sampah" },
-    { "id": "RMH-D04", "blokNo": "D04", "pemilik": "Bu Hera", "noHp": "081201122334", "status": "Aktif", "kelompokIPL": "IPL Tanpa Sampah" },
-    { "id": "RMH-D05", "blokNo": "D05", "pemilik": "Pak Irwan", "noHp": "081312233445", "status": "Aktif", "kelompokIPL": "IPL Tanpa Sampah" },
-    { "id": "RMH-D06", "blokNo": "D06", "pemilik": "Pak Wisnu", "noHp": "081423344556", "status": "Aktif", "kelompokIPL": "IPL Developer" },
-    { "id": "RMH-D07", "blokNo": "D07", "pemilik": "Bu Fitri", "noHp": "081534455667", "status": "Aktif", "kelompokIPL": "IPL Developer" }
-  ],
-  "tagihan": [
-    {
-      "id": "TAG-202508-A01",
-      "periode": "2025-08",
-      "bulan": "Agustus",
-      "tahun": "2025",
-      "rumahId": "RMH-A01",
-      "blokNo": "A01",
-      "pemilik": "Pak Budi",
-      "kelompokIPL": "IPL + Sampah",
-      "nominal": 175000,
-      "status": "Lunas",
-      "tglBayar": "05/08/2025",
-      "metode": "Transfer Bank",
-      "buktiTransfer": ""
-    },
-    {
-      "id": "TAG-202508-A02",
-      "periode": "2025-08",
-      "bulan": "Agustus",
-      "tahun": "2025",
-      "rumahId": "RMH-A02",
-      "blokNo": "A02",
-      "pemilik": "Bu Ani",
-      "kelompokIPL": "IPL Tanpa Sampah",
-      "nominal": 150000,
-      "status": "Menunggu",
-      "tglBayar": "-",
-      "metode": "-",
-      "buktiTransfer": ""
-    },
-    {
-      "id": "TAG-202508-A03",
-      "periode": "2025-08",
-      "bulan": "Agustus",
-      "tahun": "2025",
-      "rumahId": "RMH-A03",
-      "blokNo": "A03",
-      "pemilik": "Developer",
-      "kelompokIPL": "IPL Developer",
-      "nominal": 166000,
-      "status": "Lunas",
-      "tglBayar": "03/08/2025",
-      "metode": "Transfer Bank",
-      "buktiTransfer": ""
-    },
-    {
-      "id": "TAG-202508-A04",
-      "periode": "2025-08",
-      "bulan": "Agustus",
-      "tahun": "2025",
-      "rumahId": "RMH-A04",
-      "blokNo": "A04",
-      "pemilik": "Pak Joko",
-      "kelompokIPL": "IPL + Sampah",
-      "nominal": 175000,
-      "status": "Menunggak",
-      "tglBayar": "-",
-      "metode": "-",
-      "buktiTransfer": ""
-    }
-  ],
-  "pengeluaran": [
-    {
-      "id": "PGL-001",
-      "tanggal": "05/08/2025",
-      "kategori": "Gaji",
-      "penerima": "Satpam",
-      "keterangan": "Pembayaran Gaji 2 Satpam Perumahan",
-      "nominal": 3500000
-    },
-    {
-      "id": "PGL-002",
-      "tanggal": "02/08/2025",
-      "kategori": "Listrik & Wifi",
-      "penerima": "PLN / Indihome",
-      "keterangan": "Tagihan Listrik Pos & Wifi Komplek",
-      "nominal": 550000
-    },
-    {
-      "id": "PGL-003",
-      "tanggal": "31/07/2025",
-      "kategori": "Sampah",
-      "penerima": "Petugas Sampah",
-      "keterangan": "Iuran Tempat Pembuangan Akhir",
-      "nominal": 775000
-    }
-  ],
-  "grafik6Bulan": [
-    { "bulan": "Mar", "tagihan": 2400000, "pembayaran": 2400000 },
-    { "bulan": "Apr", "tagihan": 4500000, "pembayaran": 3500000 },
-    { "bulan": "Mei", "tagihan": 4600000, "pembayaran": 2900000 },
-    { "bulan": "Jun", "tagihan": 5400000, "pembayaran": 2900000 },
-    { "bulan": "Jul", "tagihan": 5400000, "pembayaran": 3200000 },
-    { "bulan": "Agu", "tagihan": 5275000, "pembayaran": 4550000 }
-  ],
+  "rumah": [],
+  "tagihan": [],
+  "pengeluaran": [],
+  "grafik6Bulan": [],
   "ringkasanKas": {
-    "kasSaatIni": 25485000,
-    "masuk": 4550000,
-    "keluar": 4825000,
-    "selisih": -275000
+    "kasSaatIni": 0,
+    "masuk": 0,
+    "keluar": 0,
+    "selisih": 0
   }
 }

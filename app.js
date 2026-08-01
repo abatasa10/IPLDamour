@@ -1,5 +1,5 @@
 /**
- * D'AMOUR Sistem IPL Perumahan - Core Application Logic (Phase 3 Complete)
+ * D'AMOUR Sistem IPL Perumahan - Core Application Logic (Clean Data Version)
  */
 
 let appState = null;
@@ -73,6 +73,35 @@ async function loadAppData() {
 function saveState() {
   if (appState) {
     localStorage.setItem("damour_ipl_db", JSON.stringify(appState));
+  }
+}
+
+// Clear / Kosongkan Seluruh Data
+function clearAllAppData() {
+  if (confirm("Apakah Anda yakin ingin mengosongkan SELURUH data? Anda dapat menginput ulang data rumah dan transaksi satu per satu dari awal.")) {
+    appState = {
+      settings: { appName: "D'AMOUR Sistem IPL", perumahan: "Perumahan D'AMOUR", periodeAktif: "2025-08", googleSheetApiUrl: "" },
+      targetIPL: [
+        { id: "tgt-1", kelompok: "IPL + Sampah", target: 175000, keterangan: "IPL + Sampah" },
+        { id: "tgt-2", kelompok: "IPL Tanpa Sampah", target: 150000, keterangan: "IPL Tanpa Sampah" },
+        { id: "tgt-3", kelompok: "IPL Developer", target: 166000, keterangan: "IPL Developer" }
+      ],
+      komponenIPL: [
+        { id: "komp-1", nama: "Satpam", nominalTotal: 0, isAutoKas: false, dibayarOleh: "Semua", aktif: true },
+        { id: "komp-2", nama: "Kas (Otomatis)", nominalTotal: 0, isAutoKas: true, dibayarOleh: "Semua", aktif: true },
+        { id: "komp-3", nama: "Sampah", nominalTotal: 0, isAutoKas: false, dibayarOleh: "IPL + Sampah", aktif: true },
+        { id: "komp-4", nama: "Listrik + Wifi", nominalTotal: 0, isAutoKas: false, dibayarOleh: "Semua", aktif: true }
+      ],
+      rumah: [],
+      tagihan: [],
+      pengeluaran: [],
+      grafik6Bulan: [],
+      ringkasanKas: { kasSaatIni: 0, masuk: 0, keluar: 0, selisih: 0 }
+    };
+
+    saveState();
+    alert("Seluruh data telah dikosongkan. Silakan mulai menginput data rumah dan transaksi satu per satu!");
+    location.reload();
   }
 }
 
@@ -170,69 +199,79 @@ function setupEventListeners() {
 function renderDashboard() {
   if (!appState) return;
 
-  const totalRumah = appState.rumah.length;
-  const lunasCount = appState.tagihan.filter((t) => t.status === "Lunas").length;
-  const menungguCount = appState.tagihan.filter((t) => t.status === "Menunggu").length;
-  const menunggakCount = appState.tagihan.filter((t) => t.status === "Menunggak").length;
+  const totalRumah = appState.rumah ? appState.rumah.length : 0;
+  const lunasCount = appState.tagihan ? appState.tagihan.filter((t) => t.status === "Lunas").length : 0;
+  const menungguCount = appState.tagihan ? appState.tagihan.filter((t) => t.status === "Menunggu").length : 0;
+  const menunggakCount = appState.tagihan ? appState.tagihan.filter((t) => t.status === "Menunggak").length : 0;
 
   document.getElementById("kpi-total-rumah").textContent = `${totalRumah} Unit`;
   document.getElementById("kpi-menunggak").textContent = `${menungguCount + menunggakCount} Unit`;
   document.getElementById("kpi-lunas").textContent = `${lunasCount} Unit`;
-  document.getElementById("kpi-kas").textContent = formatRp(appState.ringkasanKas.kasSaatIni);
+  document.getElementById("kpi-kas").textContent = formatRp(appState.ringkasanKas ? appState.ringkasanKas.kasSaatIni : 0);
 
-  const totalTagihan = appState.tagihan.reduce((acc, t) => acc + t.nominal, 0);
+  const totalTagihan = appState.tagihan ? appState.tagihan.reduce((acc, t) => acc + t.nominal, 0) : 0;
   const totalPembayaran = appState.tagihan
-    .filter((t) => t.status === "Lunas")
-    .reduce((acc, t) => acc + t.nominal, 0);
+    ? appState.tagihan.filter((t) => t.status === "Lunas").reduce((acc, t) => acc + t.nominal, 0)
+    : 0;
   const sisaTagihan = totalTagihan - totalPembayaran;
 
   document.getElementById("dash-total-tagihan").textContent = formatRp(totalTagihan);
   document.getElementById("dash-total-pembayaran").textContent = formatRp(totalPembayaran);
   document.getElementById("dash-sisa-tagihan").textContent = formatRp(sisaTagihan);
 
-  document.getElementById("dash-kas-masuk").textContent = formatRp(appState.ringkasanKas.masuk);
-  document.getElementById("dash-kas-keluar").textContent = formatRp(appState.ringkasanKas.keluar);
-  const selisih = appState.ringkasanKas.selisih;
+  document.getElementById("dash-kas-masuk").textContent = formatRp(appState.ringkasanKas ? appState.ringkasanKas.masuk : 0);
+  document.getElementById("dash-kas-keluar").textContent = formatRp(appState.ringkasanKas ? appState.ringkasanKas.keluar : 0);
+  const selisih = appState.ringkasanKas ? appState.ringkasanKas.selisih : 0;
   const selisihEl = document.getElementById("dash-kas-selisih");
-  selisihEl.textContent = formatRp(selisih);
-  selisihEl.style.color = selisih < 0 ? "var(--danger)" : "var(--success)";
+  if (selisihEl) {
+    selisihEl.textContent = formatRp(selisih);
+    selisihEl.style.color = selisih < 0 ? "var(--danger)" : "var(--success)";
+  }
 
   const recentTagihanTbody = document.getElementById("recent-tagihan-tbody");
   if (recentTagihanTbody) {
-    recentTagihanTbody.innerHTML = appState.tagihan
-      .slice(0, 4)
-      .map((t) => {
-        let badgeClass = "badge-secondary";
-        if (t.status === "Lunas") badgeClass = "badge-success";
-        if (t.status === "Menunggu") badgeClass = "badge-warning";
-        if (t.status === "Menunggak") badgeClass = "badge-danger";
+    if (!appState.tagihan || appState.tagihan.length === 0) {
+      recentTagihanTbody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: var(--text-muted);">Belum ada data tagihan.</td></tr>`;
+    } else {
+      recentTagihanTbody.innerHTML = appState.tagihan
+        .slice(0, 4)
+        .map((t) => {
+          let badgeClass = "badge-secondary";
+          if (t.status === "Lunas") badgeClass = "badge-success";
+          if (t.status === "Menunggu") badgeClass = "badge-warning";
+          if (t.status === "Menunggak") badgeClass = "badge-danger";
 
-        return `
-          <tr>
-            <td><strong>${t.blokNo}</strong> - ${t.pemilik}</td>
-            <td><span class="badge ${badgeClass}">${t.status}</span></td>
-            <td>${t.tglBayar}</td>
-            <td style="text-align: right; font-weight: 600;">${formatRp(t.nominal)}</td>
-          </tr>
-        `;
-      })
-      .join("");
+          return `
+            <tr>
+              <td><strong>${t.blokNo}</strong> - ${t.pemilik}</td>
+              <td><span class="badge ${badgeClass}">${t.status}</span></td>
+              <td>${t.tglBayar}</td>
+              <td style="text-align: right; font-weight: 600;">${formatRp(t.nominal)}</td>
+            </tr>
+          `;
+        })
+        .join("");
+    }
   }
 
   const recentPengeluaranTbody = document.getElementById("recent-pengeluaran-tbody");
   if (recentPengeluaranTbody) {
-    recentPengeluaranTbody.innerHTML = appState.pengeluaran
-      .slice(0, 3)
-      .map(
-        (p) => `
-        <tr>
-          <td>${p.tanggal}</td>
-          <td><strong>${p.kategori}</strong></td>
-          <td style="text-align: right; font-weight: 600;">${formatRp(p.nominal)}</td>
-        </tr>
-      `
-      )
-      .join("");
+    if (!appState.pengeluaran || appState.pengeluaran.length === 0) {
+      recentPengeluaranTbody.innerHTML = `<tr><td colspan="3" style="text-align: center; color: var(--text-muted);">Belum ada data pengeluaran.</td></tr>`;
+    } else {
+      recentPengeluaranTbody.innerHTML = appState.pengeluaran
+        .slice(0, 3)
+        .map(
+          (p) => `
+          <tr>
+            <td>${p.tanggal}</td>
+            <td><strong>${p.kategori}</strong></td>
+            <td style="text-align: right; font-weight: 600;">${formatRp(p.nominal)}</td>
+          </tr>
+        `
+        )
+        .join("");
+    }
   }
 
   renderCharts(lunasCount, menungguCount, menunggakCount, totalRumah);
@@ -267,11 +306,22 @@ function renderCharts(lunas, menunggu, menunggak, total) {
   }
 
   const ctxBar = document.getElementById("chart-pembayaran-history");
-  if (ctxBar && appState.grafik6Bulan) {
+  if (ctxBar) {
     if (barChartInstance) barChartInstance.destroy();
-    const labels = appState.grafik6Bulan.map((g) => g.bulan);
-    const dataTagihan = appState.grafik6Bulan.map((g) => g.tagihan / 1000000);
-    const dataPembayaran = appState.grafik6Bulan.map((g) => g.pembayaran / 1000000);
+    const historyData = appState.grafik6Bulan && appState.grafik6Bulan.length > 0
+      ? appState.grafik6Bulan
+      : [
+          { bulan: "Mar", tagihan: 0, pembayaran: 0 },
+          { bulan: "Apr", tagihan: 0, pembayaran: 0 },
+          { bulan: "Mei", tagihan: 0, pembayaran: 0 },
+          { bulan: "Jun", tagihan: 0, pembayaran: 0 },
+          { bulan: "Jul", tagihan: 0, pembayaran: 0 },
+          { bulan: "Agu", tagihan: 0, pembayaran: 0 }
+        ];
+
+    const labels = historyData.map((g) => g.bulan);
+    const dataTagihan = historyData.map((g) => g.tagihan / 1000000);
+    const dataPembayaran = historyData.map((g) => g.pembayaran / 1000000);
 
     barChartInstance = new Chart(ctxBar, {
       type: "bar",
@@ -297,7 +347,7 @@ function renderCharts(lunas, menunggu, menunggak, total) {
    2. MASTER RUMAH & KOMPONEN
    ========================================================================== */
 function renderMasterRumah() {
-  if (!appState) return;
+  if (!appState || !appState.rumah) return;
 
   const searchVal = (document.getElementById("search-rumah-input")?.value || "").toLowerCase();
   const filtered = appState.rumah.filter(
@@ -316,23 +366,27 @@ function renderMasterRumah() {
 
   const tbody = document.getElementById("master-rumah-tbody");
   if (tbody) {
-    tbody.innerHTML = paginated
-      .map(
-        (r) => `
-        <tr>
-          <td><strong>${r.blokNo}</strong></td>
-          <td>${r.pemilik}</td>
-          <td>${r.noHp}</td>
-          <td><span class="badge badge-success">${r.status}</span></td>
-          <td>${r.kelompokIPL}</td>
-          <td>
-            <button class="btn btn-outline btn-sm" onclick="editRumah('${r.id}')"><i class="ri-edit-line"></i></button>
-            <button class="btn btn-outline btn-sm" style="color: var(--danger);" onclick="deleteRumah('${r.id}')"><i class="ri-delete-bin-line"></i></button>
-          </td>
-        </tr>
-      `
-      )
-      .join("");
+    if (paginated.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 1.5rem;">Belum ada data rumah. Klik tombol <strong>+ Tambah Rumah</strong> di atas.</td></tr>`;
+    } else {
+      tbody.innerHTML = paginated
+        .map(
+          (r) => `
+          <tr>
+            <td><strong>${r.blokNo}</strong></td>
+            <td>${r.pemilik}</td>
+            <td>${r.noHp}</td>
+            <td><span class="badge badge-success">${r.status}</span></td>
+            <td>${r.kelompokIPL}</td>
+            <td>
+              <button class="btn btn-outline btn-sm" onclick="editRumah('${r.id}')"><i class="ri-edit-line"></i></button>
+              <button class="btn btn-outline btn-sm" style="color: var(--danger);" onclick="deleteRumah('${r.id}')"><i class="ri-delete-bin-line"></i></button>
+            </td>
+          </tr>
+        `
+        )
+        .join("");
+    }
   }
 
   const pageNav = document.getElementById("rumah-pagination");
@@ -421,7 +475,7 @@ function deleteRumah(id) {
 }
 
 function renderMasterKomponen() {
-  if (!appState) return;
+  if (!appState || !appState.komponenIPL) return;
 
   const tbody = document.getElementById("master-komponen-tbody");
   if (tbody) {
@@ -521,7 +575,7 @@ function deleteKomponen(id) {
 }
 
 function renderSettingTarget() {
-  if (!appState) return;
+  if (!appState || !appState.targetIPL) return;
 
   const tbody = document.getElementById("setting-target-tbody");
   if (tbody) {
@@ -568,9 +622,9 @@ function saveSettingTarget() {
 }
 
 function renderPerhitunganIPL() {
-  if (!appState) return;
+  if (!appState || !appState.rumah) return;
 
-  const totalRumah = appState.rumah.length || 31;
+  const totalRumah = appState.rumah.length || 1;
   const targetIPLObj = appState.targetIPL.find((t) => t.kelompok === "IPL + Sampah");
   const targetNominal = targetIPLObj ? targetIPLObj.target : 175000;
 
@@ -635,6 +689,11 @@ function updateHouseGroupCounts() {
 }
 
 function processGenerateTagihan() {
+  if (!appState.rumah || appState.rumah.length === 0) {
+    alert("Belum ada data rumah terdaftar. Tambahkan data rumah terlebih dahulu pada menu Master Rumah.");
+    return;
+  }
+
   const bulan = document.getElementById("gen-bulan").value;
   const tahun = document.getElementById("gen-tahun").value;
 
@@ -695,7 +754,7 @@ function processGenerateTagihan() {
 }
 
 function renderDaftarTagihan() {
-  if (!appState) return;
+  if (!appState || !appState.tagihan) return;
 
   const searchVal = (document.getElementById("filter-tagihan-search")?.value || "").toLowerCase();
   const filterBulan = document.getElementById("filter-tagihan-bulan")?.value || "Agustus";
@@ -714,35 +773,39 @@ function renderDaftarTagihan() {
 
   const tbody = document.getElementById("daftar-tagihan-tbody");
   if (tbody) {
-    tbody.innerHTML = paginated
-      .map((t, idx) => {
-        let badgeClass = "badge-secondary";
-        if (t.status === "Lunas") badgeClass = "badge-success";
-        if (t.status === "Menunggu") badgeClass = "badge-warning";
-        if (t.status === "Menunggak") badgeClass = "badge-danger";
+    if (paginated.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--text-muted); padding: 1.5rem;">Belum ada data tagihan. Gunakan menu <strong>Generate Tagihan</strong> untuk membuat tagihan baru.</td></tr>`;
+    } else {
+      tbody.innerHTML = paginated
+        .map((t, idx) => {
+          let badgeClass = "badge-secondary";
+          if (t.status === "Lunas") badgeClass = "badge-success";
+          if (t.status === "Menunggu") badgeClass = "badge-warning";
+          if (t.status === "Menunggak") badgeClass = "badge-danger";
 
-        const globalIndex = startIdx + idx + 1;
+          const globalIndex = startIdx + idx + 1;
 
-        return `
-          <tr>
-            <td>${globalIndex}</td>
-            <td><strong>${t.blokNo}</strong></td>
-            <td>${t.pemilik}</td>
-            <td>${t.kelompokIPL}</td>
-            <td style="font-weight: 600;">${formatRp(t.nominal)}</td>
-            <td><span class="badge ${badgeClass}">${t.status}</span></td>
-            <td>
-              <button class="btn btn-outline btn-sm" onclick="viewDetailTagihan('${t.id}')" title="Lihat Detail"><i class="ri-eye-line"></i></button>
-              ${
-                t.status !== "Lunas"
-                  ? `<button class="btn btn-primary btn-sm" onclick="openFormPembayaran('${t.id}')" title="Bayar"><i class="ri-checkbox-circle-line"></i></button>`
-                  : ""
-              }
-            </td>
-          </tr>
-        `;
-      })
-      .join("");
+          return `
+            <tr>
+              <td>${globalIndex}</td>
+              <td><strong>${t.blokNo}</strong></td>
+              <td>${t.pemilik}</td>
+              <td>${t.kelompokIPL}</td>
+              <td style="font-weight: 600;">${formatRp(t.nominal)}</td>
+              <td><span class="badge ${badgeClass}">${t.status}</span></td>
+              <td>
+                <button class="btn btn-outline btn-sm" onclick="viewDetailTagihan('${t.id}')" title="Lihat Detail"><i class="ri-eye-line"></i></button>
+                ${
+                  t.status !== "Lunas"
+                    ? `<button class="btn btn-primary btn-sm" onclick="openFormPembayaran('${t.id}')" title="Bayar"><i class="ri-checkbox-circle-line"></i></button>`
+                    : ""
+                }
+              </td>
+            </tr>
+          `;
+        })
+        .join("");
+    }
   }
 
   const pageNav = document.getElementById("tagihan-pagination");
@@ -777,7 +840,7 @@ function viewDetailTagihan(id) {
 
   document.getElementById("detail-val-status").innerHTML = `<span class="badge ${badgeClass}">${t.status}</span>`;
 
-  const totalRumah = appState.rumah.length || 31;
+  const totalRumah = appState.rumah.length || 1;
   const tbody = document.getElementById("detail-rincian-tbody");
 
   if (tbody) {
@@ -863,6 +926,7 @@ function simpanFormPembayaran() {
       t.buktiTransfer = previewImg;
     }
 
+    if (!appState.ringkasanKas) appState.ringkasanKas = { kasSaatIni: 0, masuk: 0, keluar: 0, selisih: 0 };
     appState.ringkasanKas.kasSaatIni += nominal;
     appState.ringkasanKas.masuk += nominal;
     appState.ringkasanKas.selisih = appState.ringkasanKas.masuk - appState.ringkasanKas.keluar;
@@ -876,29 +940,33 @@ function simpanFormPembayaran() {
 }
 
 function renderPengeluaranTable() {
-  if (!appState) return;
+  if (!appState || !appState.pengeluaran) return;
 
   const filterBulan = document.getElementById("filter-pgl-bulan")?.value || "Agustus";
   const tbody = document.getElementById("pengeluaran-full-tbody");
 
   if (tbody) {
-    tbody.innerHTML = appState.pengeluaran
-      .filter((p) => filterBulan === "Semua" || p.tanggal.includes("08") || p.tanggal.includes("Agu"))
-      .map(
-        (p) => `
-        <tr>
-          <td>${p.tanggal}</td>
-          <td><strong>${p.kategori}</strong></td>
-          <td>${p.penerima || "-"}</td>
-          <td style="font-weight: 600; color: var(--danger);">${formatRp(p.nominal)}</td>
-          <td>
-            <button class="btn btn-outline btn-sm" onclick="editPengeluaran('${p.id}')"><i class="ri-edit-line"></i></button>
-            <button class="btn btn-outline btn-sm" style="color: var(--danger);" onclick="deletePengeluaran('${p.id}')"><i class="ri-delete-bin-line"></i></button>
-          </td>
-        </tr>
-      `
-      )
-      .join("");
+    if (appState.pengeluaran.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 1.5rem;">Belum ada catatan pengeluaran. Klik tombol <strong>+ Tambah Pengeluaran</strong> di atas.</td></tr>`;
+    } else {
+      tbody.innerHTML = appState.pengeluaran
+        .filter((p) => filterBulan === "Semua" || p.tanggal.includes("08") || p.tanggal.includes("Agu"))
+        .map(
+          (p) => `
+          <tr>
+            <td>${p.tanggal}</td>
+            <td><strong>${p.kategori}</strong></td>
+            <td>${p.penerima || "-"}</td>
+            <td style="font-weight: 600; color: var(--danger);">${formatRp(p.nominal)}</td>
+            <td>
+              <button class="btn btn-outline btn-sm" onclick="editPengeluaran('${p.id}')"><i class="ri-edit-line"></i></button>
+              <button class="btn btn-outline btn-sm" style="color: var(--danger);" onclick="deletePengeluaran('${p.id}')"><i class="ri-delete-bin-line"></i></button>
+            </td>
+          </tr>
+        `
+        )
+        .join("");
+    }
   }
 }
 
@@ -944,6 +1012,7 @@ function savePengeluaran() {
       appState.pengeluaran[idx] = { ...appState.pengeluaran[idx], tanggal: tglFormatted, kategori: kat, penerima: pen, nominal: nom };
     }
   } else {
+    if (!appState.pengeluaran) appState.pengeluaran = [];
     appState.pengeluaran.unshift({
       id: `PGL-${Date.now()}`,
       tanggal: tglFormatted,
@@ -953,6 +1022,7 @@ function savePengeluaran() {
       nominal: nom
     });
 
+    if (!appState.ringkasanKas) appState.ringkasanKas = { kasSaatIni: 0, masuk: 0, keluar: 0, selisih: 0 };
     appState.ringkasanKas.kasSaatIni -= nom;
     appState.ringkasanKas.keluar += nom;
     appState.ringkasanKas.selisih = appState.ringkasanKas.masuk - appState.ringkasanKas.keluar;
@@ -976,7 +1046,7 @@ function deletePengeluaran(id) {
 }
 
 /* ==========================================================================
-   10. MOCKUP: KAS (ARUS KAS) - RUNNING BALANCE LEDGER TABLE (MOCKUP 10)
+   10. KAS (ARUS KAS)
    ========================================================================== */
 function renderKasArusKasTable() {
   if (!appState) return;
@@ -984,57 +1054,58 @@ function renderKasArusKasTable() {
   const tbody = document.getElementById("kas-arus-tbody");
   if (!tbody) return;
 
-  let currentBalance = 25000000;
+  let currentBalance = 0;
+  const ledgerRows = [];
 
-  const ledgerRows = [
-    { tanggal: "01/08/2025", referensi: "Saldo Awal", masuk: null, keluar: null, saldo: currentBalance }
-  ];
-
-  // Income from paid Tagihan
   const totalMasukTagihan = appState.tagihan
-    .filter((t) => t.status === "Lunas")
-    .reduce((sum, t) => sum + t.nominal, 0);
+    ? appState.tagihan.filter((t) => t.status === "Lunas").reduce((sum, t) => sum + t.nominal, 0)
+    : 0;
 
   if (totalMasukTagihan > 0) {
     currentBalance += totalMasukTagihan;
     ledgerRows.push({
-      tanggal: "01/08/2025",
-      referensi: "Tagihan IPL",
+      tanggal: new Date().toLocaleDateString("id-ID"),
+      referensi: "Tagihan IPL (Total Pembayaran Lunas)",
       masuk: totalMasukTagihan,
       keluar: null,
       saldo: currentBalance
     });
   }
 
-  // Expenses from Pengeluaran
-  appState.pengeluaran.forEach((p) => {
-    currentBalance -= p.nominal;
-    ledgerRows.push({
-      tanggal: p.tanggal,
-      referensi: p.kategori + (p.penerima ? ` (${p.penerima})` : ""),
-      masuk: null,
-      keluar: p.nominal,
-      saldo: currentBalance
+  if (appState.pengeluaran) {
+    appState.pengeluaran.forEach((p) => {
+      currentBalance -= p.nominal;
+      ledgerRows.push({
+        tanggal: p.tanggal,
+        referensi: p.kategori + (p.penerima ? ` (${p.penerima})` : ""),
+        masuk: null,
+        keluar: p.nominal,
+        saldo: currentBalance
+      });
     });
-  });
+  }
 
-  tbody.innerHTML = ledgerRows
-    .map(
-      (row) => `
-      <tr>
-        <td>${row.tanggal}</td>
-        <td><strong>${row.referensi}</strong></td>
-        <td style="text-align: right; color: var(--success); font-weight: 600;">${row.masuk ? formatRp(row.masuk).replace("Rp ", "") : "-"}</td>
-        <td style="text-align: right; color: var(--danger); font-weight: 600;">${row.keluar ? formatRp(row.keluar).replace("Rp ", "") : "-"}</td>
-        <td style="text-align: right; font-weight: 700;">${formatRp(row.saldo).replace("Rp ", "")}</td>
-      </tr>
-    `
-    )
-    .join("");
+  if (ledgerRows.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 1.5rem;">Belum ada mutasi arus kas.</td></tr>`;
+  } else {
+    tbody.innerHTML = ledgerRows
+      .map(
+        (row) => `
+        <tr>
+          <td>${row.tanggal}</td>
+          <td><strong>${row.referensi}</strong></td>
+          <td style="text-align: right; color: var(--success); font-weight: 600;">${row.masuk ? formatRp(row.masuk).replace("Rp ", "") : "-"}</td>
+          <td style="text-align: right; color: var(--danger); font-weight: 600;">${row.keluar ? formatRp(row.keluar).replace("Rp ", "") : "-"}</td>
+          <td style="text-align: right; font-weight: 700;">${formatRp(row.saldo).replace("Rp ", "")}</td>
+        </tr>
+      `
+      )
+      .join("");
+  }
 }
 
 /* ==========================================================================
-   11. MOCKUP: LAPORAN (MOCKUP 11)
+   11. LAPORAN
    ========================================================================== */
 function renderLaporanPreview() {
   const jenis = document.getElementById("laporan-jenis").value;
@@ -1065,21 +1136,25 @@ function renderLaporanPreview() {
           </tr>
         </thead>
         <tbody>
-          ${appState.tagihan
-            .map(
-              (t, i) => `
-            <tr>
-              <td>${i + 1}</td>
-              <td>${t.blokNo}</td>
-              <td>${t.pemilik}</td>
-              <td>${t.kelompokIPL}</td>
-              <td>${formatRp(t.nominal)}</td>
-              <td>${t.status}</td>
-              <td>${t.tglBayar}</td>
-            </tr>
-          `
-            )
-            .join("")}
+          ${
+            appState.tagihan && appState.tagihan.length > 0
+              ? appState.tagihan
+                  .map(
+                    (t, i) => `
+              <tr>
+                <td>${i + 1}</td>
+                <td>${t.blokNo}</td>
+                <td>${t.pemilik}</td>
+                <td>${t.kelompokIPL}</td>
+                <td>${formatRp(t.nominal)}</td>
+                <td>${t.status}</td>
+                <td>${t.tglBayar}</td>
+              </tr>
+            `
+                  )
+                  .join("")
+              : `<tr><td colspan="7" style="text-align: center; color: var(--text-muted);">Tidak ada data tagihan.</td></tr>`
+          }
         </tbody>
       </table>
     `;
@@ -1095,18 +1170,22 @@ function renderLaporanPreview() {
           </tr>
         </thead>
         <tbody>
-          ${appState.pengeluaran
-            .map(
-              (p) => `
-            <tr>
-              <td>${p.tanggal}</td>
-              <td>${p.kategori}</td>
-              <td>${p.penerima || "-"}</td>
-              <td>${formatRp(p.nominal)}</td>
-            </tr>
-          `
-            )
-            .join("")}
+          ${
+            appState.pengeluaran && appState.pengeluaran.length > 0
+              ? appState.pengeluaran
+                  .map(
+                    (p) => `
+              <tr>
+                <td>${p.tanggal}</td>
+                <td>${p.kategori}</td>
+                <td>${p.penerima || "-"}</td>
+                <td>${formatRp(p.nominal)}</td>
+              </tr>
+            `
+                  )
+                  .join("")
+              : `<tr><td colspan="4" style="text-align: center; color: var(--text-muted);">Tidak ada data pengeluaran.</td></tr>`
+          }
         </tbody>
       </table>
     `;
@@ -1121,14 +1200,18 @@ function exportLaporanCSV() {
 
   if (jenis === "tagihan") {
     csvContent += "No,Rumah,Pemilik,Kelompok IPL,Nominal,Status,Tgl Bayar\n";
-    appState.tagihan.forEach((t, i) => {
-      csvContent += `${i + 1},${t.blokNo},${t.pemilik},${t.kelompokIPL},${t.nominal},${t.status},${t.tglBayar}\n`;
-    });
+    if (appState.tagihan) {
+      appState.tagihan.forEach((t, i) => {
+        csvContent += `${i + 1},${t.blokNo},${t.pemilik},${t.kelompokIPL},${t.nominal},${t.status},${t.tglBayar}\n`;
+      });
+    }
   } else {
     csvContent += "Tanggal,Kategori,Penerima,Nominal\n";
-    appState.pengeluaran.forEach((p) => {
-      csvContent += `${p.tanggal},${p.kategori},${p.penerima || "-"},${p.nominal}\n`;
-    });
+    if (appState.pengeluaran) {
+      appState.pengeluaran.forEach((p) => {
+        csvContent += `${p.tanggal},${p.kategori},${p.penerima || "-"},${p.nominal}\n`;
+      });
+    }
   }
 
   const encodedUri = encodeURI(csvContent);
@@ -1141,23 +1224,23 @@ function exportLaporanCSV() {
 }
 
 /* ==========================================================================
-   12. MOCKUP: SIMULASI IPL (MOCKUP 12)
+   12. SIMULASI IPL
    ========================================================================== */
 function runSimulasiIPL() {
-  const satpamTotal = parseFloat(document.getElementById("sim-input-satpam")?.value) || 3700000;
-  const listrikTotal = parseFloat(document.getElementById("sim-input-listrik")?.value) || 550000;
-  const sampahTotal = parseFloat(document.getElementById("sim-input-sampah")?.value) || 775000;
-  const devTotal = parseFloat(document.getElementById("sim-input-developer")?.value) || 32000;
+  const satpamTotal = parseFloat(document.getElementById("sim-input-satpam")?.value) || 0;
+  const listrikTotal = parseFloat(document.getElementById("sim-input-listrik")?.value) || 0;
+  const sampahTotal = parseFloat(document.getElementById("sim-input-sampah")?.value) || 0;
+  const devTotal = parseFloat(document.getElementById("sim-input-developer")?.value) || 0;
 
-  const totalRumah = appState.rumah.length || 31;
+  const totalRumah = (appState.rumah && appState.rumah.length > 0) ? appState.rumah.length : 1;
 
   const satpamPerHome = satpamTotal / totalRumah;
   const listrikPerHome = listrikTotal / totalRumah;
   const sampahPerHome = sampahTotal / totalRumah;
 
-  const target1 = appState.targetIPL.find((t) => t.kelompok === "IPL + Sampah")?.target || 175000;
-  const target2 = appState.targetIPL.find((t) => t.kelompok === "IPL Tanpa Sampah")?.target || 150000;
-  const target3 = appState.targetIPL.find((t) => t.kelompok === "IPL Developer")?.target || 166000;
+  const target1 = appState.targetIPL ? (appState.targetIPL.find((t) => t.kelompok === "IPL + Sampah")?.target || 175000) : 175000;
+  const target2 = appState.targetIPL ? (appState.targetIPL.find((t) => t.kelompok === "IPL Tanpa Sampah")?.target || 150000) : 150000;
+  const target3 = appState.targetIPL ? (appState.targetIPL.find((t) => t.kelompok === "IPL Developer")?.target || 166000) : 166000;
 
   const kas1 = Math.round(target1 - (satpamPerHome + listrikPerHome + sampahPerHome));
   const kas2 = Math.round(target2 - (satpamPerHome + listrikPerHome));
@@ -1248,10 +1331,7 @@ function importDataJSON(input) {
 }
 
 function resetDataDefault() {
-  if (confirm("Apakah Anda yakin ingin mengembalikan seluruh data ke data default awal?")) {
-    localStorage.removeItem("damour_ipl_db");
-    location.reload();
-  }
+  clearAllAppData();
 }
 
 // Modal Helpers
