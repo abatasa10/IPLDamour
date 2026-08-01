@@ -44,15 +44,21 @@
           <span>Rumah</span>
         </a>
 
-        <div class="nav-group-title">Keuangan & IPL</div>
-        <a href="#" class="nav-item" data-view="tagihan">
+        <div class="nav-group-title">IPL & Tagihan</div>
+        <a href="#" class="nav-item" data-view="generate-tagihan">
+          <i class="ri-file-add-line"></i>
+          <span>Generate Tagihan</span>
+        </a>
+        <a href="#" class="nav-item" data-view="daftar-tagihan">
           <i class="ri-bill-line"></i>
-          <span>Tagihan & Bayar</span>
+          <span>Daftar Tagihan</span>
         </a>
         <a href="#" class="nav-item" data-view="perhitungan">
           <i class="ri-calculator-line"></i>
           <span>Perhitungan IPL</span>
         </a>
+
+        <div class="nav-group-title">Keuangan</div>
         <a href="#" class="nav-item" data-view="pengeluaran">
           <i class="ri-wallet-3-line"></i>
           <span>Pengeluaran</span>
@@ -109,7 +115,6 @@
         
         <!-- 1. DASHBOARD VIEW -->
         <section id="view-dashboard" class="view-section active">
-          <!-- Stat KPI Cards -->
           <div class="kpi-grid">
             <div class="kpi-card">
               <div class="kpi-info">
@@ -148,11 +153,8 @@
             </div>
           </div>
 
-          <!-- Main Dashboard Grid -->
           <div class="dashboard-grid">
-            <!-- Left Column -->
             <div>
-              <!-- Ringkasan Bulan Ini -->
               <div class="card">
                 <div class="card-header">
                   <div class="card-title">Ringkasan Bulan Ini (Agustus 2025)</div>
@@ -173,7 +175,6 @@
                 </div>
               </div>
 
-              <!-- Grafik Pembayaran 6 Bulan Terakhir -->
               <div class="card">
                 <div class="card-header">
                   <div class="card-title">Grafik Pembayaran 6 Bulan Terakhir</div>
@@ -183,7 +184,6 @@
                 </div>
               </div>
 
-              <!-- Pengeluaran Terakhir -->
               <div class="card">
                 <div class="card-header">
                   <div class="card-title">Pengeluaran Terakhir</div>
@@ -198,17 +198,13 @@
                         <th style="text-align: right;">Nominal</th>
                       </tr>
                     </thead>
-                    <tbody id="recent-pengeluaran-tbody">
-                      <!-- Rendered by JS -->
-                    </tbody>
+                    <tbody id="recent-pengeluaran-tbody"></tbody>
                   </table>
                 </div>
               </div>
             </div>
 
-            <!-- Right Column -->
             <div>
-              <!-- Status Tagihan Donut Chart -->
               <div class="card">
                 <div class="card-header">
                   <div class="card-title">Status Tagihan Bulan Ini</div>
@@ -218,11 +214,10 @@
                 </div>
               </div>
 
-              <!-- Tagihan Terakhir -->
               <div class="card">
                 <div class="card-header">
                   <div class="card-title">Tagihan Terakhir</div>
-                  <button class="btn btn-outline btn-sm" onclick="showView('tagihan')">Lihat Semua <i class="ri-arrow-right-line"></i></button>
+                  <button class="btn btn-outline btn-sm" onclick="showView('daftar-tagihan')">Lihat Semua <i class="ri-arrow-right-line"></i></button>
                 </div>
                 <div class="table-responsive">
                   <table class="table">
@@ -234,14 +229,11 @@
                         <th style="text-align: right;">Nominal</th>
                       </tr>
                     </thead>
-                    <tbody id="recent-tagihan-tbody">
-                      <!-- Rendered by JS -->
-                    </tbody>
+                    <tbody id="recent-tagihan-tbody"></tbody>
                   </table>
                 </div>
               </div>
 
-              <!-- Kas Masuk vs Keluar -->
               <div class="card">
                 <div class="card-header">
                   <div class="card-title">Kas Masuk vs Keluar</div>
@@ -269,7 +261,7 @@
         <section id="view-rumah" class="view-section">
           <div class="card">
             <div class="card-header">
-              <div class="card-title">Master Rumah</div>
+              <div class="card-title">1. Master Rumah</div>
               <button class="btn btn-primary" onclick="openAddRumahModal()"><i class="ri-add-line"></i> Tambah Rumah</button>
             </div>
             
@@ -292,15 +284,11 @@
                     <th>Aksi</th>
                   </tr>
                 </thead>
-                <tbody id="master-rumah-tbody">
-                  <!-- Rendered by JS -->
-                </tbody>
+                <tbody id="master-rumah-tbody"></tbody>
               </table>
             </div>
 
-            <div class="pagination-wrapper" id="rumah-pagination">
-              <!-- Rendered by JS -->
-            </div>
+            <div class="pagination-wrapper" id="rumah-pagination"></div>
           </div>
         </section>
 
@@ -308,7 +296,7 @@
         <section id="view-komponen" class="view-section">
           <div class="card">
             <div class="card-header">
-              <div class="card-title">Master Komponen IPL</div>
+              <div class="card-title">2. Master Komponen IPL</div>
               <button class="btn btn-primary" onclick="openAddKomponenModal()"><i class="ri-add-line"></i> Tambah Komponen</button>
             </div>
 
@@ -323,9 +311,7 @@
                     <th>Aksi</th>
                   </tr>
                 </thead>
-                <tbody id="master-komponen-tbody">
-                  <!-- Rendered by JS -->
-                </tbody>
+                <tbody id="master-komponen-tbody"></tbody>
               </table>
             </div>
           </div>
@@ -335,7 +321,7 @@
         <section id="view-target" class="view-section">
           <div class="card">
             <div class="card-header">
-              <div class="card-title">Setting Target IPL</div>
+              <div class="card-title">3. Setting Target IPL</div>
               <button class="btn btn-primary" onclick="openEditTargetModal()"><i class="ri-edit-line"></i> Edit Target</button>
             </div>
 
@@ -347,9 +333,7 @@
                     <th>Target IPL (Rp)</th>
                   </tr>
                 </thead>
-                <tbody id="setting-target-tbody">
-                  <!-- Rendered by JS -->
-                </tbody>
+                <tbody id="setting-target-tbody"></tbody>
               </table>
             </div>
           </div>
@@ -359,7 +343,7 @@
         <section id="view-perhitungan" class="view-section">
           <div class="card">
             <div class="card-header">
-              <div class="card-title">Perhitungan IPL (Rincian)</div>
+              <div class="card-title">4. Perhitungan IPL (Rincian)</div>
               <div style="display: flex; align-items: center; gap: 0.5rem;">
                 <span style="font-size: 0.85rem; color: var(--text-muted);">Bulan</span>
                 <select id="perhitungan-month-select" class="form-control" style="width: auto;">
@@ -381,9 +365,7 @@
                     <th>Per Rumah (Rp)</th>
                   </tr>
                 </thead>
-                <tbody id="perhitungan-ipl-tbody">
-                  <!-- Rendered by JS -->
-                </tbody>
+                <tbody id="perhitungan-ipl-tbody"></tbody>
                 <tfoot>
                   <tr style="background: #f1f5f9; font-weight: 700;">
                     <td colspan="4" style="text-align: uppercase;">Total Per Rumah (Sebelum Bulat)</td>
@@ -395,40 +377,257 @@
           </div>
         </section>
 
-        <!-- 6. TAGIHAN & PEMBAYARAN VIEW -->
-        <section id="view-tagihan" class="view-section">
+        <!-- 5. MOCKUP: GENERATE TAGIHAN VIEW -->
+        <section id="view-generate-tagihan" class="view-section">
+          <div class="card" style="max-width: 600px;">
+            <div class="card-header">
+              <div class="card-title">5. Generate Tagihan</div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; margin-bottom: 1.25rem;">
+              <div class="form-group">
+                <label>Bulan</label>
+                <select id="gen-bulan" class="form-control">
+                  <option value="Agustus">Agustus</option>
+                  <option value="September">September</option>
+                  <option value="Oktober">Oktober</option>
+                  <option value="November">November</option>
+                  <option value="Desember">Desember</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Tahun</label>
+                <select id="gen-tahun" class="form-control">
+                  <option value="2025">2025</option>
+                  <option value="2026">2026</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Tanggal Generate</label>
+                <input type="date" id="gen-tanggal" class="form-control" value="2025-08-01">
+              </div>
+            </div>
+
+            <hr style="border: none; border-top: 1px solid var(--border-color); margin-bottom: 1rem;">
+
+            <div class="form-group">
+              <label>Kelompok IPL</label>
+              <div class="checkbox-group-list">
+                <label class="checkbox-item">
+                  <input type="checkbox" id="chk-group-1" checked>
+                  <span>IPL + Sampah (<strong id="cnt-group-1">24 Rumah</strong>)</span>
+                </label>
+                <label class="checkbox-item">
+                  <input type="checkbox" id="chk-group-2" checked>
+                  <span>IPL Tanpa Sampah (<strong id="cnt-group-2">5 Rumah</strong>)</span>
+                </label>
+                <label class="checkbox-item">
+                  <input type="checkbox" id="chk-group-3" checked>
+                  <span>IPL Developer (<strong id="cnt-group-3">2 Rumah</strong>)</span>
+                </label>
+              </div>
+            </div>
+
+            <button class="btn btn-primary" style="width: 100%; padding: 0.75rem;" onclick="processGenerateTagihan()">
+              <i class="ri-home-wifi-line"></i> Generate Tagihan
+            </button>
+          </div>
+        </section>
+
+        <!-- 6. MOCKUP: DAFTAR TAGIHAN VIEW -->
+        <section id="view-daftar-tagihan" class="view-section">
           <div class="card">
             <div class="card-header">
-              <div class="card-title">Data Tagihan & Pembayaran IPL</div>
+              <div class="card-title">6. Daftar Tagihan</div>
+            </div>
+
+            <div class="filter-bar">
+              <div class="input-search-wrapper" style="flex: 1; max-width: 280px;">
+                <i class="ri-search-line"></i>
+                <input type="text" id="filter-tagihan-search" class="form-control" placeholder="Cari rumah / pemilik">
+              </div>
+              <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <span style="font-size: 0.8rem; color: var(--text-muted);">Bulan</span>
+                <select id="filter-tagihan-bulan" class="form-control" style="width: auto;">
+                  <option value="Agustus">Agustus</option>
+                  <option value="Semua">Semua Bulan</option>
+                </select>
+              </div>
+              <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <span style="font-size: 0.8rem; color: var(--text-muted);">Tahun</span>
+                <select id="filter-tagihan-tahun" class="form-control" style="width: auto;">
+                  <option value="2025">2025</option>
+                </select>
+              </div>
+              <button class="btn btn-outline" onclick="renderDaftarTagihan()"><i class="ri-filter-3-line"></i> Filter</button>
             </div>
 
             <div class="table-responsive">
               <table class="table">
                 <thead>
                   <tr>
-                    <th>Blok/No</th>
+                    <th>No</th>
+                    <th>Rumah</th>
                     <th>Pemilik</th>
                     <th>Kelompok IPL</th>
-                    <th>Nominal</th>
+                    <th>Total Tagihan</th>
                     <th>Status</th>
-                    <th>Tanggal Bayar</th>
                     <th>Aksi</th>
                   </tr>
                 </thead>
-                <tbody id="tagihan-full-tbody">
-                  <!-- Rendered by JS -->
-                </tbody>
+                <tbody id="daftar-tagihan-tbody"></tbody>
+              </table>
+            </div>
+
+            <div class="pagination-wrapper" id="tagihan-pagination"></div>
+          </div>
+        </section>
+
+        <!-- 7. MOCKUP: DETAIL TAGIHAN VIEW -->
+        <section id="view-detail-tagihan" class="view-section">
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">7. Detail Tagihan</div>
+              <button class="btn btn-outline btn-sm" onclick="showView('daftar-tagihan')"><i class="ri-arrow-left-line"></i> Kembali</button>
+            </div>
+
+            <div class="detail-summary-header">
+              <div class="detail-summary-item">
+                <p>Rumah</p>
+                <h4 id="detail-val-rumah">A01 - Pak Budi</h4>
+              </div>
+              <div class="detail-summary-item">
+                <p>Kelompok IPL</p>
+                <h4 id="detail-val-kelompok">IPL + Sampah</h4>
+              </div>
+              <div class="detail-summary-item">
+                <p>Bulan</p>
+                <h4 id="detail-val-bulan">Agustus 2025</h4>
+              </div>
+              <div class="detail-summary-item">
+                <p>Total Tagihan</p>
+                <h4 id="detail-val-nominal" style="color: var(--primary);">Rp 175.000</h4>
+              </div>
+              <div class="detail-summary-item">
+                <p>Status</p>
+                <h4 id="detail-val-status"><span class="badge badge-success">Lunas</span></h4>
+              </div>
+            </div>
+
+            <h4 style="font-size: 0.95rem; margin-bottom: 0.75rem;">Rincian Tagihan</h4>
+            <div class="table-responsive" style="max-width: 600px;">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>Komponen</th>
+                    <th style="text-align: right;">Nominal (Rp)</th>
+                  </tr>
+                </thead>
+                <tbody id="detail-rincian-tbody"></tbody>
+                <tfoot>
+                  <tr style="background: #f1f5f9; font-weight: 700;">
+                    <td>TOTAL (DIBULATKAN)</td>
+                    <td id="detail-val-total-rounded" style="text-align: right; color: var(--primary);">175.000</td>
+                  </tr>
+                </tfoot>
               </table>
             </div>
           </div>
         </section>
 
-        <!-- 7. PENGELUARAN VIEW -->
+        <!-- 8. MOCKUP: FORM PEMBAYARAN VIEW -->
+        <section id="view-form-pembayaran" class="view-section">
+          <div class="card" style="max-width: 750px;">
+            <div class="card-header">
+              <div class="card-title">8. Pembayaran</div>
+              <button class="btn btn-outline btn-sm" onclick="showView('daftar-tagihan')"><i class="ri-arrow-left-line"></i> Kembali</button>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1.5fr; gap: 1.5rem;">
+              <!-- Left Info -->
+              <div style="background: #f8fafc; border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 1.25rem;">
+                <div style="margin-bottom: 1rem;">
+                  <span style="font-size: 0.75rem; color: var(--text-muted);">Rumah</span>
+                  <div id="bayar-form-rumah" style="font-weight: 700; font-size: 1.05rem;">A01 - Pak Budi</div>
+                </div>
+                <div style="margin-bottom: 1rem;">
+                  <span style="font-size: 0.75rem; color: var(--text-muted);">Bulan</span>
+                  <div id="bayar-form-bulan" style="font-weight: 600;">Agustus 2025</div>
+                </div>
+                <div style="margin-bottom: 1rem;">
+                  <span style="font-size: 0.75rem; color: var(--text-muted);">Total Tagihan</span>
+                  <div id="bayar-form-total" style="font-weight: 700; font-size: 1.2rem; color: var(--primary);">Rp 175.000</div>
+                </div>
+                <div>
+                  <span style="font-size: 0.75rem; color: var(--text-muted);">Status Tagihan</span>
+                  <div><span id="bayar-form-status" class="badge badge-warning">Menunggu</span></div>
+                </div>
+              </div>
+
+              <!-- Right Form -->
+              <div>
+                <input type="hidden" id="bayar-form-id">
+                <div class="form-group">
+                  <label>Tanggal Transfer</label>
+                  <input type="date" id="bayar-form-tanggal" class="form-control" value="2025-08-05">
+                </div>
+                <div class="form-group">
+                  <label>Metode</label>
+                  <select id="bayar-form-metode" class="form-control">
+                    <option value="Transfer Bank">Transfer Bank</option>
+                    <option value="Tunai / Kasir RT">Tunai / Kasir RT</option>
+                    <option value="QRIS">QRIS</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label>Nominal Transfer</label>
+                  <input type="number" id="bayar-form-nominal" class="form-control" value="175000">
+                </div>
+                <div class="form-group">
+                  <label>Bukti Transfer</label>
+                  <div class="upload-dropzone" onclick="document.getElementById('file-bukti-transfer').click()">
+                    <i class="ri-upload-cloud-line upload-icon"></i>
+                    <div class="upload-text">Upload gambar</div>
+                    <div class="upload-subtext">JPG, PNG max 2MB</div>
+                    <input type="file" id="file-bukti-transfer" accept="image/*" style="display: none;" onchange="previewBuktiTransfer(this)">
+                  </div>
+                  <div id="preview-bukti-wrapper" style="margin-top: 0.5rem; display: none; text-align: center;">
+                    <img id="img-preview-bukti" style="max-height: 120px; border-radius: var(--radius-md); border: 1px solid var(--border-color);">
+                  </div>
+                </div>
+
+                <div style="display: flex; gap: 0.75rem; margin-top: 1.5rem;">
+                  <button class="btn btn-primary" onclick="simpanFormPembayaran()">Simpan</button>
+                  <button class="btn btn-outline" onclick="showView('daftar-tagihan')">Batal</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 9. MOCKUP: PENGELUARAN VIEW -->
         <section id="view-pengeluaran" class="view-section">
           <div class="card">
             <div class="card-header">
-              <div class="card-title">Data Pengeluaran Kas</div>
+              <div class="card-title">9. Pengeluaran</div>
               <button class="btn btn-primary" onclick="openAddPengeluaranModal()"><i class="ri-add-line"></i> Tambah Pengeluaran</button>
+            </div>
+
+            <div class="filter-bar">
+              <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <span style="font-size: 0.8rem; color: var(--text-muted);">Bulan</span>
+                <select id="filter-pgl-bulan" class="form-control" style="width: auto;">
+                  <option value="Agustus">Agustus</option>
+                  <option value="Semua">Semua Bulan</option>
+                </select>
+              </div>
+              <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <span style="font-size: 0.8rem; color: var(--text-muted);">Tahun</span>
+                <select id="filter-pgl-tahun" class="form-control" style="width: auto;">
+                  <option value="2025">2025</option>
+                </select>
+              </div>
+              <button class="btn btn-outline" onclick="renderPengeluaranTable()"><i class="ri-filter-3-line"></i> Filter</button>
             </div>
 
             <div class="table-responsive">
@@ -437,28 +636,41 @@
                   <tr>
                     <th>Tanggal</th>
                     <th>Kategori</th>
-                    <th>Keterangan</th>
+                    <th>Penerima</th>
                     <th>Nominal</th>
+                    <th>Aksi</th>
                   </tr>
                 </thead>
-                <tbody id="pengeluaran-full-tbody">
-                  <!-- Rendered by JS -->
-                </tbody>
+                <tbody id="pengeluaran-full-tbody"></tbody>
               </table>
             </div>
           </div>
         </section>
 
-        <!-- 8. PENGATURAN & SYNC VIEW -->
+        <!-- PENGATURAN & SPREADSHEET SYNC VIEW -->
         <section id="view-pengaturan" class="view-section">
           <div class="card">
             <div class="card-header">
-              <div class="card-title">Pengaturan & Backup Data</div>
+              <div class="card-title">Pengaturan & Database Google Spreadsheet</div>
             </div>
 
-            <div style="max-width: 600px;">
+            <div style="max-width: 650px;">
               <div class="form-group">
-                <label>Backup Data (JSON)</label>
+                <label>URL Google Apps Script Web App API</label>
+                <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.5rem;">
+                  Masukkan URL Web App hasil Deploy Google Apps Script dari Google Spreadsheet Anda untuk membaca dan menyimpan data secara otomatis.
+                </p>
+                <input type="text" id="setting-gsheet-url" class="form-control" placeholder="https://script.google.com/macros/s/.../exec">
+              </div>
+
+              <div style="display: flex; gap: 0.75rem; margin-bottom: 1.5rem;">
+                <button class="btn btn-primary" onclick="saveAndSyncGoogleSheet()"><i class="ri-sync-line"></i> Simpan & Sinkronkan Sekarang</button>
+              </div>
+
+              <hr style="margin: 1.5rem 0; border: none; border-top: 1px solid var(--border-color);">
+
+              <div class="form-group">
+                <label>Backup & Restore Data (JSON)</label>
                 <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem;">
                   <button class="btn btn-outline" onclick="exportDataJSON()"><i class="ri-download-line"></i> Download Backup JSON</button>
                   <label class="btn btn-outline" style="cursor: pointer;">
@@ -485,7 +697,7 @@
 
   <!-- MODALS -->
 
-  <!-- 1. Modal Rumah -->
+  <!-- Modal Rumah -->
   <div class="modal-overlay" id="modal-rumah">
     <div class="modal-box">
       <div class="modal-header">
@@ -522,7 +734,7 @@
     </div>
   </div>
 
-  <!-- 2. Modal Komponen IPL -->
+  <!-- Modal Komponen IPL -->
   <div class="modal-overlay" id="modal-komponen">
     <div class="modal-box">
       <div class="modal-header">
@@ -559,7 +771,7 @@
     </div>
   </div>
 
-  <!-- 3. Modal Edit Target IPL -->
+  <!-- Modal Target IPL -->
   <div class="modal-overlay" id="modal-target">
     <div class="modal-box">
       <div class="modal-header">
@@ -587,51 +799,30 @@
     </div>
   </div>
 
-  <!-- 4. Modal Bayar Tagihan -->
-  <div class="modal-overlay" id="modal-bayar">
-    <div class="modal-box">
-      <div class="modal-header">
-        <div class="modal-title">Konfirmasi Pembayaran Tagihan</div>
-        <button class="close-modal-btn" onclick="closeModal('modal-bayar')">&times;</button>
-      </div>
-      <div class="modal-body">
-        <input type="hidden" id="bayar-tagihan-id">
-        <p style="font-size: 0.9rem; margin-bottom: 1rem;">Mencatat pembayaran untuk: <br><strong id="bayar-pemilik-info" style="font-size: 1.1rem; color: var(--primary);"></strong></p>
-        <div class="form-group">
-          <label>Metode Pembayaran</label>
-          <select id="bayar-metode" class="form-control">
-            <option value="Transfer Bank">Transfer Bank</option>
-            <option value="Tunai / Kasir RT">Tunai / Kasir RT</option>
-            <option value="QRIS">QRIS</option>
-          </select>
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button class="btn btn-outline" onclick="closeModal('modal-bayar')">Batal</button>
-        <button class="btn btn-primary" onclick="confirmPembayaran()">Konfirmasi Lunas</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- 5. Modal Tambah Pengeluaran -->
+  <!-- Modal Pengeluaran -->
   <div class="modal-overlay" id="modal-pengeluaran">
     <div class="modal-box">
       <div class="modal-header">
-        <div class="modal-title">Catat Pengeluaran Baru</div>
+        <div class="modal-title" id="modal-pgl-title">Tambah Pengeluaran Baru</div>
         <button class="close-modal-btn" onclick="closeModal('modal-pengeluaran')">&times;</button>
       </div>
       <div class="modal-body">
+        <input type="hidden" id="form-pgl-id">
+        <div class="form-group">
+          <label>Tanggal</label>
+          <input type="date" id="form-pgl-tanggal" class="form-control">
+        </div>
         <div class="form-group">
           <label>Kategori Pengeluaran</label>
-          <input type="text" id="form-pgl-kategori" class="form-control" placeholder="Contoh: Perbaikan Lampu Jalan">
+          <input type="text" id="form-pgl-kategori" class="form-control" placeholder="Contoh: Gaji / Listrik / Sampah">
+        </div>
+        <div class="form-group">
+          <label>Penerima</label>
+          <input type="text" id="form-pgl-penerima" class="form-control" placeholder="Contoh: Satpam / PLN / Petugas Sampah">
         </div>
         <div class="form-group">
           <label>Nominal Pengeluaran (Rp)</label>
           <input type="number" id="form-pgl-nominal" class="form-control" placeholder="0">
-        </div>
-        <div class="form-group">
-          <label>Keterangan</label>
-          <input type="text" id="form-pgl-keterangan" class="form-control" placeholder="Catatan tambahan">
         </div>
       </div>
       <div class="modal-footer">

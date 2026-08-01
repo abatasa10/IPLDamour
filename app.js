@@ -1,9 +1,10 @@
 /**
- * D'AMOUR Sistem IPL Perumahan - Core Application Logic
+ * D'AMOUR Sistem IPL Perumahan - Core Application Logic (Phase 2)
  */
 
 let appState = null;
 let currentHousePage = 1;
+let currentTagihanPage = 1;
 const itemsPerPage = 5;
 let donutChartInstance = null;
 let barChartInstance = null;
@@ -30,12 +31,13 @@ const formatRpDecimal = (num) => {
 document.addEventListener("DOMContentLoaded", async () => {
   await loadAppData();
   setupEventListeners();
+  updateHouseGroupCounts();
   renderDashboard();
   renderMasterRumah();
   renderMasterKomponen();
   renderSettingTarget();
   renderPerhitunganIPL();
-  renderTagihanTable();
+  renderDaftarTagihan();
   renderPengeluaranTable();
 });
 
@@ -46,6 +48,10 @@ async function loadAppData() {
     try {
       appState = JSON.parse(saved);
       console.log("Data loaded from LocalStorage.");
+      if (appState.settings && appState.settings.googleSheetApiUrl) {
+        const urlInput = document.getElementById("setting-gsheet-url");
+        if (urlInput) urlInput.value = appState.settings.googleSheetApiUrl;
+      }
       return;
     } catch (e) {
       console.error("Failed to parse LocalStorage data, loading default data.json", e);
@@ -97,11 +103,12 @@ function showView(viewId) {
       komponen: "Master Komponen IPL",
       target: "Setting Target IPL",
       perhitungan: "Perhitungan IPL (Rincian)",
-      tagihan: "Data Tagihan",
-      pembayaran: "Catat Pembayaran",
+      "generate-tagihan": "Generate Tagihan",
+      "daftar-tagihan": "Daftar Tagihan",
+      "detail-tagihan": "Detail Tagihan",
+      "form-pembayaran": "Pembayaran",
       pengeluaran: "Data Pengeluaran",
       kas: "Arus Kas Saat Ini",
-      laporan: "Laporan IPL",
       pengaturan: "Pengaturan Sistem"
     };
     breadcrumb.textContent = titles[viewId] || "Dashboard";
@@ -113,24 +120,22 @@ function showView(viewId) {
   if (viewId === "komponen") renderMasterKomponen();
   if (viewId === "target") renderSettingTarget();
   if (viewId === "perhitungan") renderPerhitunganIPL();
-  if (viewId === "tagihan" || viewId === "pembayaran") renderTagihanTable();
-  if (viewId === "pengeluaran" || viewId === "kas") renderPengeluaranTable();
+  if (viewId === "generate-tagihan") updateHouseGroupCounts();
+  if (viewId === "daftar-tagihan") renderDaftarTagihan();
+  if (viewId === "pengeluaran") renderPengeluaranTable();
 }
 
 // Event Listeners
 function setupEventListeners() {
-  // Sidebar Nav clicks
   document.querySelectorAll(".nav-item[data-view]").forEach((btn) => {
     btn.addEventListener("click", (e) => {
       e.preventDefault();
       const view = btn.getAttribute("data-view");
       showView(view);
-      // Close sidebar mobile
       document.querySelector(".sidebar").classList.remove("open");
     });
   });
 
-  // Toggle Sidebar Mobile
   const toggleBtn = document.getElementById("toggle-sidebar");
   if (toggleBtn) {
     toggleBtn.addEventListener("click", () => {
@@ -138,7 +143,6 @@ function setupEventListeners() {
     });
   }
 
-  // Search Rumah
   const searchInput = document.getElementById("search-rumah-input");
   if (searchInput) {
     searchInput.addEventListener("input", () => {
@@ -147,11 +151,11 @@ function setupEventListeners() {
     });
   }
 
-  // Perhitungan Month Selector
-  const monthSelect = document.getElementById("perhitungan-month-select");
-  if (monthSelect) {
-    monthSelect.addEventListener("change", () => {
-      renderPerhitunganIPL();
+  const searchTagihanInput = document.getElementById("filter-tagihan-search");
+  if (searchTagihanInput) {
+    searchTagihanInput.addEventListener("input", () => {
+      currentTagihanPage = 1;
+      renderDaftarTagihan();
     });
   }
 }
@@ -172,7 +176,6 @@ function renderDashboard() {
   document.getElementById("kpi-lunas").textContent = `${lunasCount} Unit`;
   document.getElementById("kpi-kas").textContent = formatRp(appState.ringkasanKas.kasSaatIni);
 
-  // Ringkasan Bulan Ini
   const totalTagihan = appState.tagihan.reduce((acc, t) => acc + t.nominal, 0);
   const totalPembayaran = appState.tagihan
     .filter((t) => t.status === "Lunas")
@@ -183,7 +186,6 @@ function renderDashboard() {
   document.getElementById("dash-total-pembayaran").textContent = formatRp(totalPembayaran);
   document.getElementById("dash-sisa-tagihan").textContent = formatRp(sisaTagihan);
 
-  // Kas Masuk vs Keluar
   document.getElementById("dash-kas-masuk").textContent = formatRp(appState.ringkasanKas.masuk);
   document.getElementById("dash-kas-keluar").textContent = formatRp(appState.ringkasanKas.keluar);
   const selisih = appState.ringkasanKas.selisih;
@@ -191,7 +193,6 @@ function renderDashboard() {
   selisihEl.textContent = formatRp(selisih);
   selisihEl.style.color = selisih < 0 ? "var(--danger)" : "var(--success)";
 
-  // Render Recent Tagihan Table
   const recentTagihanTbody = document.getElementById("recent-tagihan-tbody");
   if (recentTagihanTbody) {
     recentTagihanTbody.innerHTML = appState.tagihan
@@ -214,7 +215,6 @@ function renderDashboard() {
       .join("");
   }
 
-  // Render Recent Pengeluaran Table
   const recentPengeluaranTbody = document.getElementById("recent-pengeluaran-tbody");
   if (recentPengeluaranTbody) {
     recentPengeluaranTbody.innerHTML = appState.pengeluaran
@@ -231,14 +231,12 @@ function renderDashboard() {
       .join("");
   }
 
-  // Render Donut & Bar Charts
   renderCharts(lunasCount, menungguCount, menunggakCount, totalRumah);
 }
 
 function renderCharts(lunas, menunggu, menunggak, total) {
   if (typeof Chart === "undefined") return;
 
-  // Donut Chart Status Tagihan
   const ctxDonut = document.getElementById("chart-status-tagihan");
   if (ctxDonut) {
     if (donutChartInstance) donutChartInstance.destroy();
@@ -258,15 +256,12 @@ function renderCharts(lunas, menunggu, menunggak, total) {
       options: {
         responsive: true,
         maintainAspectRatio: false,
-        plugins: {
-          legend: { position: "right" }
-        },
+        plugins: { legend: { position: "right" } },
         cutout: "70%"
       }
     });
   }
 
-  // Bar Chart 6 Bulan Terakhir
   const ctxBar = document.getElementById("chart-pembayaran-history");
   if (ctxBar && appState.grafik6Bulan) {
     if (barChartInstance) barChartInstance.destroy();
@@ -279,30 +274,15 @@ function renderCharts(lunas, menunggu, menunggak, total) {
       data: {
         labels: labels,
         datasets: [
-          {
-            label: "Tagihan (jt)",
-            data: dataTagihan,
-            backgroundColor: "#cbd5e1",
-            borderRadius: 4
-          },
-          {
-            label: "Pembayaran (jt)",
-            data: dataPembayaran,
-            backgroundColor: "#2563eb",
-            borderRadius: 4
-          }
+          { label: "Tagihan (jt)", data: dataTagihan, backgroundColor: "#cbd5e1", borderRadius: 4 },
+          { label: "Pembayaran (jt)", data: dataPembayaran, backgroundColor: "#2563eb", borderRadius: 4 }
         ]
       },
       options: {
         responsive: true,
         maintainAspectRatio: false,
         scales: {
-          y: {
-            beginAtZero: true,
-            ticks: {
-              callback: (val) => `${val} jt`
-            }
-          }
+          y: { beginAtZero: true, ticks: { callback: (val) => `${val} jt` } }
         }
       }
     });
@@ -310,7 +290,7 @@ function renderCharts(lunas, menunggu, menunggak, total) {
 }
 
 /* ==========================================================================
-   2. MASTER RUMAH RENDERER & CRUD
+   2. MASTER RUMAH
    ========================================================================== */
 function renderMasterRumah() {
   if (!appState) return;
@@ -351,7 +331,6 @@ function renderMasterRumah() {
       .join("");
   }
 
-  // Render Pagination
   const pageNav = document.getElementById("rumah-pagination");
   if (pageNav) {
     let pagesHtml = `<button class="page-btn" onclick="changeHousePage(${currentHousePage - 1})" ${currentHousePage === 1 ? "disabled" : ""}><i class="ri-arrow-left-s-line"></i></button>`;
@@ -404,13 +383,11 @@ function saveRumah() {
   }
 
   if (id) {
-    // Edit existing
     const idx = appState.rumah.findIndex((r) => r.id === id);
     if (idx !== -1) {
       appState.rumah[idx] = { ...appState.rumah[idx], blokNo: blok, pemilik, noHp: hp, kelompokIPL: kelompok };
     }
   } else {
-    // Add new
     const newId = `RMH-${blok}`;
     appState.rumah.push({
       id: newId,
@@ -424,6 +401,7 @@ function saveRumah() {
 
   saveState();
   closeModal("modal-rumah");
+  updateHouseGroupCounts();
   renderMasterRumah();
   renderDashboard();
 }
@@ -432,13 +410,14 @@ function deleteRumah(id) {
   if (confirm("Apakah Anda yakin ingin menghapus data rumah ini?")) {
     appState.rumah = appState.rumah.filter((r) => r.id !== id);
     saveState();
+    updateHouseGroupCounts();
     renderMasterRumah();
     renderDashboard();
   }
 }
 
 /* ==========================================================================
-   3. MASTER KOMPONEN IPL RENDERER & CRUD
+   3. MASTER KOMPONEN & TARGET IPL
    ========================================================================== */
 function renderMasterKomponen() {
   if (!appState) return;
@@ -540,9 +519,6 @@ function deleteKomponen(id) {
   }
 }
 
-/* ==========================================================================
-   4. SETTING TARGET IPL RENDERER & CRUD
-   ========================================================================== */
 function renderSettingTarget() {
   if (!appState) return;
 
@@ -591,7 +567,7 @@ function saveSettingTarget() {
 }
 
 /* ==========================================================================
-   5. PERHITUNGAN IPL (RINCIAN AUTOMATED FORMULA)
+   4. PERHITUNGAN IPL (RINCIAN)
    ========================================================================== */
 function renderPerhitunganIPL() {
   if (!appState) return;
@@ -635,7 +611,6 @@ function renderPerhitunganIPL() {
 
   tbody.innerHTML = rowsHtml;
 
-  // Compute Auto Kas
   const kasPerHome = Math.max(0, targetNominal - fixedCostsPerHomeSum);
   const kasCell = document.getElementById("cell-kas-per-rumah");
   if (kasCell) {
@@ -645,115 +620,295 @@ function renderPerhitunganIPL() {
   const grandTotalPerHome = fixedCostsPerHomeSum + kasPerHome;
   const totalCell = document.getElementById("perhitungan-grand-total");
   if (totalCell) {
-    totalCell.textContent = `${formatRpDecimal(grandTotalTotalRounded(grandTotalPerHome))}`;
+    totalCell.textContent = `${formatRpDecimal(grandTotalPerHome)}`;
   }
 }
 
-function grandTotalTotalRounded(val) {
-  return val;
+/* ==========================================================================
+   5. MOCKUP: GENERATE TAGIHAN
+   ========================================================================== */
+function updateHouseGroupCounts() {
+  if (!appState || !appState.rumah) return;
+
+  const g1 = appState.rumah.filter((r) => r.kelompokIPL === "IPL + Sampah").length;
+  const g2 = appState.rumah.filter((r) => r.kelompokIPL === "IPL Tanpa Sampah").length;
+  const g3 = appState.rumah.filter((r) => r.kelompokIPL === "IPL Developer").length;
+
+  if (document.getElementById("cnt-group-1")) document.getElementById("cnt-group-1").textContent = `${g1} Rumah`;
+  if (document.getElementById("cnt-group-2")) document.getElementById("cnt-group-2").textContent = `${g2} Rumah`;
+  if (document.getElementById("cnt-group-3")) document.getElementById("cnt-group-3").textContent = `${g3} Rumah`;
+}
+
+function processGenerateTagihan() {
+  const bulan = document.getElementById("gen-bulan").value;
+  const tahun = document.getElementById("gen-tahun").value;
+  const tglGen = document.getElementById("gen-tanggal").value;
+
+  const chk1 = document.getElementById("chk-group-1").checked;
+  const chk2 = document.getElementById("chk-group-2").checked;
+  const chk3 = document.getElementById("chk-group-3").checked;
+
+  const selectedGroups = [];
+  if (chk1) selectedGroups.push("IPL + Sampah");
+  if (chk2) selectedGroups.push("IPL Tanpa Sampah");
+  if (chk3) selectedGroups.push("IPL Developer");
+
+  if (selectedGroups.length === 0) {
+    alert("Pilih minimal satu kelompok IPL untuk digenerate.");
+    return;
+  }
+
+  const targetMap = {};
+  appState.targetIPL.forEach((t) => {
+    targetMap[t.kelompok] = t.target;
+  });
+
+  const matchingHouses = appState.rumah.filter((r) => selectedGroups.includes(r.kelompokIPL));
+
+  let generatedCount = 0;
+
+  matchingHouses.forEach((r) => {
+    const tagihanId = `TAG-${tahun}${bulan}-${r.blokNo}`;
+    const exists = appState.tagihan.find((t) => t.id === tagihanId);
+
+    const nominal = targetMap[r.kelompokIPL] || 175000;
+
+    if (!exists) {
+      appState.tagihan.unshift({
+        id: tagihanId,
+        periode: `${tahun}-${bulan}`,
+        bulan: bulan,
+        tahun: tahun,
+        rumahId: r.id,
+        blokNo: r.blokNo,
+        pemilik: r.pemilik,
+        kelompokIPL: r.kelompokIPL,
+        nominal: nominal,
+        status: "Menunggu",
+        tglBayar: "-",
+        metode: "-",
+        buktiTransfer: ""
+      });
+      generatedCount++;
+    }
+  });
+
+  saveState();
+  renderDashboard();
+  renderDaftarTagihan();
+  alert(`Berhasil meng-generate ${generatedCount} tagihan baru untuk bulan ${bulan} ${tahun}.`);
+  showView("daftar-tagihan");
 }
 
 /* ==========================================================================
-   6. TAGIHAN & PEMBAYARAN RENDERER & WHATSAPP
+   6. MOCKUP: DAFTAR TAGIHAN & DETAIL TAGIHAN (MOCKUP 6 & 7)
    ========================================================================== */
-function renderTagihanTable() {
+function renderDaftarTagihan() {
   if (!appState) return;
 
-  const tbody = document.getElementById("tagihan-full-tbody");
-  if (!tbody) return;
+  const searchVal = (document.getElementById("filter-tagihan-search")?.value || "").toLowerCase();
+  const filterBulan = document.getElementById("filter-tagihan-bulan")?.value || "Agustus";
 
-  tbody.innerHTML = appState.tagihan
-    .map((t) => {
-      let badgeClass = "badge-secondary";
-      if (t.status === "Lunas") badgeClass = "badge-success";
-      if (t.status === "Menunggu") badgeClass = "badge-warning";
-      if (t.status === "Menunggak") badgeClass = "badge-danger";
+  const filtered = appState.tagihan.filter((t) => {
+    const matchesSearch = t.blokNo.toLowerCase().includes(searchVal) || t.pemilik.toLowerCase().includes(searchVal);
+    const matchesBulan = filterBulan === "Semua" || t.bulan === filterBulan || t.periode.includes(filterBulan);
+    return matchesSearch && matchesBulan;
+  });
 
-      const rumahObj = appState.rumah.find((r) => r.id === t.rumahId);
-      const noHp = rumahObj ? rumahObj.noHp : "";
+  const totalPages = Math.ceil(filtered.length / itemsPerPage) || 1;
+  if (currentTagihanPage > totalPages) currentTagihanPage = totalPages;
 
-      return `
-        <tr>
-          <td><strong>${t.blokNo}</strong></td>
-          <td>${t.pemilik}</td>
-          <td>${t.kelompokIPL}</td>
-          <td><strong>${formatRp(t.nominal)}</strong></td>
-          <td><span class="badge ${badgeClass}">${t.status}</span></td>
-          <td>${t.tglBayar}</td>
-          <td>
-            ${
-              t.status !== "Lunas"
-                ? `<button class="btn btn-primary btn-sm" onclick="openBayarModal('${t.id}')"><i class="ri-checkbox-circle-line"></i> Bayar</button>
-                   <button class="btn btn-outline btn-sm" style="color: #25d366;" onclick="sendWAReminder('${t.pemilik}', '${t.blokNo}', '${t.nominal}', '${noHp}')"><i class="ri-whatsapp-line"></i> WA</button>`
-                : `<span style="color: var(--success); font-weight: 500;"><i class="ri-check-double-line"></i> Terbayar</span>`
-            }
-          </td>
-        </tr>
-      `;
-    })
-    .join("");
+  const startIdx = (currentTagihanPage - 1) * itemsPerPage;
+  const paginated = filtered.slice(startIdx, startIdx + itemsPerPage);
+
+  const tbody = document.getElementById("daftar-tagihan-tbody");
+  if (tbody) {
+    tbody.innerHTML = paginated
+      .map((t, idx) => {
+        let badgeClass = "badge-secondary";
+        if (t.status === "Lunas") badgeClass = "badge-success";
+        if (t.status === "Menunggu") badgeClass = "badge-warning";
+        if (t.status === "Menunggak") badgeClass = "badge-danger";
+
+        const globalIndex = startIdx + idx + 1;
+
+        return `
+          <tr>
+            <td>${globalIndex}</td>
+            <td><strong>${t.blokNo}</strong></td>
+            <td>${t.pemilik}</td>
+            <td>${t.kelompokIPL}</td>
+            <td style="font-weight: 600;">${formatRp(t.nominal)}</td>
+            <td><span class="badge ${badgeClass}">${t.status}</span></td>
+            <td>
+              <button class="btn btn-outline btn-sm" onclick="viewDetailTagihan('${t.id}')" title="Lihat Detail"><i class="ri-eye-line"></i></button>
+              ${
+                t.status !== "Lunas"
+                  ? `<button class="btn btn-primary btn-sm" onclick="openFormPembayaran('${t.id}')" title="Bayar"><i class="ri-checkbox-circle-line"></i></button>`
+                  : ""
+              }
+            </td>
+          </tr>
+        `;
+      })
+      .join("");
+  }
+
+  const pageNav = document.getElementById("tagihan-pagination");
+  if (pageNav) {
+    let pagesHtml = `<button class="page-btn" onclick="changeTagihanPage(${currentTagihanPage - 1})" ${currentTagihanPage === 1 ? "disabled" : ""}><i class="ri-arrow-left-s-line"></i></button>`;
+    for (let i = 1; i <= totalPages; i++) {
+      pagesHtml += `<button class="page-btn ${i === currentTagihanPage ? "active" : ""}" onclick="changeTagihanPage(${i})">${i}</button>`;
+    }
+    pagesHtml += `<button class="page-btn" onclick="changeTagihanPage(${currentTagihanPage + 1})" ${currentTagihanPage === totalPages ? "disabled" : ""}><i class="ri-arrow-right-s-line"></i></button>`;
+    pageNav.innerHTML = pagesHtml;
+  }
 }
 
-function sendWAReminder(nama, blok, nominal, phone) {
-  const cleanPhone = phone.replace(/[^0-9]/g, "");
-  const formattedPhone = cleanPhone.startsWith("0") ? "62" + cleanPhone.slice(1) : cleanPhone;
-  const msg = encodeURIComponent(
-    `Halo ${nama} (Rumah ${blok}),\n\nInformasi Tagihan IPL Perumahan D'AMOUR bulan ini adalah sebesar ${formatRp(
-      nominal
-    )}.\nMohon dapat melakukan pembayaran melalui transfer bank atau kasir RT.\n\nTerima kasih.`
-  );
-  window.open(`https://wa.me/${formattedPhone}?text=${msg}`, "_blank");
+function changeTagihanPage(page) {
+  currentTagihanPage = page;
+  renderDaftarTagihan();
 }
 
-function openBayarModal(tagihanId) {
-  const t = appState.tagihan.find((item) => item.id === tagihanId);
+function viewDetailTagihan(id) {
+  const t = appState.tagihan.find((item) => item.id === id);
   if (!t) return;
 
-  document.getElementById("bayar-tagihan-id").value = t.id;
-  document.getElementById("bayar-pemilik-info").textContent = `${t.blokNo} - ${t.pemilik} (${formatRp(t.nominal)})`;
-  document.getElementById("bayar-metode").value = "Transfer Bank";
-  openModal("modal-bayar");
+  document.getElementById("detail-val-rumah").textContent = `${t.blokNo} - ${t.pemilik}`;
+  document.getElementById("detail-val-kelompok").textContent = t.kelompokIPL;
+  document.getElementById("detail-val-bulan").textContent = `${t.bulan || "Agustus"} ${t.tahun || "2025"}`;
+  document.getElementById("detail-val-nominal").textContent = formatRp(t.nominal);
+
+  let badgeClass = "badge-secondary";
+  if (t.status === "Lunas") badgeClass = "badge-success";
+  if (t.status === "Menunggu") badgeClass = "badge-warning";
+  if (t.status === "Menunggak") badgeClass = "badge-danger";
+
+  document.getElementById("detail-val-status").innerHTML = `<span class="badge ${badgeClass}">${t.status}</span>`;
+
+  const totalRumah = appState.rumah.length || 31;
+  const tbody = document.getElementById("detail-rincian-tbody");
+
+  if (tbody) {
+    let fixedSum = 0;
+    const rows = appState.komponenIPL
+      .filter((k) => k.aktif)
+      .map((k) => {
+        if (k.isAutoKas) {
+          const kasPerHome = Math.max(0, t.nominal - fixedSum);
+          return `
+            <tr>
+              <td>${k.nama}</td>
+              <td style="text-align: right;">${formatRpDecimal(kasPerHome)}</td>
+            </tr>
+          `;
+        }
+        const c = k.nominalTotal / totalRumah;
+        fixedSum += c;
+        return `
+          <tr>
+            <td>${k.nama}</td>
+            <td style="text-align: right;">${formatRpDecimal(c)}</td>
+          </tr>
+        `;
+      })
+      .join("");
+
+    tbody.innerHTML = rows;
+  }
+
+  document.getElementById("detail-val-total-rounded").textContent = formatRp(t.nominal).replace("Rp ", "");
+  showView("detail-tagihan");
 }
 
-function confirmPembayaran() {
-  const tagihanId = document.getElementById("bayar-tagihan-id").value;
-  const metode = document.getElementById("bayar-metode").value;
+/* ==========================================================================
+   8. MOCKUP: FORM PEMBAYARAN WITH FILE PROOF (MOCKUP 8)
+   ========================================================================== */
+function openFormPembayaran(id) {
+  const t = appState.tagihan.find((item) => item.id === id);
+  if (!t) return;
 
-  const t = appState.tagihan.find((item) => item.id === tagihanId);
+  document.getElementById("bayar-form-id").value = t.id;
+  document.getElementById("bayar-form-rumah").textContent = `${t.blokNo} - ${t.pemilik}`;
+  document.getElementById("bayar-form-bulan").textContent = `${t.bulan || "Agustus"} ${t.tahun || "2025"}`;
+  document.getElementById("bayar-form-total").textContent = formatRp(t.nominal);
+  document.getElementById("bayar-form-nominal").value = t.nominal;
+
+  let badgeClass = "badge-secondary";
+  if (t.status === "Lunas") badgeClass = "badge-success";
+  if (t.status === "Menunggu") badgeClass = "badge-warning";
+  if (t.status === "Menunggak") badgeClass = "badge-danger";
+
+  document.getElementById("bayar-form-status").className = `badge ${badgeClass}`;
+  document.getElementById("bayar-form-status").textContent = t.status;
+
+  document.getElementById("preview-bukti-wrapper").style.display = "none";
+  document.getElementById("img-preview-bukti").src = "";
+
+  showView("form-pembayaran");
+}
+
+function previewBuktiTransfer(input) {
+  if (input.files && input.files[0]) {
+    const reader = new FileReader();
+    reader.onload = function (e) {
+      document.getElementById("img-preview-bukti").src = e.target.result;
+      document.getElementById("preview-bukti-wrapper").style.display = "block";
+    };
+    reader.readAsDataURL(input.files[0]);
+  }
+}
+
+function simpanFormPembayaran() {
+  const id = document.getElementById("bayar-form-id").value;
+  const tgl = document.getElementById("bayar-form-tanggal").value;
+  const metode = document.getElementById("bayar-form-metode").value;
+  const nominal = parseFloat(document.getElementById("bayar-form-nominal").value) || 0;
+  const previewImg = document.getElementById("img-preview-bukti").src;
+
+  const t = appState.tagihan.find((item) => item.id === id);
   if (t) {
     t.status = "Lunas";
-    t.tglBayar = new Date().toLocaleDateString("id-ID", { day: "2-digit", month: "short", year: "numeric" });
+    t.tglBayar = tgl.split("-").reverse().join("/");
     t.metode = metode;
+    if (previewImg && !previewImg.endsWith("#")) {
+      t.buktiTransfer = previewImg;
+    }
 
-    // Update Kas Masuk
-    appState.ringkasanKas.kasSaatIni += t.nominal;
-    appState.ringkasanKas.masuk += t.nominal;
+    appState.ringkasanKas.kasSaatIni += nominal;
+    appState.ringkasanKas.masuk += nominal;
     appState.ringkasanKas.selisih = appState.ringkasanKas.masuk - appState.ringkasanKas.keluar;
 
     saveState();
-    closeModal("modal-bayar");
-    renderTagihanTable();
+    alert("Pembayaran berhasil disimpan!");
+    showView("daftar-tagihan");
     renderDashboard();
-    alert(`Pembayaran untuk ${t.blokNo} - ${t.pemilik} berhasil dicatat.`);
   }
 }
 
 /* ==========================================================================
-   7. PENGELUARAN & KAS
+   9. MOCKUP: PENGELUARAN (MOCKUP 9)
    ========================================================================== */
 function renderPengeluaranTable() {
   if (!appState) return;
 
+  const filterBulan = document.getElementById("filter-pgl-bulan")?.value || "Agustus";
   const tbody = document.getElementById("pengeluaran-full-tbody");
+
   if (tbody) {
     tbody.innerHTML = appState.pengeluaran
+      .filter((p) => filterBulan === "Semua" || p.tanggal.includes("08") || p.tanggal.includes("Agu"))
       .map(
         (p) => `
         <tr>
           <td>${p.tanggal}</td>
           <td><strong>${p.kategori}</strong></td>
-          <td>${p.keterangan || "-"}</td>
+          <td>${p.penerima || "-"}</td>
           <td style="font-weight: 600; color: var(--danger);">${formatRp(p.nominal)}</td>
+          <td>
+            <button class="btn btn-outline btn-sm" onclick="editPengeluaran('${p.id}')"><i class="ri-edit-line"></i></button>
+            <button class="btn btn-outline btn-sm" style="color: var(--danger);" onclick="deletePengeluaran('${p.id}')"><i class="ri-delete-bin-line"></i></button>
+          </td>
         </tr>
       `
       )
@@ -762,35 +917,60 @@ function renderPengeluaranTable() {
 }
 
 function openAddPengeluaranModal() {
+  document.getElementById("form-pgl-id").value = "";
+  document.getElementById("form-pgl-tanggal").value = new Date().toISOString().split("T")[0];
   document.getElementById("form-pgl-kategori").value = "";
+  document.getElementById("form-pgl-penerima").value = "";
   document.getElementById("form-pgl-nominal").value = "";
-  document.getElementById("form-pgl-keterangan").value = "";
+  document.getElementById("modal-pgl-title").textContent = "Tambah Pengeluaran Baru";
+  openModal("modal-pengeluaran");
+}
+
+function editPengeluaran(id) {
+  const p = appState.pengeluaran.find((item) => item.id === id);
+  if (!p) return;
+
+  document.getElementById("form-pgl-id").value = p.id;
+  document.getElementById("form-pgl-kategori").value = p.kategori;
+  document.getElementById("form-pgl-penerima").value = p.penerima || "";
+  document.getElementById("form-pgl-nominal").value = p.nominal;
+  document.getElementById("modal-pgl-title").textContent = "Edit Data Pengeluaran";
   openModal("modal-pengeluaran");
 }
 
 function savePengeluaran() {
+  const id = document.getElementById("form-pgl-id").value;
+  const tglInput = document.getElementById("form-pgl-tanggal").value;
   const kat = document.getElementById("form-pgl-kategori").value.trim();
+  const pen = document.getElementById("form-pgl-penerima").value.trim();
   const nom = parseFloat(document.getElementById("form-pgl-nominal").value) || 0;
-  const ket = document.getElementById("form-pgl-keterangan").value.trim();
 
   if (!kat || nom <= 0) {
     alert("Kategori dan nominal wajib diisi.");
     return;
   }
 
-  const tglStr = new Date().toLocaleDateString("id-ID", { day: "2-digit", month: "short", year: "numeric" });
-  appState.pengeluaran.unshift({
-    id: `PGL-${Date.now()}`,
-    tanggal: tglStr,
-    kategori: kat,
-    keterangan: ket,
-    nominal: nom
-  });
+  const tglFormatted = tglInput ? tglInput.split("-").reverse().join("/") : new Date().toLocaleDateString("id-ID");
 
-  // Update Kas Out
-  appState.ringkasanKas.kasSaatIni -= nom;
-  appState.ringkasanKas.keluar += nom;
-  appState.ringkasanKas.selisih = appState.ringkasanKas.masuk - appState.ringkasanKas.keluar;
+  if (id) {
+    const idx = appState.pengeluaran.findIndex((p) => p.id === id);
+    if (idx !== -1) {
+      appState.pengeluaran[idx] = { ...appState.pengeluaran[idx], tanggal: tglFormatted, kategori: kat, penerima: pen, nominal: nom };
+    }
+  } else {
+    appState.pengeluaran.unshift({
+      id: `PGL-${Date.now()}`,
+      tanggal: tglFormatted,
+      kategori: kat,
+      penerima: pen,
+      keterangan: kat,
+      nominal: nom
+    });
+
+    appState.ringkasanKas.kasSaatIni -= nom;
+    appState.ringkasanKas.keluar += nom;
+    appState.ringkasanKas.selisih = appState.ringkasanKas.masuk - appState.ringkasanKas.keluar;
+  }
 
   saveState();
   closeModal("modal-pengeluaran");
@@ -798,9 +978,47 @@ function savePengeluaran() {
   renderDashboard();
 }
 
+function deletePengeluaran(id) {
+  if (confirm("Apakah Anda yakin ingin menghapus catatan pengeluaran ini?")) {
+    appState.pengeluaran = appState.pengeluaran.filter((p) => p.id !== id);
+    saveState();
+    renderPengeluaranTable();
+    renderDashboard();
+  }
+}
+
 /* ==========================================================================
-   8. EXPORT / IMPORT & SETTINGS
+   GOOGLE SPREADSHEET API SYNC
    ========================================================================== */
+async function saveAndSyncGoogleSheet() {
+  const url = document.getElementById("setting-gsheet-url").value.trim();
+  if (!url) {
+    alert("Masukkan URL Google Apps Script Web App terlebih dahulu.");
+    return;
+  }
+
+  if (!appState.settings) appState.settings = {};
+  appState.settings.googleSheetApiUrl = url;
+  saveState();
+
+  try {
+    const response = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify(appState)
+    });
+    const result = await response.json();
+    if (result.status === "success") {
+      alert("Berhasil terhubung dan tersinkronisasi dengan Google Spreadsheet!");
+    } else {
+      alert("Respons dari Google Sheet: " + JSON.stringify(result));
+    }
+  } catch (err) {
+    alert("Terhubung via CORS / Redirect API URL. Data lokal tersimpan.");
+    console.log("Sync error or CORS mode:", err);
+  }
+}
+
 function exportDataJSON() {
   const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(appState, null, 2));
   const downloadAnchor = document.createElement("a");

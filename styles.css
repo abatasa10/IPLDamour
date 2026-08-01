@@ -151,11 +151,6 @@ button {
   text-align: center;
 }
 
-.nav-sub-item {
-  padding-left: 2.5rem;
-  font-size: 0.85rem;
-}
-
 /* Header Navbar */
 .main-wrapper {
   margin-left: var(--sidebar-width);
@@ -524,28 +519,93 @@ button {
   background: var(--bg-main);
 }
 
-/* Ringkasan & Chart Layout */
-.summary-highlight-box {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 1rem;
+/* Checkbox Item List (Generate Tagihan mockup 5) */
+.checkbox-group-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin: 1rem 0 1.5rem;
+}
+
+.checkbox-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.checkbox-item input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--primary);
+  cursor: pointer;
+}
+
+/* File Upload Zone (Pembayaran mockup 8) */
+.upload-dropzone {
+  border: 2px dashed var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 1.5rem;
+  text-align: center;
   background: #f8fafc;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.upload-dropzone:hover {
+  border-color: var(--primary);
+  background: var(--primary-light);
+}
+
+.upload-icon {
+  font-size: 2rem;
+  color: var(--text-muted);
+  margin-bottom: 0.5rem;
+}
+
+.upload-text {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.upload-subtext {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+/* Detail Tagihan Summary Box (mockup 7) */
+.detail-summary-header {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 1rem;
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
   padding: 1rem;
-  margin-bottom: 1rem;
+  background: #ffffff;
+  margin-bottom: 1.25rem;
 }
 
-.summary-item h5 {
+.detail-summary-item p {
   font-size: 0.75rem;
   color: var(--text-muted);
-  font-weight: 500;
-  margin-bottom: 0.25rem;
 }
 
-.summary-item p {
-  font-size: 1.15rem;
+.detail-summary-item h4 {
+  font-size: 1rem;
   font-weight: 700;
+  color: var(--text-main);
+  margin-top: 0.15rem;
+}
+
+/* Filter Bar Layout */
+.filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
 }
 
 /* Modal */
@@ -574,7 +634,7 @@ button {
   background: var(--bg-card);
   border-radius: var(--radius-lg);
   width: 90%;
-  max-width: 500px;
+  max-width: 550px;
   max-height: 90vh;
   overflow-y: auto;
   box-shadow: var(--shadow-lg);
