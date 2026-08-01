@@ -1,6 +1,6 @@
 /**
  * D'AMOUR Sistem IPL Perumahan - Core Application Logic
- * 100% Synchronized Kas Calculation between 4. Perhitungan IPL and 12. Simulasi IPL
+ * Refined Calculations: Sampah removed from base components, dynamic month/year dropdowns across all views
  */
 
 let appState = null;
@@ -9,6 +9,11 @@ let currentTagihanPage = 1;
 const itemsPerPage = 5;
 let donutChartInstance = null;
 let barChartInstance = null;
+
+const MONTH_NAMES = [
+  "Januari", "Februari", "Maret", "April", "Mei", "Juni",
+  "Juli", "Agustus", "September", "Oktober", "November", "Desember"
+];
 
 // Formatters
 const formatRp = (num) => {
@@ -32,6 +37,7 @@ const formatRpDecimal = (num) => {
 document.addEventListener("DOMContentLoaded", async () => {
   await loadAppData();
   setupEventListeners();
+  updatePerhitunganMonthDropdown();
   updateHouseGroupCounts();
   renderDashboard();
   renderMasterRumah();
@@ -55,6 +61,7 @@ async function loadAppData() {
       appState = JSON.parse(saved);
       console.log("Data loaded from LocalStorage.");
       ensureMasterEventState();
+      cleanUpSampahFromKomponen();
       if (appState.settings && appState.settings.googleSheetApiUrl) {
         const urlInput = document.getElementById("setting-gsheet-url");
         if (urlInput) urlInput.value = appState.settings.googleSheetApiUrl;
@@ -69,6 +76,7 @@ async function loadAppData() {
     const res = await fetch("data.json");
     appState = await res.json();
     ensureMasterEventState();
+    cleanUpSampahFromKomponen();
     saveState();
     console.log("Data loaded from data.json.");
   } catch (err) {
@@ -85,6 +93,12 @@ function ensureMasterEventState() {
   }
   if (!appState.biayaSampahDefault) {
     appState.biayaSampahDefault = 25000;
+  }
+}
+
+function cleanUpSampahFromKomponen() {
+  if (appState && appState.komponenIPL) {
+    appState.komponenIPL = appState.komponenIPL.filter((k) => k.nama.toLowerCase() !== "sampah");
   }
 }
 
@@ -111,7 +125,6 @@ function clearAllAppData() {
       komponenIPL: [
         { id: "komp-1", nama: "Satpam 1", nominalTotal: 1750000, isAutoKas: false, dibayarOleh: "Semua", aktif: true },
         { id: "komp-2", nama: "Kas (Otomatis)", nominalTotal: 0, isAutoKas: true, dibayarOleh: "Semua", aktif: true },
-        { id: "komp-3", nama: "Sampah", nominalTotal: 450000, isAutoKas: false, dibayarOleh: "IPL + Sampah", aktif: true },
         { id: "komp-4", nama: "Listrik + Wifi", nominalTotal: 550000, isAutoKas: false, dibayarOleh: "Semua", aktif: true },
         { id: "komp-5", nama: "Tambahan Developer", nominalTotal: 32000, isAutoKas: false, dibayarOleh: "IPL Developer", aktif: true },
         { id: "komp-6", nama: "Satpam 2", nominalTotal: 1500000, isAutoKas: false, dibayarOleh: "Semua", aktif: true },
@@ -224,6 +237,18 @@ function setupEventListeners() {
       renderDaftarTagihan();
     });
   }
+}
+
+function updatePerhitunganMonthDropdown() {
+  const yearSelect = document.getElementById("perhitungan-tahun-select");
+  const monthSelect = document.getElementById("perhitungan-month-select");
+  if (!yearSelect || !monthSelect) return;
+
+  const selYear = yearSelect.value;
+  monthSelect.innerHTML = MONTH_NAMES.map(
+    (m) => `<option value="${selYear}-${m}">${m} ${selYear}</option>`
+  ).join("");
+  monthSelect.value = `${selYear}-Agustus`;
 }
 
 /* ==========================================================================
@@ -745,7 +770,7 @@ function renderSettingTarget() {
 
     const sampahRow = `
       <tr style="background: #f8fafc;">
-        <td><strong>Biaya Sampah Default (Tambahan)</strong></td>
+        <td><strong>Biaya Sampah Default (Tambahan Penagihan)</strong></td>
         <td style="font-weight: 600; color: var(--primary);">${formatRp(appState.biayaSampahDefault || 25000)} / rumah</td>
       </tr>
     `;
@@ -796,14 +821,13 @@ function saveSettingTarget() {
 }
 
 /* ==========================================================================
-   4. PERHITUNGAN IPL (FULLY SYNCHRONIZED KAS WITH SIMULASI IPL)
+   4. PERHITUNGAN IPL (DYNAMIC CALCULATION FOR ADDITIONS & REDUCTIONS)
    ========================================================================== */
 function renderPerhitunganIPL() {
   if (!appState) return;
 
   const hasHouses = appState.rumah && appState.rumah.length > 0;
   const totalRumahAll = hasHouses ? appState.rumah.length : 31;
-  const totalRumahSampah = hasHouses ? (appState.rumah.filter((r) => r.kelompokIPL === "IPL + Sampah").length || totalRumahAll) : 24;
   const totalRumahDev = hasHouses ? (appState.rumah.filter((r) => r.kelompokIPL === "IPL Developer").length || totalRumahAll) : 2;
 
   const targetTanpaSampahObj = appState.targetIPL.find((t) => t.kelompok === "IPL Tanpa Sampah");
@@ -814,13 +838,12 @@ function renderPerhitunganIPL() {
   const tbody = document.getElementById("perhitungan-ipl-tbody");
   if (!tbody) return;
 
-  const rowsHtml = appState.komponenIPL
-    .filter((k) => k.aktif)
+  const activeKomponen = appState.komponenIPL.filter((k) => k.aktif);
+
+  const rowsHtml = activeKomponen
     .map((k) => {
       let targetJmlRumah = totalRumahAll;
-      if (k.dibayarOleh === "IPL + Sampah") {
-        targetJmlRumah = totalRumahSampah;
-      } else if (k.dibayarOleh === "IPL Developer" || k.dibayarOleh === "Developer") {
+      if (k.dibayarOleh === "IPL Developer" || k.dibayarOleh === "Developer") {
         targetJmlRumah = totalRumahDev;
       }
 
@@ -839,7 +862,7 @@ function renderPerhitunganIPL() {
 
       const costPerHome = targetJmlRumah > 0 ? k.nominalTotal / targetJmlRumah : 0;
       
-      if (k.dibayarOleh !== "IPL + Sampah" && k.dibayarOleh !== "IPL Developer" && k.dibayarOleh !== "Developer") {
+      if (k.dibayarOleh !== "IPL Developer" && k.dibayarOleh !== "Developer") {
         generalCostsPerHomeSum += costPerHome;
       }
 
@@ -866,17 +889,22 @@ function renderPerhitunganIPL() {
 
   tbody.innerHTML = rowsHtml;
 
-  // Kas per home for IPL & IPL + Sampah (exact match with Simulasi IPL)
+  // Kas per home dynamically adjusts as operational costs change!
   const kasPerHome = Math.max(0, baseTargetTanpaSampah - generalCostsPerHomeSum);
   const kasCell = document.getElementById("cell-kas-per-rumah");
   if (kasCell) {
     kasCell.textContent = formatRpDecimal(kasPerHome);
   }
 
-  const grandTotalPerHome = generalCostsPerHomeSum + kasPerHome;
-  const totalCell = document.getElementById("perhitungan-grand-total");
-  if (totalCell) {
-    totalCell.textContent = `${formatRpDecimal(grandTotalPerHome)}`;
+  const generalTotalCell = document.getElementById("perhitungan-general-total");
+  if (generalTotalCell) {
+    generalTotalCell.textContent = `${formatRpDecimal(generalCostsPerHomeSum)}`;
+  }
+
+  const grandTotalCell = document.getElementById("perhitungan-grand-total");
+  if (grandTotalCell) {
+    const grandTotal = generalCostsPerHomeSum + kasPerHome;
+    grandTotalCell.textContent = `${formatRpDecimal(grandTotal)}`;
   }
 }
 
@@ -1033,11 +1061,13 @@ function renderDaftarTagihan() {
 
   const searchVal = (document.getElementById("filter-tagihan-search")?.value || "").toLowerCase();
   const filterBulan = document.getElementById("filter-tagihan-bulan")?.value || "Agustus";
+  const filterTahun = document.getElementById("filter-tagihan-tahun")?.value || "2025";
 
   const filtered = appState.tagihan.filter((t) => {
     const matchesSearch = t.blokNo.toLowerCase().includes(searchVal) || t.pemilik.toLowerCase().includes(searchVal);
     const matchesBulan = filterBulan === "Semua" || t.bulan === filterBulan || t.periode.includes(filterBulan);
-    return matchesSearch && matchesBulan;
+    const matchesTahun = filterTahun === "Semua" || t.tahun === filterTahun || t.periode.includes(filterTahun);
+    return matchesSearch && matchesBulan && matchesTahun;
   });
 
   const totalPages = Math.ceil(filtered.length / itemsPerPage) || 1;
@@ -1256,6 +1286,7 @@ function renderPengeluaranTable() {
   if (!appState || !appState.pengeluaran) return;
 
   const filterBulan = document.getElementById("filter-pgl-bulan")?.value || "Agustus";
+  const filterTahun = document.getElementById("filter-pgl-tahun")?.value || "2025";
   const tbody = document.getElementById("pengeluaran-full-tbody");
 
   if (tbody) {
@@ -1263,7 +1294,11 @@ function renderPengeluaranTable() {
       tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 1.5rem;">Belum ada catatan pengeluaran. Klik tombol <strong>+ Tambah Pengeluaran</strong> di atas.</td></tr>`;
     } else {
       tbody.innerHTML = appState.pengeluaran
-        .filter((p) => filterBulan === "Semua" || p.tanggal.includes("08") || p.tanggal.includes("Agu"))
+        .filter((p) => {
+          const matchesBulan = filterBulan === "Semua" || p.tanggal.includes(filterBulan) || p.tanggal.includes("08");
+          const matchesTahun = filterTahun === "Semua" || p.tanggal.includes(filterTahun);
+          return matchesBulan && matchesTahun;
+        })
         .map(
           (p) => `
           <tr>
@@ -1579,8 +1614,7 @@ function runSimulasiIPL() {
 
     if (dibayar === "Developer" || dibayar === "IPL Developer") {
       costDevPerHome += val / rumahDevCount;
-    } else if (dibayar !== "IPL + Sampah") {
-      // General costs (Satpam 1, Satpam 2, Listrik, Satpam Inval, etc.)
+    } else {
       costGeneralPerHome += val / totalRumahAll;
     }
   });
@@ -1671,6 +1705,7 @@ function importDataJSON(input) {
       if (parsed.rumah && parsed.komponenIPL) {
         appState = parsed;
         ensureMasterEventState();
+        cleanUpSampahFromKomponen();
         saveState();
         alert("Data berhasil diimport!");
         location.reload();
