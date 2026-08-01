@@ -1,5 +1,5 @@
 /**
- * D'AMOUR Sistem IPL Perumahan - Core Application Logic (Dynamic Simulasi from Master Komponen)
+ * D'AMOUR Sistem IPL Perumahan - Core Application Logic (Fully Editable Simulasi IPL)
  */
 
 let appState = null;
@@ -87,10 +87,13 @@ function clearAllAppData() {
         { id: "tgt-3", kelompok: "IPL Developer", target: 166000, keterangan: "IPL Developer" }
       ],
       komponenIPL: [
-        { id: "komp-1", nama: "Satpam", nominalTotal: 3700000, isAutoKas: false, dibayarOleh: "Semua", aktif: true },
+        { id: "komp-1", nama: "Satpam 1", nominalTotal: 1750000, isAutoKas: false, dibayarOleh: "Semua", aktif: true },
         { id: "komp-2", nama: "Kas (Otomatis)", nominalTotal: 0, isAutoKas: true, dibayarOleh: "Semua", aktif: true },
-        { id: "komp-3", nama: "Sampah", nominalTotal: 775000, isAutoKas: false, dibayarOleh: "IPL + Sampah", aktif: true },
-        { id: "komp-4", nama: "Listrik + Wifi", nominalTotal: 550000, isAutoKas: false, dibayarOleh: "Semua", aktif: true }
+        { id: "komp-3", nama: "Sampah", nominalTotal: 450000, isAutoKas: false, dibayarOleh: "IPL + Sampah", aktif: true },
+        { id: "komp-4", nama: "Listrik + Wifi", nominalTotal: 550000, isAutoKas: false, dibayarOleh: "Semua", aktif: true },
+        { id: "komp-5", nama: "Tambahan Developer", nominalTotal: 32000, isAutoKas: false, dibayarOleh: "IPL Developer", aktif: true },
+        { id: "komp-6", nama: "Satpam 2", nominalTotal: 1500000, isAutoKas: false, dibayarOleh: "Semua", aktif: true },
+        { id: "komp-7", nama: "Satpam (Inval)", nominalTotal: 450000, isAutoKas: false, dibayarOleh: "Semua", aktif: true }
       ],
       rumah: [],
       tagihan: [],
@@ -638,7 +641,7 @@ function saveSettingTarget() {
 function renderPerhitunganIPL() {
   if (!appState || !appState.rumah) return;
 
-  const totalRumah = appState.rumah.length || 1;
+  const totalRumah = appState.rumah.length || 31;
   const targetIPLObj = appState.targetIPL.find((t) => t.kelompok === "IPL + Sampah");
   const targetNominal = targetIPLObj ? targetIPLObj.target : 175000;
 
@@ -854,7 +857,7 @@ function viewDetailTagihan(id) {
 
   document.getElementById("detail-val-status").innerHTML = `<span class="badge ${badgeClass}">${t.status}</span>`;
 
-  const totalRumah = appState.rumah.length || 1;
+  const totalRumah = appState.rumah.length || 31;
   const tbody = document.getElementById("detail-rincian-tbody");
 
   if (tbody) {
@@ -1232,7 +1235,7 @@ function exportLaporanCSV() {
 }
 
 /* ==========================================================================
-   12. DYNAMIC SIMULASI IPL (LOADS DIRECTLY FROM MASTER KOMPONEN)
+   12. FULLY EDITABLE SIMULASI IPL (EVERY COMPONENT IS AN EDITABLE INPUT)
    ========================================================================== */
 function renderSimulasiInputs() {
   const container = document.getElementById("simulasi-dynamic-inputs-container");
@@ -1243,25 +1246,16 @@ function renderSimulasiInputs() {
   let html = "";
   activeKomponen.forEach((k) => {
     if (k.isAutoKas) {
-      // Skip auto kas from manual total input
+      // Kas is the output being calculated, skip input box
       return;
     }
 
-    if (k.dibayarOleh === "Developer") {
-      html += `
-        <div class="form-group" style="display: flex; align-items: center; justify-content: space-between; gap: 1rem;">
-          <label style="margin-bottom: 0;">${k.nama} (Total)</label>
-          <div style="width: 160px; text-align: right; background: #f1f5f9; padding: 0.5rem 0.75rem; border-radius: var(--radius-md); font-weight: 600; font-size: 0.9rem;" id="sim-val-developer-total">AUTO</div>
-        </div>
-      `;
-    } else {
-      html += `
-        <div class="form-group" style="display: flex; align-items: center; justify-content: space-between; gap: 1rem;">
-          <label style="margin-bottom: 0;">${k.nama} (Total)</label>
-          <input type="number" class="form-control sim-input-komponen" data-id="${k.id}" data-dibayar="${k.dibayarOleh}" style="width: 160px; text-align: right;" value="${k.nominalTotal}" oninput="runSimulasiIPL()">
-        </div>
-      `;
-    }
+    html += `
+      <div class="form-group" style="display: flex; align-items: center; justify-content: space-between; gap: 1rem;">
+        <label style="margin-bottom: 0;">${k.nama} (Total)</label>
+        <input type="number" class="form-control sim-input-komponen" data-id="${k.id}" data-dibayar="${k.dibayarOleh}" style="width: 160px; text-align: right;" value="${k.nominalTotal}" oninput="runSimulasiIPL()">
+      </div>
+    `;
   });
 
   container.innerHTML = html;
@@ -1270,7 +1264,7 @@ function renderSimulasiInputs() {
 function syncSimulasiFromMaster() {
   renderSimulasiInputs();
   runSimulasiIPL();
-  alert("Input simulasi berhasil disinkronkan dengan data terkini Master Komponen!");
+  alert("Input simulasi berhasil di-reset sesuai data terkini Perhitungan IPL!");
 }
 
 function runSimulasiIPL() {
@@ -1279,10 +1273,11 @@ function runSimulasiIPL() {
   const hasHouses = appState && appState.rumah && appState.rumah.length > 0;
   const totalRumah = hasHouses ? appState.rumah.length : 31;
   const rumahSampahCount = hasHouses ? (appState.rumah.filter((r) => r.kelompokIPL === "IPL + Sampah").length || totalRumah) : 31;
-  const rumahDevCount = hasHouses ? (appState.rumah.filter((r) => r.kelompokIPL === "IPL Developer").length || 2) : 2;
+  const rumahDevCount = hasHouses ? (appState.rumah.filter((r) => r.kelompokIPL === "IPL Developer").length || 31) : 31;
 
-  let totalGeneralCostsPerHome = 0;
-  let totalSampahPerHome = 0;
+  let costGeneralPerHome = 0;
+  let costSampahPerHome = 0;
+  let costDevPerHome = 0;
 
   const inputs = document.querySelectorAll(".sim-input-komponen");
   inputs.forEach((inp) => {
@@ -1290,9 +1285,11 @@ function runSimulasiIPL() {
     const dibayar = inp.getAttribute("data-dibayar");
 
     if (dibayar === "IPL + Sampah") {
-      totalSampahPerHome += val / rumahSampahCount;
+      costSampahPerHome += val / rumahSampahCount;
+    } else if (dibayar === "Developer" || dibayar === "IPL Developer") {
+      costDevPerHome += val / rumahDevCount;
     } else {
-      totalGeneralCostsPerHome += val / totalRumah;
+      costGeneralPerHome += val / totalRumah;
     }
   });
 
@@ -1300,32 +1297,25 @@ function runSimulasiIPL() {
   const target2 = appState && appState.targetIPL ? (appState.targetIPL.find((t) => t.kelompok === "IPL Tanpa Sampah")?.target || 150000) : 150000;
   const target3 = appState && appState.targetIPL ? (appState.targetIPL.find((t) => t.kelompok === "IPL Developer")?.target || 166000) : 166000;
 
-  // Kas Per Rumah is UNIFORM across IPL + Sampah and IPL Tanpa Sampah!
-  const kasPerHome = Math.round(target1 - (totalGeneralCostsPerHome + totalSampahPerHome));
-
-  // Tambahan Developer (Per Rumah) = Target Developer (166.000) - GeneralCosts - KasPerHome
-  const tambahanDevPerHome = Math.max(0, Math.round(target3 - (totalGeneralCostsPerHome + kasPerHome)));
-  const tambahanDevTotal = tambahanDevPerHome * rumahDevCount;
-
-  const devInputDisplay = document.getElementById("sim-val-developer-total");
-  if (devInputDisplay) {
-    devInputDisplay.textContent = `AUTO (${formatRp(tambahanDevTotal).replace("Rp ", "")})`;
-  }
+  // Kas calculations for each group matching exact Perhitungan IPL breakdown logic
+  const kasGroup1 = Math.round(target1 - (costGeneralPerHome + costSampahPerHome));
+  const kasGroup2 = Math.round(target2 - costGeneralPerHome);
+  const kasGroup3 = Math.round(target3 - (costGeneralPerHome + costDevPerHome));
 
   const tbody = document.getElementById("simulasi-result-tbody");
   if (tbody) {
     tbody.innerHTML = `
       <tr>
         <td><strong>IPL + Sampah</strong></td>
-        <td style="text-align: right;"><span style="font-weight: 700; margin-right: 1.5rem;">${formatRp(target1)}</span> <span style="color: var(--text-main); font-weight: 600;">${kasPerHome.toLocaleString("id-ID")}</span></td>
+        <td style="text-align: right;"><span style="font-weight: 700; margin-right: 1.5rem;">${formatRp(target1)}</span> <span style="color: var(--text-main); font-weight: 600;">${kasGroup1.toLocaleString("id-ID")}</span></td>
       </tr>
       <tr>
         <td><strong>IPL Tanpa Sampah</strong></td>
-        <td style="text-align: right;"><span style="font-weight: 700; margin-right: 1.5rem;">${formatRp(target2)}</span> <span style="color: var(--text-main); font-weight: 600;">${kasPerHome.toLocaleString("id-ID")}</span></td>
+        <td style="text-align: right;"><span style="font-weight: 700; margin-right: 1.5rem;">${formatRp(target2)}</span> <span style="color: var(--text-main); font-weight: 600;">${kasGroup2.toLocaleString("id-ID")}</span></td>
       </tr>
       <tr>
         <td><strong>IPL Developer</strong></td>
-        <td style="text-align: right;"><span style="font-weight: 700; margin-right: 1.5rem;">${formatRp(target3)}</span> <span style="color: var(--text-main); font-weight: 600;">${kasPerHome.toLocaleString("id-ID")}</span></td>
+        <td style="text-align: right;"><span style="font-weight: 700; margin-right: 1.5rem;">${formatRp(target3)}</span> <span style="color: var(--text-main); font-weight: 600;">${kasGroup3.toLocaleString("id-ID")}</span></td>
       </tr>
     `;
   }

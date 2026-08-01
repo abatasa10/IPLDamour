@@ -743,20 +743,20 @@
           </div>
         </section>
 
-        <!-- 12. DYNAMIC SIMULASI IPL VIEW -->
+        <!-- 12. FULLY EDITABLE SIMULASI IPL VIEW -->
         <section id="view-simulasi" class="view-section">
           <div class="card">
             <div class="card-header">
               <div class="card-title">12. Simulasi IPL</div>
-              <button class="btn btn-outline btn-sm" onclick="syncSimulasiFromMaster()"><i class="ri-refresh-line"></i> Muat Dari Master Komponen</button>
+              <button class="btn btn-outline btn-sm" onclick="syncSimulasiFromMaster()"><i class="ri-refresh-line"></i> Reset Dari Perhitungan IPL</button>
             </div>
 
             <div style="display: grid; grid-template-columns: 1fr 1.2fr; gap: 1.5rem;">
-              <!-- Left Form Inputs (Dynamic from Master Komponen) -->
+              <!-- Left Form Inputs (Editable inputs for ALL components in Perhitungan IPL) -->
               <div>
-                <h4 style="font-size: 0.95rem; margin-bottom: 1rem; color: var(--text-muted);">Komponen Biaya (Diambil dari Master Komponen)</h4>
+                <h4 style="font-size: 0.95rem; margin-bottom: 1rem; color: var(--text-muted);">Komponen Biaya (Dapat Diedit Bebas)</h4>
                 <div id="simulasi-dynamic-inputs-container">
-                  <!-- Rendered dynamically by JS -->
+                  <!-- Rendered dynamically as fully editable inputs by JS -->
                 </div>
 
                 <div style="margin-top: 1.5rem; display: flex; gap: 0.5rem; justify-content: flex-end;">
