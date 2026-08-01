@@ -653,7 +653,7 @@
           </div>
         </section>
 
-        <!-- 10. MOCKUP: KAS (ARUS KAS) VIEW -->
+        <!-- 10. KAS (ARUS KAS) VIEW -->
         <section id="view-kas" class="view-section">
           <div class="card">
             <div class="card-header">
@@ -694,7 +694,7 @@
           </div>
         </section>
 
-        <!-- 11. MOCKUP: LAPORAN VIEW -->
+        <!-- 11. LAPORAN VIEW -->
         <section id="view-laporan" class="view-section">
           <div class="card" style="max-width: 600px;">
             <div class="card-header">
@@ -743,7 +743,7 @@
           </div>
         </section>
 
-        <!-- 12. MOCKUP: SIMULASI IPL VIEW -->
+        <!-- 12. SIMULASI IPL VIEW -->
         <section id="view-simulasi" class="view-section">
           <div class="card">
             <div class="card-header">
@@ -756,19 +756,19 @@
                 <h4 style="font-size: 0.95rem; margin-bottom: 1rem; color: var(--text-muted);">Komponen Biaya</h4>
                 <div class="form-group" style="display: flex; align-items: center; justify-content: space-between; gap: 1rem;">
                   <label style="margin-bottom: 0;">Satpam (Total)</label>
-                  <input type="number" id="sim-input-satpam" class="form-control" style="width: 160px; text-align: right;" value="3700000">
+                  <input type="number" id="sim-input-satpam" class="form-control" style="width: 160px; text-align: right;" value="3700000" oninput="runSimulasiIPL()">
                 </div>
                 <div class="form-group" style="display: flex; align-items: center; justify-content: space-between; gap: 1rem;">
                   <label style="margin-bottom: 0;">Listrik + Wifi (Total)</label>
-                  <input type="number" id="sim-input-listrik" class="form-control" style="width: 160px; text-align: right;" value="550000">
+                  <input type="number" id="sim-input-listrik" class="form-control" style="width: 160px; text-align: right;" value="550000" oninput="runSimulasiIPL()">
                 </div>
                 <div class="form-group" style="display: flex; align-items: center; justify-content: space-between; gap: 1rem;">
                   <label style="margin-bottom: 0;">Sampah (Total)</label>
-                  <input type="number" id="sim-input-sampah" class="form-control" style="width: 160px; text-align: right;" value="775000">
+                  <input type="number" id="sim-input-sampah" class="form-control" style="width: 160px; text-align: right;" value="775000" oninput="runSimulasiIPL()">
                 </div>
                 <div class="form-group" style="display: flex; align-items: center; justify-content: space-between; gap: 1rem;">
                   <label style="margin-bottom: 0;">Tambahan Developer (Total)</label>
-                  <input type="number" id="sim-input-developer" class="form-control" style="width: 160px; text-align: right;" value="32000">
+                  <div style="width: 160px; text-align: right; background: #f1f5f9; padding: 0.5rem 0.75rem; border-radius: var(--radius-md); font-weight: 600; font-size: 0.9rem;" id="sim-val-developer-total">AUTO (32.000)</div>
                 </div>
 
                 <div style="margin-top: 1.5rem; text-align: right;">
@@ -782,8 +782,8 @@
                   <table class="table">
                     <thead>
                       <tr>
-                        <th>Target IPL</th>
-                        <th style="text-align: right;">Hasil Simulasi (Kas / Rumah)</th>
+                        <th>TARGET IPL</th>
+                        <th style="text-align: right;">HASIL SIMULASI (KAS / RUMAH)</th>
                       </tr>
                     </thead>
                     <tbody id="simulasi-result-tbody">

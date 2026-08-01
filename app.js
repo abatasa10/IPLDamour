@@ -1,5 +1,5 @@
 /**
- * D'AMOUR Sistem IPL Perumahan - Core Application Logic (Clean Data Version)
+ * D'AMOUR Sistem IPL Perumahan - Core Application Logic (Simulasi Logic Refined)
  */
 
 let appState = null;
@@ -76,7 +76,6 @@ function saveState() {
   }
 }
 
-// Clear / Kosongkan Seluruh Data
 function clearAllAppData() {
   if (confirm("Apakah Anda yakin ingin mengosongkan SELURUH data? Anda dapat menginput ulang data rumah dan transaksi satu per satu dari awal.")) {
     appState = {
@@ -1045,9 +1044,6 @@ function deletePengeluaran(id) {
   }
 }
 
-/* ==========================================================================
-   10. KAS (ARUS KAS)
-   ========================================================================== */
 function renderKasArusKasTable() {
   if (!appState) return;
 
@@ -1104,9 +1100,6 @@ function renderKasArusKasTable() {
   }
 }
 
-/* ==========================================================================
-   11. LAPORAN
-   ========================================================================== */
 function renderLaporanPreview() {
   const jenis = document.getElementById("laporan-jenis").value;
   const bulan = document.getElementById("laporan-bulan").value;
@@ -1224,42 +1217,53 @@ function exportLaporanCSV() {
 }
 
 /* ==========================================================================
-   12. SIMULASI IPL
+   12. REFINED SIMULASI IPL FORMULA
    ========================================================================== */
 function runSimulasiIPL() {
   const satpamTotal = parseFloat(document.getElementById("sim-input-satpam")?.value) || 0;
   const listrikTotal = parseFloat(document.getElementById("sim-input-listrik")?.value) || 0;
   const sampahTotal = parseFloat(document.getElementById("sim-input-sampah")?.value) || 0;
-  const devTotal = parseFloat(document.getElementById("sim-input-developer")?.value) || 0;
 
-  const totalRumah = (appState.rumah && appState.rumah.length > 0) ? appState.rumah.length : 1;
+  const hasHouses = appState && appState.rumah && appState.rumah.length > 0;
+  const totalRumah = hasHouses ? appState.rumah.length : 31;
+  const rumahSampahCount = hasHouses ? (appState.rumah.filter((r) => r.kelompokIPL === "IPL + Sampah").length || totalRumah) : 31;
+  const rumahDevCount = hasHouses ? (appState.rumah.filter((r) => r.kelompokIPL === "IPL Developer").length || 2) : 2;
 
   const satpamPerHome = satpamTotal / totalRumah;
   const listrikPerHome = listrikTotal / totalRumah;
-  const sampahPerHome = sampahTotal / totalRumah;
+  const sampahPerHome = sampahTotal / rumahSampahCount;
 
-  const target1 = appState.targetIPL ? (appState.targetIPL.find((t) => t.kelompok === "IPL + Sampah")?.target || 175000) : 175000;
-  const target2 = appState.targetIPL ? (appState.targetIPL.find((t) => t.kelompok === "IPL Tanpa Sampah")?.target || 150000) : 150000;
-  const target3 = appState.targetIPL ? (appState.targetIPL.find((t) => t.kelompok === "IPL Developer")?.target || 166000) : 166000;
+  const target1 = appState && appState.targetIPL ? (appState.targetIPL.find((t) => t.kelompok === "IPL + Sampah")?.target || 175000) : 175000;
+  const target2 = appState && appState.targetIPL ? (appState.targetIPL.find((t) => t.kelompok === "IPL Tanpa Sampah")?.target || 150000) : 150000;
+  const target3 = appState && appState.targetIPL ? (appState.targetIPL.find((t) => t.kelompok === "IPL Developer")?.target || 166000) : 166000;
 
-  const kas1 = Math.round(target1 - (satpamPerHome + listrikPerHome + sampahPerHome));
-  const kas2 = Math.round(target2 - (satpamPerHome + listrikPerHome));
-  const kas3 = Math.round(target3 - (satpamPerHome + listrikPerHome));
+  // Kas Per Rumah is UNIFORM across IPL + Sampah and IPL Tanpa Sampah!
+  const kasPerHome = Math.round(target1 - (satpamPerHome + listrikPerHome + sampahPerHome));
+
+  // Tambahan Developer (Per Rumah) = Target Developer (166.000) - Satpam - Listrik - KasPerHome
+  const tambahanDevPerHome = Math.max(0, Math.round(target3 - (satpamPerHome + listrikPerHome + kasPerHome)));
+  const tambahanDevTotal = tambahanDevPerHome * rumahDevCount;
+
+  // Update read-only Tambahan Developer input
+  const devInputDisplay = document.getElementById("sim-val-developer-total");
+  if (devInputDisplay) {
+    devInputDisplay.textContent = `AUTO (${formatRp(tambahanDevTotal).replace("Rp ", "")})`;
+  }
 
   const tbody = document.getElementById("simulasi-result-tbody");
   if (tbody) {
     tbody.innerHTML = `
       <tr>
         <td><strong>IPL + Sampah</strong></td>
-        <td style="text-align: right;"><span style="font-weight: 700; margin-right: 1.5rem;">${formatRp(target1).replace("Rp ", "")}</span> <span style="color: var(--text-muted);">${kas1.toLocaleString("id-ID")}</span></td>
+        <td style="text-align: right;"><span style="font-weight: 700; margin-right: 1.5rem;">${formatRp(target1)}</span> <span style="color: var(--text-main); font-weight: 600;">${kasPerHome.toLocaleString("id-ID")}</span></td>
       </tr>
       <tr>
         <td><strong>IPL Tanpa Sampah</strong></td>
-        <td style="text-align: right;"><span style="font-weight: 700; margin-right: 1.5rem;">${formatRp(target2).replace("Rp ", "")}</span> <span style="color: var(--text-muted);">${kas2.toLocaleString("id-ID")}</span></td>
+        <td style="text-align: right;"><span style="font-weight: 700; margin-right: 1.5rem;">${formatRp(target2)}</span> <span style="color: var(--text-main); font-weight: 600;">${kasPerHome.toLocaleString("id-ID")}</span></td>
       </tr>
       <tr>
         <td><strong>IPL Developer</strong></td>
-        <td style="text-align: right;"><span style="font-weight: 700; margin-right: 1.5rem;">${formatRp(target3).replace("Rp ", "")}</span> <span style="color: var(--text-muted);">${kas3.toLocaleString("id-ID")}</span></td>
+        <td style="text-align: right;"><span style="font-weight: 700; margin-right: 1.5rem;">${formatRp(target3)}</span> <span style="color: var(--text-main); font-weight: 600;">${kasPerHome.toLocaleString("id-ID")}</span></td>
       </tr>
     `;
   }
