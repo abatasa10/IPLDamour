@@ -1,6 +1,6 @@
 /**
  * D'AMOUR Sistem IPL Perumahan - Core Application Logic
- * Dynamic Interactive Simulasi IPL: Every input change instantly recalculates its target Kas group
+ * Refined Simulasi IPL: Equal Kas for IPL+Sampah & IPL Tanpa Sampah, Developer calculated separately
  */
 
 let appState = null;
@@ -1569,11 +1569,9 @@ function runSimulasiIPL() {
 
   const hasHouses = appState && appState.rumah && appState.rumah.length > 0;
   const totalRumahAll = hasHouses ? appState.rumah.length : 31;
-  const rumahSampahCount = hasHouses ? (appState.rumah.filter((r) => r.kelompokIPL === "IPL + Sampah").length || totalRumahAll) : 24;
   const rumahDevCount = hasHouses ? (appState.rumah.filter((r) => r.kelompokIPL === "IPL Developer").length || totalRumahAll) : 2;
 
   let costGeneralPerHome = 0;
-  let costSampahPerHome = 0;
   let costDevPerHome = 0;
 
   const inputs = document.querySelectorAll(".sim-input-komponen");
@@ -1581,11 +1579,10 @@ function runSimulasiIPL() {
     const val = parseFloat(inp.value) || 0;
     const dibayar = inp.getAttribute("data-dibayar");
 
-    if (dibayar === "IPL + Sampah") {
-      costSampahPerHome += val / rumahSampahCount;
-    } else if (dibayar === "Developer" || dibayar === "IPL Developer") {
+    if (dibayar === "Developer" || dibayar === "IPL Developer") {
       costDevPerHome += val / rumahDevCount;
-    } else {
+    } else if (dibayar !== "IPL + Sampah") {
+      // General costs (Satpam 1, Satpam 2, Listrik, Satpam Inval, etc.)
       costGeneralPerHome += val / totalRumahAll;
     }
   });
@@ -1594,9 +1591,14 @@ function runSimulasiIPL() {
   const target2 = appState && appState.targetIPL ? (appState.targetIPL.find((t) => t.kelompok === "IPL Tanpa Sampah")?.target || 150000) : 150000;
   const target3 = appState && appState.targetIPL ? (appState.targetIPL.find((t) => t.kelompok === "IPL Developer")?.target || 166000) : 166000;
 
-  // Realtime live calculation based on current editable input values:
-  const kasGroup1 = Math.round(target1 - (costGeneralPerHome + costSampahPerHome));
-  const kasGroup2 = Math.round(target2 - costGeneralPerHome);
+  // Kas for IPL Tanpa Sampah
+  const kasBase = Math.round(target2 - costGeneralPerHome);
+  
+  // Kas for IPL + Sampah is EQUALized with IPL Tanpa Sampah (diratakan)
+  const kasGroup1 = kasBase;
+  const kasGroup2 = kasBase;
+  
+  // Kas for IPL Developer
   const kasGroup3 = Math.round(target3 - (costGeneralPerHome + costDevPerHome));
 
   const tbody = document.getElementById("simulasi-result-tbody");
