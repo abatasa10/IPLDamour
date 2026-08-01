@@ -5,6 +5,7 @@
     "periodeAktif": "2025-08",
     "googleSheetApiUrl": ""
   },
+  "biayaSampahDefault": 25000,
   "targetIPL": [
     {
       "id": "tgt-1",
@@ -25,11 +26,27 @@
       "keterangan": "Khusus unit rumah milik developer / fasilitas umum"
     }
   ],
+  "masterEvent": [
+    {
+      "id": "evt-1",
+      "nama": "Iuran THR Satpam",
+      "nominal": 50000,
+      "dibayarOleh": "Semua",
+      "aktif": true
+    },
+    {
+      "id": "evt-2",
+      "nama": "Iuran 17 Agustus",
+      "nominal": 20000,
+      "dibayarOleh": "Semua",
+      "aktif": false
+    }
+  ],
   "komponenIPL": [
     {
       "id": "komp-1",
-      "nama": "Satpam",
-      "nominalTotal": 0,
+      "nama": "Satpam 1",
+      "nominalTotal": 1750000,
       "isAutoKas": false,
       "dibayarOleh": "Semua",
       "aktif": true
@@ -43,17 +60,33 @@
       "aktif": true
     },
     {
-      "id": "komp-3",
-      "nama": "Sampah",
-      "nominalTotal": 0,
+      "id": "komp-4",
+      "nama": "Listrik + Wifi",
+      "nominalTotal": 550000,
       "isAutoKas": false,
-      "dibayarOleh": "IPL + Sampah",
+      "dibayarOleh": "Semua",
       "aktif": true
     },
     {
-      "id": "komp-4",
-      "nama": "Listrik + Wifi",
-      "nominalTotal": 0,
+      "id": "komp-5",
+      "nama": "Tambahan Developer",
+      "nominalTotal": 32000,
+      "isAutoKas": false,
+      "dibayarOleh": "IPL Developer",
+      "aktif": true
+    },
+    {
+      "id": "komp-6",
+      "nama": "Satpam 2",
+      "nominalTotal": 1500000,
+      "isAutoKas": false,
+      "dibayarOleh": "Semua",
+      "aktif": true
+    },
+    {
+      "id": "komp-7",
+      "nama": "Satpam (Inval)",
+      "nominalTotal": 450000,
       "isAutoKas": false,
       "dibayarOleh": "Semua",
       "aktif": true

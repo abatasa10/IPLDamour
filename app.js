@@ -1,6 +1,6 @@
 /**
  * D'AMOUR Sistem IPL Perumahan - Core Application Logic
- * Refined Calculations: Sampah removed from base components, dynamic month/year dropdowns across all views
+ * Clean Transaction Database State (Tagihan, Pengeluaran, Kas, & Dashboard Cleared)
  */
 
 let appState = null;
@@ -62,6 +62,17 @@ async function loadAppData() {
       console.log("Data loaded from LocalStorage.");
       ensureMasterEventState();
       cleanUpSampahFromKomponen();
+      
+      // Wipe dummy transactions if requested by user
+      if (!appState._transactionsCleared) {
+        appState.tagihan = [];
+        appState.pengeluaran = [];
+        appState.grafik6Bulan = [];
+        appState.ringkasanKas = { kasSaatIni: 0, masuk: 0, keluar: 0, selisih: 0 };
+        appState._transactionsCleared = true;
+        saveState();
+      }
+
       if (appState.settings && appState.settings.googleSheetApiUrl) {
         const urlInput = document.getElementById("setting-gsheet-url");
         if (urlInput) urlInput.value = appState.settings.googleSheetApiUrl;
@@ -75,6 +86,7 @@ async function loadAppData() {
   try {
     const res = await fetch("data.json");
     appState = await res.json();
+    appState._transactionsCleared = true;
     ensureMasterEventState();
     cleanUpSampahFromKomponen();
     saveState();
@@ -113,6 +125,7 @@ function clearAllAppData() {
     appState = {
       settings: { appName: "D'AMOUR Sistem IPL", perumahan: "Perumahan D'AMOUR", periodeAktif: "2025-08", googleSheetApiUrl: "" },
       biayaSampahDefault: 25000,
+      _transactionsCleared: true,
       targetIPL: [
         { id: "tgt-1", kelompok: "IPL + Sampah", target: 175000, keterangan: "IPL + Sampah" },
         { id: "tgt-2", kelompok: "IPL Tanpa Sampah", target: 150000, keterangan: "IPL Tanpa Sampah" },
