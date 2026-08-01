@@ -1,6 +1,6 @@
 /**
  * D'AMOUR Sistem IPL Perumahan - Core Application Logic
- * Refined Simulasi IPL: Equal Kas for IPL+Sampah & IPL Tanpa Sampah, Developer calculated separately
+ * 100% Synchronized Kas Calculation between 4. Perhitungan IPL and 12. Simulasi IPL
  */
 
 let appState = null;
@@ -796,7 +796,7 @@ function saveSettingTarget() {
 }
 
 /* ==========================================================================
-   4. PERHITUNGAN IPL (SMART GROUP DIVISION)
+   4. PERHITUNGAN IPL (FULLY SYNCHRONIZED KAS WITH SIMULASI IPL)
    ========================================================================== */
 function renderPerhitunganIPL() {
   if (!appState) return;
@@ -806,11 +806,10 @@ function renderPerhitunganIPL() {
   const totalRumahSampah = hasHouses ? (appState.rumah.filter((r) => r.kelompokIPL === "IPL + Sampah").length || totalRumahAll) : 24;
   const totalRumahDev = hasHouses ? (appState.rumah.filter((r) => r.kelompokIPL === "IPL Developer").length || totalRumahAll) : 2;
 
-  const targetIPLObj = appState.targetIPL.find((t) => t.kelompok === "IPL + Sampah");
-  const targetNominal = targetIPLObj ? targetIPLObj.target : 175000;
+  const targetTanpaSampahObj = appState.targetIPL.find((t) => t.kelompok === "IPL Tanpa Sampah");
+  const baseTargetTanpaSampah = targetTanpaSampahObj ? targetTanpaSampahObj.target : 150000;
 
   let generalCostsPerHomeSum = 0;
-  let sampahCostPerHome = 0;
 
   const tbody = document.getElementById("perhitungan-ipl-tbody");
   if (!tbody) return;
@@ -840,9 +839,7 @@ function renderPerhitunganIPL() {
 
       const costPerHome = targetJmlRumah > 0 ? k.nominalTotal / targetJmlRumah : 0;
       
-      if (k.dibayarOleh === "IPL + Sampah") {
-        sampahCostPerHome += costPerHome;
-      } else if (k.dibayarOleh !== "IPL Developer" && k.dibayarOleh !== "Developer") {
+      if (k.dibayarOleh !== "IPL + Sampah" && k.dibayarOleh !== "IPL Developer" && k.dibayarOleh !== "Developer") {
         generalCostsPerHomeSum += costPerHome;
       }
 
@@ -869,13 +866,14 @@ function renderPerhitunganIPL() {
 
   tbody.innerHTML = rowsHtml;
 
-  const kasPerHome = Math.max(0, targetNominal - (generalCostsPerHomeSum + sampahCostPerHome));
+  // Kas per home for IPL & IPL + Sampah (exact match with Simulasi IPL)
+  const kasPerHome = Math.max(0, baseTargetTanpaSampah - generalCostsPerHomeSum);
   const kasCell = document.getElementById("cell-kas-per-rumah");
   if (kasCell) {
     kasCell.textContent = formatRpDecimal(kasPerHome);
   }
 
-  const grandTotalPerHome = generalCostsPerHomeSum + sampahCostPerHome + kasPerHome;
+  const grandTotalPerHome = generalCostsPerHomeSum + kasPerHome;
   const totalCell = document.getElementById("perhitungan-grand-total");
   if (totalCell) {
     totalCell.textContent = `${formatRpDecimal(grandTotalPerHome)}`;
