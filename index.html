@@ -57,15 +57,23 @@
           <i class="ri-calculator-line"></i>
           <span>Perhitungan IPL</span>
         </a>
+        <a href="#" class="nav-item" data-view="simulasi">
+          <i class="ri-pie-chart-line"></i>
+          <span>Simulasi IPL</span>
+        </a>
 
-        <div class="nav-group-title">Keuangan</div>
+        <div class="nav-group-title">Keuangan & Laporan</div>
         <a href="#" class="nav-item" data-view="pengeluaran">
           <i class="ri-wallet-3-line"></i>
           <span>Pengeluaran</span>
         </a>
         <a href="#" class="nav-item" data-view="kas">
           <i class="ri-bank-card-line"></i>
-          <span>Arus Kas</span>
+          <span>Kas (Arus Kas)</span>
+        </a>
+        <a href="#" class="nav-item" data-view="laporan">
+          <i class="ri-file-chart-line"></i>
+          <span>Laporan</span>
         </a>
 
         <div class="nav-group-title">Master Data</div>
@@ -377,7 +385,7 @@
           </div>
         </section>
 
-        <!-- 5. MOCKUP: GENERATE TAGIHAN VIEW -->
+        <!-- 5. GENERATE TAGIHAN VIEW -->
         <section id="view-generate-tagihan" class="view-section">
           <div class="card" style="max-width: 600px;">
             <div class="card-header">
@@ -434,7 +442,7 @@
           </div>
         </section>
 
-        <!-- 6. MOCKUP: DAFTAR TAGIHAN VIEW -->
+        <!-- 6. DAFTAR TAGIHAN VIEW -->
         <section id="view-daftar-tagihan" class="view-section">
           <div class="card">
             <div class="card-header">
@@ -483,7 +491,7 @@
           </div>
         </section>
 
-        <!-- 7. MOCKUP: DETAIL TAGIHAN VIEW -->
+        <!-- 7. DETAIL TAGIHAN VIEW -->
         <section id="view-detail-tagihan" class="view-section">
           <div class="card">
             <div class="card-header">
@@ -535,7 +543,7 @@
           </div>
         </section>
 
-        <!-- 8. MOCKUP: FORM PEMBAYARAN VIEW -->
+        <!-- 8. FORM PEMBAYARAN VIEW -->
         <section id="view-form-pembayaran" class="view-section">
           <div class="card" style="max-width: 750px;">
             <div class="card-header">
@@ -544,7 +552,6 @@
             </div>
 
             <div style="display: grid; grid-template-columns: 1fr 1.5fr; gap: 1.5rem;">
-              <!-- Left Info -->
               <div style="background: #f8fafc; border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 1.25rem;">
                 <div style="margin-bottom: 1rem;">
                   <span style="font-size: 0.75rem; color: var(--text-muted);">Rumah</span>
@@ -564,7 +571,6 @@
                 </div>
               </div>
 
-              <!-- Right Form -->
               <div>
                 <input type="hidden" id="bayar-form-id">
                 <div class="form-group">
@@ -605,7 +611,7 @@
           </div>
         </section>
 
-        <!-- 9. MOCKUP: PENGELUARAN VIEW -->
+        <!-- 9. PENGELUARAN VIEW -->
         <section id="view-pengeluaran" class="view-section">
           <div class="card">
             <div class="card-header">
@@ -647,7 +653,150 @@
           </div>
         </section>
 
-        <!-- PENGATURAN & SPREADSHEET SYNC VIEW -->
+        <!-- 10. MOCKUP: KAS (ARUS KAS) VIEW -->
+        <section id="view-kas" class="view-section">
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">10. Kas (Arus Kas)</div>
+            </div>
+
+            <div class="filter-bar">
+              <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <span style="font-size: 0.8rem; color: var(--text-muted);">Bulan</span>
+                <select id="filter-kas-bulan" class="form-control" style="width: auto;">
+                  <option value="Agustus">Agustus</option>
+                  <option value="Semua">Semua Bulan</option>
+                </select>
+              </div>
+              <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <span style="font-size: 0.8rem; color: var(--text-muted);">Tahun</span>
+                <select id="filter-kas-tahun" class="form-control" style="width: auto;">
+                  <option value="2025">2025</option>
+                </select>
+              </div>
+              <button class="btn btn-outline" onclick="renderKasArusKasTable()"><i class="ri-filter-3-line"></i> Filter</button>
+            </div>
+
+            <div class="table-responsive">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>Tanggal</th>
+                    <th>Referensi</th>
+                    <th style="text-align: right;">Masuk (Rp)</th>
+                    <th style="text-align: right;">Keluar (Rp)</th>
+                    <th style="text-align: right;">Saldo (Rp)</th>
+                  </tr>
+                </thead>
+                <tbody id="kas-arus-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- 11. MOCKUP: LAPORAN VIEW -->
+        <section id="view-laporan" class="view-section">
+          <div class="card" style="max-width: 600px;">
+            <div class="card-header">
+              <div class="card-title">11. Laporan</div>
+            </div>
+
+            <div class="form-group">
+              <label>Jenis Laporan</label>
+              <select id="laporan-jenis" class="form-control">
+                <option value="tagihan">Laporan Tagihan & Pembayaran IPL</option>
+                <option value="pengeluaran">Laporan Pengeluaran Kas</option>
+                <option value="kas">Laporan Arus Kas</option>
+                <option value="rekap">Rekapitulasi IPL Perumahan</option>
+              </select>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem;">
+              <div class="form-group">
+                <label>Bulan</label>
+                <select id="laporan-bulan" class="form-control">
+                  <option value="Agustus">Agustus</option>
+                  <option value="Semua">Semua Bulan</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Tahun</label>
+                <select id="laporan-tahun" class="form-control">
+                  <option value="2025">2025</option>
+                </select>
+              </div>
+            </div>
+
+            <div style="display: flex; gap: 0.75rem;">
+              <button class="btn btn-primary" onclick="renderLaporanPreview()"><i class="ri-eye-line"></i> Tampilkan</button>
+              <button class="btn btn-outline" onclick="exportLaporanCSV()"><i class="ri-download-cloud-line"></i> Export CSV</button>
+            </div>
+          </div>
+
+          <!-- Laporan Preview Output -->
+          <div class="card" id="card-laporan-preview" style="display: none; margin-top: 1rem;">
+            <div class="card-header">
+              <div class="card-title" id="preview-laporan-title">Hasil Laporan</div>
+              <button class="btn btn-outline btn-sm" onclick="window.print()"><i class="ri-printer-line"></i> Cetak / PDF</button>
+            </div>
+            <div class="table-responsive" id="laporan-preview-table-wrapper"></div>
+          </div>
+        </section>
+
+        <!-- 12. MOCKUP: SIMULASI IPL VIEW -->
+        <section id="view-simulasi" class="view-section">
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">12. Simulasi IPL</div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1.2fr; gap: 1.5rem;">
+              <!-- Left Form Inputs -->
+              <div>
+                <h4 style="font-size: 0.95rem; margin-bottom: 1rem; color: var(--text-muted);">Komponen Biaya</h4>
+                <div class="form-group" style="display: flex; align-items: center; justify-content: space-between; gap: 1rem;">
+                  <label style="margin-bottom: 0;">Satpam (Total)</label>
+                  <input type="number" id="sim-input-satpam" class="form-control" style="width: 160px; text-align: right;" value="3700000">
+                </div>
+                <div class="form-group" style="display: flex; align-items: center; justify-content: space-between; gap: 1rem;">
+                  <label style="margin-bottom: 0;">Listrik + Wifi (Total)</label>
+                  <input type="number" id="sim-input-listrik" class="form-control" style="width: 160px; text-align: right;" value="550000">
+                </div>
+                <div class="form-group" style="display: flex; align-items: center; justify-content: space-between; gap: 1rem;">
+                  <label style="margin-bottom: 0;">Sampah (Total)</label>
+                  <input type="number" id="sim-input-sampah" class="form-control" style="width: 160px; text-align: right;" value="775000">
+                </div>
+                <div class="form-group" style="display: flex; align-items: center; justify-content: space-between; gap: 1rem;">
+                  <label style="margin-bottom: 0;">Tambahan Developer (Total)</label>
+                  <input type="number" id="sim-input-developer" class="form-control" style="width: 160px; text-align: right;" value="32000">
+                </div>
+
+                <div style="margin-top: 1.5rem; text-align: right;">
+                  <button class="btn btn-primary" onclick="runSimulasiIPL()"><i class="ri-refresh-line"></i> Hitung Ulang</button>
+                </div>
+              </div>
+
+              <!-- Right Live Table Result -->
+              <div>
+                <div class="table-responsive">
+                  <table class="table">
+                    <thead>
+                      <tr>
+                        <th>Target IPL</th>
+                        <th style="text-align: right;">Hasil Simulasi (Kas / Rumah)</th>
+                      </tr>
+                    </thead>
+                    <tbody id="simulasi-result-tbody">
+                      <!-- Rendered by JS -->
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- PENGATURAN VIEW -->
         <section id="view-pengaturan" class="view-section">
           <div class="card">
             <div class="card-header">
@@ -657,9 +806,6 @@
             <div style="max-width: 650px;">
               <div class="form-group">
                 <label>URL Google Apps Script Web App API</label>
-                <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.5rem;">
-                  Masukkan URL Web App hasil Deploy Google Apps Script dari Google Spreadsheet Anda untuk membaca dan menyimpan data secara otomatis.
-                </p>
                 <input type="text" id="setting-gsheet-url" class="form-control" placeholder="https://script.google.com/macros/s/.../exec">
               </div>
 

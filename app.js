@@ -1,5 +1,5 @@
 /**
- * D'AMOUR Sistem IPL Perumahan - Core Application Logic (Phase 2)
+ * D'AMOUR Sistem IPL Perumahan - Core Application Logic (Phase 3 Complete)
  */
 
 let appState = null;
@@ -39,6 +39,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   renderPerhitunganIPL();
   renderDaftarTagihan();
   renderPengeluaranTable();
+  renderKasArusKasTable();
+  runSimulasiIPL();
 });
 
 // Load App Data from LocalStorage or data.json
@@ -94,7 +96,6 @@ function showView(viewId) {
     activeNav.classList.add("active");
   }
 
-  // Update Breadcrumb
   const breadcrumb = document.getElementById("page-title-breadcrumb");
   if (breadcrumb) {
     const titles = {
@@ -108,13 +109,14 @@ function showView(viewId) {
       "detail-tagihan": "Detail Tagihan",
       "form-pembayaran": "Pembayaran",
       pengeluaran: "Data Pengeluaran",
-      kas: "Arus Kas Saat Ini",
+      kas: "Kas (Arus Kas)",
+      laporan: "Laporan IPL",
+      simulasi: "Simulasi IPL",
       pengaturan: "Pengaturan Sistem"
     };
     breadcrumb.textContent = titles[viewId] || "Dashboard";
   }
 
-  // Refresh dynamic views
   if (viewId === "dashboard") renderDashboard();
   if (viewId === "rumah") renderMasterRumah();
   if (viewId === "komponen") renderMasterKomponen();
@@ -123,6 +125,8 @@ function showView(viewId) {
   if (viewId === "generate-tagihan") updateHouseGroupCounts();
   if (viewId === "daftar-tagihan") renderDaftarTagihan();
   if (viewId === "pengeluaran") renderPengeluaranTable();
+  if (viewId === "kas") renderKasArusKasTable();
+  if (viewId === "simulasi") runSimulasiIPL();
 }
 
 // Event Listeners
@@ -161,7 +165,7 @@ function setupEventListeners() {
 }
 
 /* ==========================================================================
-   1. DASHBOARD RENDERER
+   1. DASHBOARD
    ========================================================================== */
 function renderDashboard() {
   if (!appState) return;
@@ -290,7 +294,7 @@ function renderCharts(lunas, menunggu, menunggak, total) {
 }
 
 /* ==========================================================================
-   2. MASTER RUMAH
+   2. MASTER RUMAH & KOMPONEN
    ========================================================================== */
 function renderMasterRumah() {
   if (!appState) return;
@@ -416,9 +420,6 @@ function deleteRumah(id) {
   }
 }
 
-/* ==========================================================================
-   3. MASTER KOMPONEN & TARGET IPL
-   ========================================================================== */
 function renderMasterKomponen() {
   if (!appState) return;
 
@@ -566,9 +567,6 @@ function saveSettingTarget() {
   renderPerhitunganIPL();
 }
 
-/* ==========================================================================
-   4. PERHITUNGAN IPL (RINCIAN)
-   ========================================================================== */
 function renderPerhitunganIPL() {
   if (!appState) return;
 
@@ -624,9 +622,6 @@ function renderPerhitunganIPL() {
   }
 }
 
-/* ==========================================================================
-   5. MOCKUP: GENERATE TAGIHAN
-   ========================================================================== */
 function updateHouseGroupCounts() {
   if (!appState || !appState.rumah) return;
 
@@ -642,7 +637,6 @@ function updateHouseGroupCounts() {
 function processGenerateTagihan() {
   const bulan = document.getElementById("gen-bulan").value;
   const tahun = document.getElementById("gen-tahun").value;
-  const tglGen = document.getElementById("gen-tanggal").value;
 
   const chk1 = document.getElementById("chk-group-1").checked;
   const chk2 = document.getElementById("chk-group-2").checked;
@@ -700,9 +694,6 @@ function processGenerateTagihan() {
   showView("daftar-tagihan");
 }
 
-/* ==========================================================================
-   6. MOCKUP: DAFTAR TAGIHAN & DETAIL TAGIHAN (MOCKUP 6 & 7)
-   ========================================================================== */
 function renderDaftarTagihan() {
   if (!appState) return;
 
@@ -821,9 +812,6 @@ function viewDetailTagihan(id) {
   showView("detail-tagihan");
 }
 
-/* ==========================================================================
-   8. MOCKUP: FORM PEMBAYARAN WITH FILE PROOF (MOCKUP 8)
-   ========================================================================== */
 function openFormPembayaran(id) {
   const t = appState.tagihan.find((item) => item.id === id);
   if (!t) return;
@@ -883,12 +871,10 @@ function simpanFormPembayaran() {
     alert("Pembayaran berhasil disimpan!");
     showView("daftar-tagihan");
     renderDashboard();
+    renderKasArusKasTable();
   }
 }
 
-/* ==========================================================================
-   9. MOCKUP: PENGELUARAN (MOCKUP 9)
-   ========================================================================== */
 function renderPengeluaranTable() {
   if (!appState) return;
 
@@ -976,6 +962,7 @@ function savePengeluaran() {
   closeModal("modal-pengeluaran");
   renderPengeluaranTable();
   renderDashboard();
+  renderKasArusKasTable();
 }
 
 function deletePengeluaran(id) {
@@ -984,6 +971,214 @@ function deletePengeluaran(id) {
     saveState();
     renderPengeluaranTable();
     renderDashboard();
+    renderKasArusKasTable();
+  }
+}
+
+/* ==========================================================================
+   10. MOCKUP: KAS (ARUS KAS) - RUNNING BALANCE LEDGER TABLE (MOCKUP 10)
+   ========================================================================== */
+function renderKasArusKasTable() {
+  if (!appState) return;
+
+  const tbody = document.getElementById("kas-arus-tbody");
+  if (!tbody) return;
+
+  let currentBalance = 25000000;
+
+  const ledgerRows = [
+    { tanggal: "01/08/2025", referensi: "Saldo Awal", masuk: null, keluar: null, saldo: currentBalance }
+  ];
+
+  // Income from paid Tagihan
+  const totalMasukTagihan = appState.tagihan
+    .filter((t) => t.status === "Lunas")
+    .reduce((sum, t) => sum + t.nominal, 0);
+
+  if (totalMasukTagihan > 0) {
+    currentBalance += totalMasukTagihan;
+    ledgerRows.push({
+      tanggal: "01/08/2025",
+      referensi: "Tagihan IPL",
+      masuk: totalMasukTagihan,
+      keluar: null,
+      saldo: currentBalance
+    });
+  }
+
+  // Expenses from Pengeluaran
+  appState.pengeluaran.forEach((p) => {
+    currentBalance -= p.nominal;
+    ledgerRows.push({
+      tanggal: p.tanggal,
+      referensi: p.kategori + (p.penerima ? ` (${p.penerima})` : ""),
+      masuk: null,
+      keluar: p.nominal,
+      saldo: currentBalance
+    });
+  });
+
+  tbody.innerHTML = ledgerRows
+    .map(
+      (row) => `
+      <tr>
+        <td>${row.tanggal}</td>
+        <td><strong>${row.referensi}</strong></td>
+        <td style="text-align: right; color: var(--success); font-weight: 600;">${row.masuk ? formatRp(row.masuk).replace("Rp ", "") : "-"}</td>
+        <td style="text-align: right; color: var(--danger); font-weight: 600;">${row.keluar ? formatRp(row.keluar).replace("Rp ", "") : "-"}</td>
+        <td style="text-align: right; font-weight: 700;">${formatRp(row.saldo).replace("Rp ", "")}</td>
+      </tr>
+    `
+    )
+    .join("");
+}
+
+/* ==========================================================================
+   11. MOCKUP: LAPORAN (MOCKUP 11)
+   ========================================================================== */
+function renderLaporanPreview() {
+  const jenis = document.getElementById("laporan-jenis").value;
+  const bulan = document.getElementById("laporan-bulan").value;
+  const tahun = document.getElementById("laporan-tahun").value;
+
+  const previewCard = document.getElementById("card-laporan-preview");
+  const wrapper = document.getElementById("laporan-preview-table-wrapper");
+  const title = document.getElementById("preview-laporan-title");
+
+  if (!previewCard || !wrapper) return;
+
+  previewCard.style.display = "block";
+  title.textContent = `Preview Laporan ${jenis.toUpperCase()} - ${bulan} ${tahun}`;
+
+  if (jenis === "tagihan") {
+    wrapper.innerHTML = `
+      <table class="table">
+        <thead>
+          <tr>
+            <th>No</th>
+            <th>Rumah</th>
+            <th>Pemilik</th>
+            <th>Kelompok IPL</th>
+            <th>Nominal</th>
+            <th>Status</th>
+            <th>Tgl Bayar</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${appState.tagihan
+            .map(
+              (t, i) => `
+            <tr>
+              <td>${i + 1}</td>
+              <td>${t.blokNo}</td>
+              <td>${t.pemilik}</td>
+              <td>${t.kelompokIPL}</td>
+              <td>${formatRp(t.nominal)}</td>
+              <td>${t.status}</td>
+              <td>${t.tglBayar}</td>
+            </tr>
+          `
+            )
+            .join("")}
+        </tbody>
+      </table>
+    `;
+  } else if (jenis === "pengeluaran") {
+    wrapper.innerHTML = `
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Tanggal</th>
+            <th>Kategori</th>
+            <th>Penerima</th>
+            <th>Nominal</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${appState.pengeluaran
+            .map(
+              (p) => `
+            <tr>
+              <td>${p.tanggal}</td>
+              <td>${p.kategori}</td>
+              <td>${p.penerima || "-"}</td>
+              <td>${formatRp(p.nominal)}</td>
+            </tr>
+          `
+            )
+            .join("")}
+        </tbody>
+      </table>
+    `;
+  } else {
+    wrapper.innerHTML = `<p style="padding: 1rem; color: var(--text-muted);">Laporan ${jenis} siap di-export ke CSV.</p>`;
+  }
+}
+
+function exportLaporanCSV() {
+  const jenis = document.getElementById("laporan-jenis").value;
+  let csvContent = "data:text/csv;charset=utf-8,";
+
+  if (jenis === "tagihan") {
+    csvContent += "No,Rumah,Pemilik,Kelompok IPL,Nominal,Status,Tgl Bayar\n";
+    appState.tagihan.forEach((t, i) => {
+      csvContent += `${i + 1},${t.blokNo},${t.pemilik},${t.kelompokIPL},${t.nominal},${t.status},${t.tglBayar}\n`;
+    });
+  } else {
+    csvContent += "Tanggal,Kategori,Penerima,Nominal\n";
+    appState.pengeluaran.forEach((p) => {
+      csvContent += `${p.tanggal},${p.kategori},${p.penerima || "-"},${p.nominal}\n`;
+    });
+  }
+
+  const encodedUri = encodeURI(csvContent);
+  const link = document.createElement("a");
+  link.setAttribute("href", encodedUri);
+  link.setAttribute("download", `Laporan_${jenis}_${Date.now()}.csv`);
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+}
+
+/* ==========================================================================
+   12. MOCKUP: SIMULASI IPL (MOCKUP 12)
+   ========================================================================== */
+function runSimulasiIPL() {
+  const satpamTotal = parseFloat(document.getElementById("sim-input-satpam")?.value) || 3700000;
+  const listrikTotal = parseFloat(document.getElementById("sim-input-listrik")?.value) || 550000;
+  const sampahTotal = parseFloat(document.getElementById("sim-input-sampah")?.value) || 775000;
+  const devTotal = parseFloat(document.getElementById("sim-input-developer")?.value) || 32000;
+
+  const totalRumah = appState.rumah.length || 31;
+
+  const satpamPerHome = satpamTotal / totalRumah;
+  const listrikPerHome = listrikTotal / totalRumah;
+  const sampahPerHome = sampahTotal / totalRumah;
+
+  const target1 = appState.targetIPL.find((t) => t.kelompok === "IPL + Sampah")?.target || 175000;
+  const target2 = appState.targetIPL.find((t) => t.kelompok === "IPL Tanpa Sampah")?.target || 150000;
+  const target3 = appState.targetIPL.find((t) => t.kelompok === "IPL Developer")?.target || 166000;
+
+  const kas1 = Math.round(target1 - (satpamPerHome + listrikPerHome + sampahPerHome));
+  const kas2 = Math.round(target2 - (satpamPerHome + listrikPerHome));
+  const kas3 = Math.round(target3 - (satpamPerHome + listrikPerHome));
+
+  const tbody = document.getElementById("simulasi-result-tbody");
+  if (tbody) {
+    tbody.innerHTML = `
+      <tr>
+        <td><strong>IPL + Sampah</strong></td>
+        <td style="text-align: right;"><span style="font-weight: 700; margin-right: 1.5rem;">${formatRp(target1).replace("Rp ", "")}</span> <span style="color: var(--text-muted);">${kas1.toLocaleString("id-ID")}</span></td>
+      </tr>
+      <tr>
+        <td><strong>IPL Tanpa Sampah</strong></td>
+        <td style="text-align: right;"><span style="font-weight: 700; margin-right: 1.5rem;">${formatRp(target2).replace("Rp ", "")}</span> <span style="color: var(--text-muted);">${kas2.toLocaleString("id-ID")}</span></td>
+      </tr>
+      <tr>
+        <td><strong>IPL Developer</strong></td>
+        <td style="text-align: right;"><span style="font-weight: 700; margin-right: 1.5rem;">${formatRp(target3).replace("Rp ", "")}</span> <span style="color: var(--text-muted);">${kas3.toLocaleString("id-ID")}</span></td>
+      </tr>
+    `;
   }
 }
 
