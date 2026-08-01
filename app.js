@@ -1,6 +1,6 @@
 /**
  * D'AMOUR Sistem IPL Perumahan - Core Application Logic
- * Refined Perhitungan IPL: Exact Jml Rumah calculation per target group (IPL+Sampah vs Semua vs Developer)
+ * Refined Simulasi IPL: Equal Kas per home across all groups based on target group division
  */
 
 let appState = null;
@@ -796,7 +796,7 @@ function saveSettingTarget() {
 }
 
 /* ==========================================================================
-   4. PERHITUNGAN IPL (SMART JML RUMAH CALCULATION BASED ON DIBAYAR OLEH)
+   4. PERHITUNGAN IPL (SMART GROUP DIVISION)
    ========================================================================== */
 function renderPerhitunganIPL() {
   if (!appState) return;
@@ -804,7 +804,7 @@ function renderPerhitunganIPL() {
   const hasHouses = appState.rumah && appState.rumah.length > 0;
   const totalRumahAll = hasHouses ? appState.rumah.length : 31;
   const totalRumahSampah = hasHouses ? (appState.rumah.filter((r) => r.kelompokIPL === "IPL + Sampah").length || totalRumahAll) : 24;
-  const totalRumahDev = hasHouses ? (appState.rumah.filter((r) => r.kelompokIPL === "IPL Developer").length || 2) : 2;
+  const totalRumahDev = hasHouses ? (appState.rumah.filter((r) => r.kelompokIPL === "IPL Developer").length || totalRumahAll) : 2;
 
   const targetIPLObj = appState.targetIPL.find((t) => t.kelompok === "IPL + Sampah");
   const targetNominal = targetIPLObj ? targetIPLObj.target : 175000;
@@ -1533,7 +1533,7 @@ function exportLaporanCSV() {
 }
 
 /* ==========================================================================
-   12. FULLY EDITABLE SIMULASI IPL
+   12. FULLY EDITABLE SIMULASI IPL (EQUAL KAS ACROSS ALL GROUPS)
    ========================================================================== */
 function renderSimulasiInputs() {
   const container = document.getElementById("simulasi-dynamic-inputs-container");
@@ -1568,50 +1568,45 @@ function runSimulasiIPL() {
   if (!appState || !appState.komponenIPL) return;
 
   const hasHouses = appState && appState.rumah && appState.rumah.length > 0;
-  const totalRumah = hasHouses ? appState.rumah.length : 31;
-  const rumahSampahCount = hasHouses ? (appState.rumah.filter((r) => r.kelompokIPL === "IPL + Sampah").length || totalRumah) : 24;
-  const rumahDevCount = hasHouses ? (appState.rumah.filter((r) => r.kelompokIPL === "IPL Developer").length || 31) : 2;
+  const totalRumahAll = hasHouses ? appState.rumah.length : 31;
+  const rumahSampahCount = hasHouses ? (appState.rumah.filter((r) => r.kelompokIPL === "IPL + Sampah").length || totalRumahAll) : 24;
+  const rumahDevCount = hasHouses ? (appState.rumah.filter((r) => r.kelompokIPL === "IPL Developer").length || totalRumahAll) : 2;
 
   let costGeneralPerHome = 0;
-  let costSampahPerHome = 0;
-  let costDevPerHome = 0;
 
   const inputs = document.querySelectorAll(".sim-input-komponen");
   inputs.forEach((inp) => {
     const val = parseFloat(inp.value) || 0;
     const dibayar = inp.getAttribute("data-dibayar");
 
-    if (dibayar === "IPL + Sampah") {
-      costSampahPerHome += val / rumahSampahCount;
-    } else if (dibayar === "Developer" || dibayar === "IPL Developer") {
-      costDevPerHome += val / rumahDevCount;
-    } else {
-      costGeneralPerHome += val / totalRumah;
+    if (dibayar !== "IPL + Sampah" && dibayar !== "Developer" && dibayar !== "IPL Developer") {
+      costGeneralPerHome += val / totalRumahAll;
     }
   });
+
+  const baseTargetTanpaSampah = appState.targetIPL?.find((t) => t.kelompok === "IPL Tanpa Sampah")?.target || 150000;
+  
+  // Kas per home is uniform across ALL groups when targets match component group allocations!
+  const kasPerHome = Math.round(baseTargetTanpaSampah - costGeneralPerHome);
 
   const target1 = appState && appState.targetIPL ? (appState.targetIPL.find((t) => t.kelompok === "IPL + Sampah")?.target || 175000) : 175000;
   const target2 = appState && appState.targetIPL ? (appState.targetIPL.find((t) => t.kelompok === "IPL Tanpa Sampah")?.target || 150000) : 150000;
   const target3 = appState && appState.targetIPL ? (appState.targetIPL.find((t) => t.kelompok === "IPL Developer")?.target || 166000) : 166000;
-
-  const kasGroup1 = Math.round(target1 - (costGeneralPerHome + costSampahPerHome));
-  const kasGroup2 = Math.round(target2 - costGeneralPerHome);
-  const kasGroup3 = Math.round(target3 - (costGeneralPerHome + costDevPerHome));
 
   const tbody = document.getElementById("simulasi-result-tbody");
   if (tbody) {
     tbody.innerHTML = `
       <tr>
         <td><strong>IPL + Sampah</strong></td>
-        <td style="text-align: right;"><span style="font-weight: 700; margin-right: 1.5rem;">${formatRp(target1)}</span> <span style="color: var(--text-main); font-weight: 600;">${kasGroup1.toLocaleString("id-ID")}</span></td>
+        <td style="text-align: right;"><span style="font-weight: 700; margin-right: 1.5rem;">${formatRp(target1)}</span> <span style="color: var(--text-main); font-weight: 600;">${kasPerHome.toLocaleString("id-ID")}</span></td>
       </tr>
       <tr>
         <td><strong>IPL Tanpa Sampah</strong></td>
-        <td style="text-align: right;"><span style="font-weight: 700; margin-right: 1.5rem;">${formatRp(target2)}</span> <span style="color: var(--text-main); font-weight: 600;">${kasGroup2.toLocaleString("id-ID")}</span></td>
+        <td style="text-align: right;"><span style="font-weight: 700; margin-right: 1.5rem;">${formatRp(target2)}</span> <span style="color: var(--text-main); font-weight: 600;">${kasPerHome.toLocaleString("id-ID")}</span></td>
       </tr>
       <tr>
         <td><strong>IPL Developer</strong></td>
-        <td style="text-align: right;"><span style="font-weight: 700; margin-right: 1.5rem;">${formatRp(target3)}</span> <span style="color: var(--text-main); font-weight: 600;">${kasGroup3.toLocaleString("id-ID")}</span></td>
+        <td style="text-align: right;"><span style="font-weight: 700; margin-right: 1.5rem;">${formatRp(target3)}</span> <span style="color: var(--text-main); font-weight: 600;">${kasPerHome.toLocaleString("id-ID")}</span></td>
       </tr>
     `;
   }
