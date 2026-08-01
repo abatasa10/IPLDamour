@@ -1,5 +1,5 @@
 /**
- * D'AMOUR Sistem IPL Perumahan - Core Application Logic (Simulasi Logic Refined)
+ * D'AMOUR Sistem IPL Perumahan - Core Application Logic (Dynamic Simulasi from Master Komponen)
  */
 
 let appState = null;
@@ -40,6 +40,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   renderDaftarTagihan();
   renderPengeluaranTable();
   renderKasArusKasTable();
+  renderSimulasiInputs();
   runSimulasiIPL();
 });
 
@@ -86,10 +87,10 @@ function clearAllAppData() {
         { id: "tgt-3", kelompok: "IPL Developer", target: 166000, keterangan: "IPL Developer" }
       ],
       komponenIPL: [
-        { id: "komp-1", nama: "Satpam", nominalTotal: 0, isAutoKas: false, dibayarOleh: "Semua", aktif: true },
+        { id: "komp-1", nama: "Satpam", nominalTotal: 3700000, isAutoKas: false, dibayarOleh: "Semua", aktif: true },
         { id: "komp-2", nama: "Kas (Otomatis)", nominalTotal: 0, isAutoKas: true, dibayarOleh: "Semua", aktif: true },
-        { id: "komp-3", nama: "Sampah", nominalTotal: 0, isAutoKas: false, dibayarOleh: "IPL + Sampah", aktif: true },
-        { id: "komp-4", nama: "Listrik + Wifi", nominalTotal: 0, isAutoKas: false, dibayarOleh: "Semua", aktif: true }
+        { id: "komp-3", nama: "Sampah", nominalTotal: 775000, isAutoKas: false, dibayarOleh: "IPL + Sampah", aktif: true },
+        { id: "komp-4", nama: "Listrik + Wifi", nominalTotal: 550000, isAutoKas: false, dibayarOleh: "Semua", aktif: true }
       ],
       rumah: [],
       tagihan: [],
@@ -154,7 +155,10 @@ function showView(viewId) {
   if (viewId === "daftar-tagihan") renderDaftarTagihan();
   if (viewId === "pengeluaran") renderPengeluaranTable();
   if (viewId === "kas") renderKasArusKasTable();
-  if (viewId === "simulasi") runSimulasiIPL();
+  if (viewId === "simulasi") {
+    renderSimulasiInputs();
+    runSimulasiIPL();
+  }
 }
 
 // Event Listeners
@@ -461,6 +465,8 @@ function saveRumah() {
   updateHouseGroupCounts();
   renderMasterRumah();
   renderDashboard();
+  renderSimulasiInputs();
+  runSimulasiIPL();
 }
 
 function deleteRumah(id) {
@@ -470,6 +476,8 @@ function deleteRumah(id) {
     updateHouseGroupCounts();
     renderMasterRumah();
     renderDashboard();
+    renderSimulasiInputs();
+    runSimulasiIPL();
   }
 }
 
@@ -506,6 +514,8 @@ function toggleKomponenAktif(id) {
     saveState();
     renderMasterKomponen();
     renderPerhitunganIPL();
+    renderSimulasiInputs();
+    runSimulasiIPL();
   }
 }
 
@@ -562,6 +572,8 @@ function saveKomponen() {
   closeModal("modal-komponen");
   renderMasterKomponen();
   renderPerhitunganIPL();
+  renderSimulasiInputs();
+  runSimulasiIPL();
 }
 
 function deleteKomponen(id) {
@@ -570,6 +582,8 @@ function deleteKomponen(id) {
     saveState();
     renderMasterKomponen();
     renderPerhitunganIPL();
+    renderSimulasiInputs();
+    runSimulasiIPL();
   }
 }
 
@@ -618,6 +632,7 @@ function saveSettingTarget() {
   closeModal("modal-target");
   renderSettingTarget();
   renderPerhitunganIPL();
+  runSimulasiIPL();
 }
 
 function renderPerhitunganIPL() {
@@ -1217,34 +1232,81 @@ function exportLaporanCSV() {
 }
 
 /* ==========================================================================
-   12. REFINED SIMULASI IPL FORMULA
+   12. DYNAMIC SIMULASI IPL (LOADS DIRECTLY FROM MASTER KOMPONEN)
    ========================================================================== */
+function renderSimulasiInputs() {
+  const container = document.getElementById("simulasi-dynamic-inputs-container");
+  if (!container || !appState || !appState.komponenIPL) return;
+
+  const activeKomponen = appState.komponenIPL.filter((k) => k.aktif);
+
+  let html = "";
+  activeKomponen.forEach((k) => {
+    if (k.isAutoKas) {
+      // Skip auto kas from manual total input
+      return;
+    }
+
+    if (k.dibayarOleh === "Developer") {
+      html += `
+        <div class="form-group" style="display: flex; align-items: center; justify-content: space-between; gap: 1rem;">
+          <label style="margin-bottom: 0;">${k.nama} (Total)</label>
+          <div style="width: 160px; text-align: right; background: #f1f5f9; padding: 0.5rem 0.75rem; border-radius: var(--radius-md); font-weight: 600; font-size: 0.9rem;" id="sim-val-developer-total">AUTO</div>
+        </div>
+      `;
+    } else {
+      html += `
+        <div class="form-group" style="display: flex; align-items: center; justify-content: space-between; gap: 1rem;">
+          <label style="margin-bottom: 0;">${k.nama} (Total)</label>
+          <input type="number" class="form-control sim-input-komponen" data-id="${k.id}" data-dibayar="${k.dibayarOleh}" style="width: 160px; text-align: right;" value="${k.nominalTotal}" oninput="runSimulasiIPL()">
+        </div>
+      `;
+    }
+  });
+
+  container.innerHTML = html;
+}
+
+function syncSimulasiFromMaster() {
+  renderSimulasiInputs();
+  runSimulasiIPL();
+  alert("Input simulasi berhasil disinkronkan dengan data terkini Master Komponen!");
+}
+
 function runSimulasiIPL() {
-  const satpamTotal = parseFloat(document.getElementById("sim-input-satpam")?.value) || 0;
-  const listrikTotal = parseFloat(document.getElementById("sim-input-listrik")?.value) || 0;
-  const sampahTotal = parseFloat(document.getElementById("sim-input-sampah")?.value) || 0;
+  if (!appState || !appState.komponenIPL) return;
 
   const hasHouses = appState && appState.rumah && appState.rumah.length > 0;
   const totalRumah = hasHouses ? appState.rumah.length : 31;
   const rumahSampahCount = hasHouses ? (appState.rumah.filter((r) => r.kelompokIPL === "IPL + Sampah").length || totalRumah) : 31;
   const rumahDevCount = hasHouses ? (appState.rumah.filter((r) => r.kelompokIPL === "IPL Developer").length || 2) : 2;
 
-  const satpamPerHome = satpamTotal / totalRumah;
-  const listrikPerHome = listrikTotal / totalRumah;
-  const sampahPerHome = sampahTotal / rumahSampahCount;
+  let totalGeneralCostsPerHome = 0;
+  let totalSampahPerHome = 0;
+
+  const inputs = document.querySelectorAll(".sim-input-komponen");
+  inputs.forEach((inp) => {
+    const val = parseFloat(inp.value) || 0;
+    const dibayar = inp.getAttribute("data-dibayar");
+
+    if (dibayar === "IPL + Sampah") {
+      totalSampahPerHome += val / rumahSampahCount;
+    } else {
+      totalGeneralCostsPerHome += val / totalRumah;
+    }
+  });
 
   const target1 = appState && appState.targetIPL ? (appState.targetIPL.find((t) => t.kelompok === "IPL + Sampah")?.target || 175000) : 175000;
   const target2 = appState && appState.targetIPL ? (appState.targetIPL.find((t) => t.kelompok === "IPL Tanpa Sampah")?.target || 150000) : 150000;
   const target3 = appState && appState.targetIPL ? (appState.targetIPL.find((t) => t.kelompok === "IPL Developer")?.target || 166000) : 166000;
 
   // Kas Per Rumah is UNIFORM across IPL + Sampah and IPL Tanpa Sampah!
-  const kasPerHome = Math.round(target1 - (satpamPerHome + listrikPerHome + sampahPerHome));
+  const kasPerHome = Math.round(target1 - (totalGeneralCostsPerHome + totalSampahPerHome));
 
-  // Tambahan Developer (Per Rumah) = Target Developer (166.000) - Satpam - Listrik - KasPerHome
-  const tambahanDevPerHome = Math.max(0, Math.round(target3 - (satpamPerHome + listrikPerHome + kasPerHome)));
+  // Tambahan Developer (Per Rumah) = Target Developer (166.000) - GeneralCosts - KasPerHome
+  const tambahanDevPerHome = Math.max(0, Math.round(target3 - (totalGeneralCostsPerHome + kasPerHome)));
   const tambahanDevTotal = tambahanDevPerHome * rumahDevCount;
 
-  // Update read-only Tambahan Developer input
   const devInputDisplay = document.getElementById("sim-val-developer-total");
   if (devInputDisplay) {
     devInputDisplay.textContent = `AUTO (${formatRp(tambahanDevTotal).replace("Rp ", "")})`;

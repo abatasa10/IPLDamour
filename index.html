@@ -743,36 +743,24 @@
           </div>
         </section>
 
-        <!-- 12. SIMULASI IPL VIEW -->
+        <!-- 12. DYNAMIC SIMULASI IPL VIEW -->
         <section id="view-simulasi" class="view-section">
           <div class="card">
             <div class="card-header">
               <div class="card-title">12. Simulasi IPL</div>
+              <button class="btn btn-outline btn-sm" onclick="syncSimulasiFromMaster()"><i class="ri-refresh-line"></i> Muat Dari Master Komponen</button>
             </div>
 
             <div style="display: grid; grid-template-columns: 1fr 1.2fr; gap: 1.5rem;">
-              <!-- Left Form Inputs -->
+              <!-- Left Form Inputs (Dynamic from Master Komponen) -->
               <div>
-                <h4 style="font-size: 0.95rem; margin-bottom: 1rem; color: var(--text-muted);">Komponen Biaya</h4>
-                <div class="form-group" style="display: flex; align-items: center; justify-content: space-between; gap: 1rem;">
-                  <label style="margin-bottom: 0;">Satpam (Total)</label>
-                  <input type="number" id="sim-input-satpam" class="form-control" style="width: 160px; text-align: right;" value="3700000" oninput="runSimulasiIPL()">
-                </div>
-                <div class="form-group" style="display: flex; align-items: center; justify-content: space-between; gap: 1rem;">
-                  <label style="margin-bottom: 0;">Listrik + Wifi (Total)</label>
-                  <input type="number" id="sim-input-listrik" class="form-control" style="width: 160px; text-align: right;" value="550000" oninput="runSimulasiIPL()">
-                </div>
-                <div class="form-group" style="display: flex; align-items: center; justify-content: space-between; gap: 1rem;">
-                  <label style="margin-bottom: 0;">Sampah (Total)</label>
-                  <input type="number" id="sim-input-sampah" class="form-control" style="width: 160px; text-align: right;" value="775000" oninput="runSimulasiIPL()">
-                </div>
-                <div class="form-group" style="display: flex; align-items: center; justify-content: space-between; gap: 1rem;">
-                  <label style="margin-bottom: 0;">Tambahan Developer (Total)</label>
-                  <div style="width: 160px; text-align: right; background: #f1f5f9; padding: 0.5rem 0.75rem; border-radius: var(--radius-md); font-weight: 600; font-size: 0.9rem;" id="sim-val-developer-total">AUTO (32.000)</div>
+                <h4 style="font-size: 0.95rem; margin-bottom: 1rem; color: var(--text-muted);">Komponen Biaya (Diambil dari Master Komponen)</h4>
+                <div id="simulasi-dynamic-inputs-container">
+                  <!-- Rendered dynamically by JS -->
                 </div>
 
-                <div style="margin-top: 1.5rem; text-align: right;">
-                  <button class="btn btn-primary" onclick="runSimulasiIPL()"><i class="ri-refresh-line"></i> Hitung Ulang</button>
+                <div style="margin-top: 1.5rem; display: flex; gap: 0.5rem; justify-content: flex-end;">
+                  <button class="btn btn-primary" onclick="runSimulasiIPL()"><i class="ri-calculator-line"></i> Hitung Ulang</button>
                 </div>
               </div>
 
