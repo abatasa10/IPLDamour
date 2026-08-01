@@ -376,18 +376,21 @@
           </div>
         </section>
 
-        <!-- 5. PERHITUNGAN IPL (RINCIAN) VIEW -->
+        <!-- 5. PERHITUNGAN IPL (RINCIAN) VIEW - INTERACTIVE DIRECT EDIT -->
         <section id="view-perhitungan" class="view-section">
           <div class="card">
-            <div class="card-header">
-              <div class="card-title">4. Perhitungan IPL (Rincian)</div>
-              <div style="display: flex; align-items: center; gap: 0.5rem;">
-                <span style="font-size: 0.85rem; color: var(--text-muted);">Bulan</span>
-                <select id="perhitungan-month-select" class="form-control" style="width: auto;">
-                  <option value="2025-08">Agustus 2025</option>
-                  <option value="2025-07">Juli 2025</option>
-                  <option value="2025-06">Juni 2025</option>
-                </select>
+            <div class="card-header" style="flex-wrap: wrap; gap: 1rem;">
+              <div class="card-title">4. Perhitungan IPL (Rincian Live Calculator)</div>
+              <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+                <button class="btn btn-primary btn-sm" onclick="openAddKomponenModal()"><i class="ri-add-line"></i> Tambah Komponen</button>
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                  <span style="font-size: 0.85rem; color: var(--text-muted);">Bulan</span>
+                  <select id="perhitungan-month-select" class="form-control" style="width: auto;">
+                    <option value="2025-08">Agustus 2025</option>
+                    <option value="2025-07">Juli 2025</option>
+                    <option value="2025-06">Juni 2025</option>
+                  </select>
+                </div>
               </div>
             </div>
 
@@ -396,10 +399,11 @@
                 <thead>
                   <tr>
                     <th>Komponen</th>
-                    <th>Total Biaya</th>
+                    <th>Total Biaya (Dapat Diedit Langsung)</th>
                     <th>Dibayar Oleh</th>
                     <th>Jml Rumah</th>
                     <th>Per Rumah (Rp)</th>
+                    <th>Aksi</th>
                   </tr>
                 </thead>
                 <tbody id="perhitungan-ipl-tbody"></tbody>
@@ -407,6 +411,7 @@
                   <tr style="background: #f1f5f9; font-weight: 700;">
                     <td colspan="4" style="text-align: uppercase;">Total Per Rumah (Sebelum Bulat)</td>
                     <td id="perhitungan-grand-total" style="color: #1e3a8a;">175.000,00</td>
+                    <td></td>
                   </tr>
                 </tfoot>
               </table>

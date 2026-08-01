@@ -1,6 +1,6 @@
 /**
  * D'AMOUR Sistem IPL Perumahan - Core Application Logic
- * Feature: Master Event / Biaya Tambahan (THR, Event 17an), Dynamic Sampah Fee, & Custom Bill Breakdown
+ * Interactive Live Spreadsheet UX for 4. Perhitungan IPL (Rincian)
  */
 
 let appState = null;
@@ -793,6 +793,9 @@ function saveSettingTarget() {
   runSimulasiIPL();
 }
 
+/* ==========================================================================
+   4. PERHITUNGAN IPL (RINCIAN LIVE INTERACTIVE SPREADSHEET CALCULATOR)
+   ========================================================================== */
 function renderPerhitunganIPL() {
   if (!appState || !appState.rumah) return;
 
@@ -814,7 +817,10 @@ function renderPerhitunganIPL() {
           <td><span class="badge badge-secondary">AUTO (Sisa)</span></td>
           <td>${k.dibayarOleh}</td>
           <td>${totalRumah}</td>
-          <td id="cell-kas-per-rumah" style="font-weight: 600;">-</td>
+          <td id="cell-kas-per-rumah" style="font-weight: 700; color: var(--success);">-</td>
+          <td>
+            <button class="btn btn-outline btn-sm" onclick="editKomponen('${k.id}')"><i class="ri-edit-line"></i></button>
+          </td>
         </tr>`;
       }
 
@@ -824,10 +830,19 @@ function renderPerhitunganIPL() {
       return `
         <tr>
           <td><strong>${k.nama}</strong></td>
-          <td>${formatRp(k.nominalTotal)}</td>
+          <td>
+            <div style="display: flex; align-items: center; gap: 0.25rem;">
+              <span style="font-size: 0.8rem; color: var(--text-muted);">Rp</span>
+              <input type="number" class="form-control" style="width: 140px; font-weight: 600;" value="${k.nominalTotal}" oninput="updatePerhitunganNominalDirect('${k.id}', this.value)">
+            </div>
+          </td>
           <td>${k.dibayarOleh}</td>
           <td>${totalRumah}</td>
           <td style="font-weight: 600;">${formatRpDecimal(costPerHome)}</td>
+          <td>
+            <button class="btn btn-outline btn-sm" onclick="editKomponen('${k.id}')" title="Edit Master"><i class="ri-edit-line"></i></button>
+            <button class="btn btn-outline btn-sm" style="color: var(--danger);" onclick="deleteKomponen('${k.id}')" title="Hapus"><i class="ri-delete-bin-line"></i></button>
+          </td>
         </tr>
       `;
     })
@@ -845,6 +860,18 @@ function renderPerhitunganIPL() {
   const totalCell = document.getElementById("perhitungan-grand-total");
   if (totalCell) {
     totalCell.textContent = `${formatRpDecimal(grandTotalPerHome)}`;
+  }
+}
+
+function updatePerhitunganNominalDirect(id, value) {
+  const nominal = parseFloat(value) || 0;
+  const k = appState.komponenIPL.find((item) => item.id === id);
+  if (k) {
+    k.nominalTotal = nominal;
+    saveState();
+    renderPerhitunganIPL();
+    renderSimulasiInputs();
+    runSimulasiIPL();
   }
 }
 
