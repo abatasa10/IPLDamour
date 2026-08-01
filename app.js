@@ -1,6 +1,6 @@
 /**
  * D'AMOUR Sistem IPL Perumahan - Core Application Logic
- * Clean Transaction Database State (Tagihan, Pengeluaran, Kas, & Dashboard Cleared)
+ * Feature: Automatic Bank Balance Adjustment & Interest Reconciliation
  */
 
 let appState = null;
@@ -63,10 +63,10 @@ async function loadAppData() {
       ensureMasterEventState();
       cleanUpSampahFromKomponen();
       
-      // Wipe dummy transactions if requested by user
       if (!appState._transactionsCleared) {
         appState.tagihan = [];
         appState.pengeluaran = [];
+        appState.pemasukanLain = [];
         appState.grafik6Bulan = [];
         appState.ringkasanKas = { kasSaatIni: 0, masuk: 0, keluar: 0, selisih: 0 };
         appState._transactionsCleared = true;
@@ -105,6 +105,9 @@ function ensureMasterEventState() {
   }
   if (!appState.biayaSampahDefault) {
     appState.biayaSampahDefault = 25000;
+  }
+  if (!appState.pemasukanLain) {
+    appState.pemasukanLain = [];
   }
 }
 
@@ -146,6 +149,7 @@ function clearAllAppData() {
       rumah: [],
       tagihan: [],
       pengeluaran: [],
+      pemasukanLain: [],
       grafik6Bulan: [],
       ringkasanKas: { kasSaatIni: 0, masuk: 0, keluar: 0, selisih: 0 }
     };
@@ -902,7 +906,6 @@ function renderPerhitunganIPL() {
 
   tbody.innerHTML = rowsHtml;
 
-  // Kas per home dynamically adjusts as operational costs change!
   const kasPerHome = Math.max(0, baseTargetTanpaSampah - generalCostsPerHomeSum);
   const kasCell = document.getElementById("cell-kas-per-rumah");
   if (kasCell) {
@@ -1406,6 +1409,112 @@ function deletePengeluaran(id) {
   }
 }
 
+/* ==========================================================================
+   BANK RECONCILIATION & ADJUSTMENT LOGIC
+   ========================================================================== */
+function openModalRekonsiliasiBank() {
+  const currentKas = appState.ringkasanKas ? appState.ringkasanKas.kasSaatIni : 0;
+  document.getElementById("rekon-sys-balance").textContent = formatRp(currentKas);
+  document.getElementById("rekon-bank-balance").value = "";
+  document.getElementById("rekon-tanggal").value = new Date().toISOString().split("T")[0];
+  document.getElementById("rekon-keterangan").value = "Bunga Bank & Admin Rekening (Penyesuaian Saldo)";
+  document.getElementById("rekon-result-box").style.display = "none";
+  openModal("modal-rekon-bank");
+}
+
+function calculateBankRekonSelisih() {
+  const currentKas = appState.ringkasanKas ? appState.ringkasanKas.kasSaatIni : 0;
+  const inputBankVal = parseFloat(document.getElementById("rekon-bank-balance").value);
+  const resultBox = document.getElementById("rekon-result-box");
+  const resultText = document.getElementById("rekon-result-text");
+
+  if (isNaN(inputBankVal)) {
+    resultBox.style.display = "none";
+    return;
+  }
+
+  const selisih = inputBankVal - currentKas;
+  resultBox.style.display = "block";
+
+  if (selisih > 0) {
+    resultBox.style.background = "#ecfdf5";
+    resultBox.style.borderColor = "#a7f3d0";
+    resultText.style.color = "#047857";
+    resultText.textContent = `Selisih Pemasukan (Bunga Bank): +${formatRp(selisih)}`;
+  } else if (selisih < 0) {
+    resultBox.style.background = "#fef2f2";
+    resultBox.style.borderColor = "#fecaca";
+    resultText.style.color = "#b91c1c";
+    resultText.textContent = `Selisih Pengeluaran (Admin/Biaya Bank): -${formatRp(Math.abs(selisih))}`;
+  } else {
+    resultBox.style.background = "#f8fafc";
+    resultBox.style.borderColor = "#e2e8f0";
+    resultText.style.color = "var(--text-muted)";
+    resultText.textContent = `Saldo Sistem & Saldo Bank Sudah Sama (Tidak Ada Selisih).`;
+  }
+}
+
+function simpanRekonsiliasiBank() {
+  const currentKas = appState.ringkasanKas ? appState.ringkasanKas.kasSaatIni : 0;
+  const inputBankVal = parseFloat(document.getElementById("rekon-bank-balance").value);
+  const tglInput = document.getElementById("rekon-tanggal").value;
+  const ket = document.getElementById("rekon-keterangan").value.trim() || "Bunga Bank & Admin Rekening (Penyesuaian)";
+
+  if (isNaN(inputBankVal)) {
+    alert("Masukkan nominal saldo riil rekening bank.");
+    return;
+  }
+
+  const selisih = inputBankVal - currentKas;
+  if (selisih === 0) {
+    alert("Saldo bank sudah sama persis dengan saldo catatan sistem.");
+    closeModal("modal-rekon-bank");
+    return;
+  }
+
+  const tglFormatted = tglInput ? tglInput.split("-").reverse().join("/") : new Date().toLocaleDateString("id-ID");
+
+  if (selisih > 0) {
+    if (!appState.pemasukanLain) appState.pemasukanLain = [];
+    appState.pemasukanLain.unshift({
+      id: `MSK-${Date.now()}`,
+      tanggal: tglFormatted,
+      kategori: "Bunga Bank",
+      penerima: "Bank (Bunga Netto)",
+      keterangan: ket,
+      nominal: selisih
+    });
+
+    if (!appState.ringkasanKas) appState.ringkasanKas = { kasSaatIni: 0, masuk: 0, keluar: 0, selisih: 0 };
+    appState.ringkasanKas.kasSaatIni += selisih;
+    appState.ringkasanKas.masuk += selisih;
+    appState.ringkasanKas.selisih = appState.ringkasanKas.masuk - appState.ringkasanKas.keluar;
+  } else {
+    const nomAbs = Math.abs(selisih);
+    if (!appState.pengeluaran) appState.pengeluaran = [];
+    appState.pengeluaran.unshift({
+      id: `PGL-${Date.now()}`,
+      tanggal: tglFormatted,
+      kategori: "Admin Bank",
+      penerima: "Bank (Biaya Admin)",
+      keterangan: ket,
+      nominal: nomAbs
+    });
+
+    if (!appState.ringkasanKas) appState.ringkasanKas = { kasSaatIni: 0, masuk: 0, keluar: 0, selisih: 0 };
+    appState.ringkasanKas.kasSaatIni -= nomAbs;
+    appState.ringkasanKas.keluar += nomAbs;
+    appState.ringkasanKas.selisih = appState.ringkasanKas.masuk - appState.ringkasanKas.keluar;
+  }
+
+  saveState();
+  closeModal("modal-rekon-bank");
+  alert(`Berhasil menyesuaikan saldo kas bank menjadi ${formatRp(inputBankVal)}!`);
+  renderDashboard();
+  renderKasArusKasTable();
+  renderPengeluaranTable();
+}
+
 function renderKasArusKasTable() {
   if (!appState) return;
 
@@ -1415,6 +1524,7 @@ function renderKasArusKasTable() {
   let currentBalance = 0;
   const ledgerRows = [];
 
+  // 1. Tagihan IPL Lunas
   const totalMasukTagihan = appState.tagihan
     ? appState.tagihan.filter((t) => t.status === "Lunas").reduce((sum, t) => sum + t.nominal, 0)
     : 0;
@@ -1430,6 +1540,21 @@ function renderKasArusKasTable() {
     });
   }
 
+  // 2. Pemasukan Lain (Bunga Bank / Penyesuaian)
+  if (appState.pemasukanLain) {
+    appState.pemasukanLain.forEach((m) => {
+      currentBalance += m.nominal;
+      ledgerRows.push({
+        tanggal: m.tanggal,
+        referensi: `${m.kategori} - ${m.keterangan || "Penyesuaian"}`,
+        masuk: m.nominal,
+        keluar: null,
+        saldo: currentBalance
+      });
+    });
+  }
+
+  // 3. Pengeluaran
   if (appState.pengeluaran) {
     appState.pengeluaran.forEach((p) => {
       currentBalance -= p.nominal;

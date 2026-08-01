@@ -140,7 +140,7 @@
             <div class="kpi-card">
               <div class="kpi-info">
                 <p>Menunggak / Menunggu</p>
-                <div class="kpi-value" id="kpi-menunggak">5 Unit</div>
+                <div class="kpi-value" id="kpi-menunggak">0 Unit</div>
                 <span class="kpi-subtext">Perlu ditindaklanjuti</span>
               </div>
               <div class="kpi-icon orange"><i class="ri-time-line"></i></div>
@@ -149,7 +149,7 @@
             <div class="kpi-card">
               <div class="kpi-info">
                 <p>Lunas Bulan Ini</p>
-                <div class="kpi-value" id="kpi-lunas">26 Unit</div>
+                <div class="kpi-value" id="kpi-lunas">0 Unit</div>
                 <span class="kpi-subtext">Sudah membayar</span>
               </div>
               <div class="kpi-icon green"><i class="ri-checkbox-circle-line"></i></div>
@@ -158,7 +158,7 @@
             <div class="kpi-card">
               <div class="kpi-info">
                 <p>Kas Saat Ini</p>
-                <div class="kpi-value" id="kpi-kas">Rp 25.485.000</div>
+                <div class="kpi-value" id="kpi-kas">Rp 0</div>
                 <span class="kpi-subtext">Saldo kas berjalan</span>
               </div>
               <div class="kpi-icon slate"><i class="ri-wallet-line"></i></div>
@@ -174,15 +174,15 @@
                 <div class="summary-highlight-box">
                   <div class="summary-item">
                     <h5>Total Tagihan</h5>
-                    <p id="dash-total-tagihan">Rp 5.275.000</p>
+                    <p id="dash-total-tagihan">Rp 0</p>
                   </div>
                   <div class="summary-item">
                     <h5>Total Pembayaran</h5>
-                    <p id="dash-total-pembayaran" style="color: var(--success);">Rp 4.550.000</p>
+                    <p id="dash-total-pembayaran" style="color: var(--success);">Rp 0</p>
                   </div>
                   <div class="summary-item">
                     <h5>Sisa Tagihan</h5>
-                    <p id="dash-sisa-tagihan" style="color: var(--danger);">Rp 725.000</p>
+                    <p id="dash-sisa-tagihan" style="color: var(--danger);">Rp 0</p>
                   </div>
                 </div>
               </div>
@@ -253,15 +253,15 @@
                 <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.5rem; text-align: center;">
                   <div>
                     <div style="font-size: 0.75rem; color: var(--text-muted);">Masuk</div>
-                    <div id="dash-kas-masuk" style="font-weight: 700; color: var(--success);">Rp 4.550.000</div>
+                    <div id="dash-kas-masuk" style="font-weight: 700; color: var(--success);">Rp 0</div>
                   </div>
                   <div>
                     <div style="font-size: 0.75rem; color: var(--text-muted);">Keluar</div>
-                    <div id="dash-kas-keluar" style="font-weight: 700; color: var(--danger);">Rp 4.825.000</div>
+                    <div id="dash-kas-keluar" style="font-weight: 700; color: var(--danger);">Rp 0</div>
                   </div>
                   <div>
                     <div style="font-size: 0.75rem; color: var(--text-muted);">Selisih</div>
-                    <div id="dash-kas-selisih" style="font-weight: 700;">- Rp 275.000</div>
+                    <div id="dash-kas-selisih" style="font-weight: 700;">Rp 0</div>
                   </div>
                 </div>
               </div>
@@ -376,7 +376,7 @@
           </div>
         </section>
 
-        <!-- 5. PERHITUNGAN IPL (RINCIAN) VIEW - INTERACTIVE DIRECT EDIT & REALTIME TOTALS -->
+        <!-- 5. PERHITUNGAN IPL (RINCIAN) VIEW -->
         <section id="view-perhitungan" class="view-section">
           <div class="card">
             <div class="card-header" style="flex-wrap: wrap; gap: 1rem;">
@@ -749,11 +749,14 @@
           </div>
         </section>
 
-        <!-- 10. KAS (ARUS KAS) VIEW -->
+        <!-- 10. KAS (ARUS KAS) VIEW - WITH REKONSILIASI BANK BUTTON -->
         <section id="view-kas" class="view-section">
           <div class="card">
-            <div class="card-header">
+            <div class="card-header" style="flex-wrap: wrap; gap: 0.75rem;">
               <div class="card-title">10. Kas (Arus Kas)</div>
+              <button class="btn btn-primary" onclick="openModalRekonsiliasiBank()">
+                <i class="ri-bank-line"></i> Adjust / Rekonsiliasi Saldo Bank
+              </button>
             </div>
 
             <div class="filter-bar">
@@ -955,6 +958,48 @@
   </div>
 
   <!-- MODALS -->
+
+  <!-- Modal Rekonsiliasi Bank -->
+  <div class="modal-overlay" id="modal-rekon-bank">
+    <div class="modal-box" style="max-width: 520px;">
+      <div class="modal-header">
+        <div class="modal-title"><i class="ri-bank-line" style="color: var(--primary);"></i> Adjust / Rekonsiliasi Saldo Bank</div>
+        <button class="close-modal-btn" onclick="closeModal('modal-rekon-bank')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div style="background: #f8fafc; border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 1rem; margin-bottom: 1rem;">
+          <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+            <span style="font-size: 0.85rem; color: var(--text-muted);">Saldo Catatan Sistem Saat Ini:</span>
+            <strong id="rekon-sys-balance" style="color: var(--text-main);">Rp 0</strong>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Saldo Riil di Rekening Bank Terkini (Rp)</label>
+          <input type="number" id="rekon-bank-balance" class="form-control" placeholder="Contoh: 25485000" oninput="calculateBankRekonSelisih()">
+        </div>
+
+        <div class="form-group">
+          <label>Tanggal Pencatatan / Cetak Buku</label>
+          <input type="date" id="rekon-tanggal" class="form-control">
+        </div>
+
+        <div class="form-group">
+          <label>Keterangan Penyesuaian</label>
+          <input type="text" id="rekon-keterangan" class="form-control" value="Bunga Bank & Admin Rekening (Penyesuaian Saldo)">
+        </div>
+
+        <div id="rekon-result-box" style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: var(--radius-md); padding: 1rem; display: none;">
+          <div style="font-size: 0.85rem; color: #1e40af; margin-bottom: 0.25rem;">Hasil Penyesuaian Otomatis:</div>
+          <div id="rekon-result-text" style="font-weight: 700; font-size: 1rem;">-</div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" onclick="closeModal('modal-rekon-bank')">Batal</button>
+        <button class="btn btn-primary" onclick="simpanRekonsiliasiBank()"><i class="ri-checkbox-circle-line"></i> Simpan Penyesuaian Bank</button>
+      </div>
+    </div>
+  </div>
 
   <!-- Modal Rumah -->
   <div class="modal-overlay" id="modal-rumah">
