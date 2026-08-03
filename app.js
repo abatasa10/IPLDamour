@@ -1,6 +1,6 @@
 /**
  * D'AMOUR Sistem IPL Perumahan - Core Application Logic
- * Feature: Exclude Developer Houses from Per-House Account Generation (1 Single Developer Account)
+ * Feature: Automatic cleanup of Developer house accounts from Management User
  */
 
 let appState = null;
@@ -311,12 +311,17 @@ function generateAllMissingHouseUsers(isSilent = false) {
   if (!appState || !appState.rumah) return;
   if (!appState.users) appState.users = [...DEFAULT_USERS];
 
-  // Remove any previously auto-generated individual accounts for Developer houses
+  // Purge any accounts created for Developer houses or accounts with name "Developer" (except central developer account)
   appState.users = appState.users.filter((u) => {
-    if (u.role === "warga" && u.blokNo && u.blokNo !== "-") {
-      const h = appState.rumah.find((r) => r.blokNo === u.blokNo);
-      if (h && h.kelompokIPL === "IPL Developer") return false;
+    if (u.username === "developer" && u.role === "developer") return true;
+
+    if (u.name && u.name.trim().toLowerCase() === "developer") return false;
+
+    if (u.blokNo && u.blokNo !== "-") {
+      const house = appState.rumah.find((r) => r.blokNo === u.blokNo);
+      if (house && house.kelompokIPL === "IPL Developer") return false;
     }
+
     return true;
   });
 
@@ -354,9 +359,9 @@ function generateAllMissingHouseUsers(isSilent = false) {
 
   if (!isSilent) {
     if (addedCount > 0) {
-      alert(`Berhasil membuat ${addedCount} akun warga baru (Default: damour123). Rumah kelompok IPL Developer tidak dibuatkan per unit (tetap 1 akun Developer).`);
+      alert(`Berhasil membuat ${addedCount} akun warga baru (Default: damour123). Akun ber-label Developer telah dibersihkan.`);
     } else {
-      alert("Seluruh rumah warga terdaftar sudah mempunyai akun masing-masing (IPL Developer menggunakan 1 akun terpusat).");
+      alert("Seluruh rumah warga terdaftar sudah mempunyai akun masing-masing. Akun Developer per unit telah dibersihkan.");
     }
   }
 }
