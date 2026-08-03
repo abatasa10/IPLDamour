@@ -19,6 +19,55 @@
 </head>
 <body>
 
+  <!-- LOGIN OVERLAY -->
+  <div class="modal-overlay active" id="login-overlay" style="z-index: 9999; background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(8px);">
+    <div class="modal-box" style="max-width: 420px; border-radius: 16px; padding: 2rem; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);">
+      <div style="text-align: center; margin-bottom: 1.5rem;">
+        <div style="width: 56px; height: 56px; background: var(--primary); color: white; border-radius: 14px; display: inline-flex; align-items: center; justify-content: center; font-size: 1.75rem; margin-bottom: 0.75rem; box-shadow: 0 10px 15px -3px rgba(37, 99, 235, 0.3);">
+          <i class="ri-home-4-line"></i>
+        </div>
+        <h3 style="font-weight: 700; font-size: 1.35rem; color: var(--text-main); margin-bottom: 0.25rem;">D'AMOUR IPL</h3>
+        <p style="font-size: 0.85rem; color: var(--text-muted);">Silakan masuk untuk mengelola sistem IPL</p>
+      </div>
+
+      <form onsubmit="handleLoginSubmit(event)">
+        <div class="form-group">
+          <label>Username</label>
+          <div class="input-search-wrapper">
+            <i class="ri-user-line"></i>
+            <input type="text" id="login-username" class="form-control" placeholder="Masukkan username" required style="padding-left: 2.25rem;">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Password</label>
+          <div class="input-search-wrapper">
+            <i class="ri-lock-line"></i>
+            <input type="password" id="login-password" class="form-control" placeholder="Masukkan password" required style="padding-left: 2.25rem;">
+          </div>
+        </div>
+
+        <div id="login-error-msg" style="color: var(--danger); font-size: 0.85rem; margin-bottom: 1rem; display: none; text-align: center; font-weight: 500;"></div>
+
+        <button type="submit" class="btn btn-primary" style="width: 100%; padding: 0.75rem; font-weight: 600; font-size: 0.95rem;">
+          <i class="ri-login-box-line"></i> Masuk Aplikasi
+        </button>
+      </form>
+
+      <div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px dashed var(--border-color); text-align: center;">
+        <span style="font-size: 0.75rem; color: var(--text-muted); display: block; margin-bottom: 0.75rem;">Tombol Cepat Login Demo:</span>
+        <div style="display: flex; gap: 0.5rem;">
+          <button type="button" class="btn btn-outline btn-sm" style="flex: 1;" onclick="quickLoginDemo('admin')">
+            <i class="ri-shield-user-line"></i> Login Admin
+          </button>
+          <button type="button" class="btn btn-outline btn-sm" style="flex: 1;" onclick="quickLoginDemo('warga')">
+            <i class="ri-user-smile-line"></i> Login Warga
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div class="app-container">
     
     <!-- Sidebar Navigation -->
@@ -45,7 +94,7 @@
         </a>
 
         <div class="nav-group-title">IPL & Tagihan</div>
-        <a href="#" class="nav-item" data-view="generate-tagihan">
+        <a href="#" class="nav-item role-admin-only" data-view="generate-tagihan">
           <i class="ri-file-add-line"></i>
           <span>Generate Tagihan</span>
         </a>
@@ -76,20 +125,20 @@
           <span>Laporan</span>
         </a>
 
-        <div class="nav-group-title">Master Data</div>
-        <a href="#" class="nav-item" data-view="komponen">
+        <div class="nav-group-title role-admin-only">Master Data</div>
+        <a href="#" class="nav-item role-admin-only" data-view="komponen">
           <i class="ri-list-check-2"></i>
           <span>Master Komponen</span>
         </a>
-        <a href="#" class="nav-item" data-view="event">
+        <a href="#" class="nav-item role-admin-only" data-view="event">
           <i class="ri-calendar-event-line"></i>
           <span>Master Event & Tambahan</span>
         </a>
-        <a href="#" class="nav-item" data-view="target">
+        <a href="#" class="nav-item role-admin-only" data-view="target">
           <i class="ri-money-dollar-circle-line"></i>
           <span>Setting Target IPL</span>
         </a>
-        <a href="#" class="nav-item" data-view="pengaturan">
+        <a href="#" class="nav-item role-admin-only" data-view="pengaturan">
           <i class="ri-settings-3-line"></i>
           <span>Pengaturan & Sync</span>
         </a>
@@ -109,15 +158,20 @@
         </div>
 
         <div class="nav-right">
-          <button class="icon-btn" title="Notifikasi">
-            <i class="ri-notification-3-line"></i>
-            <span class="badge-dot"></span>
-          </button>
-
-          <div class="user-profile">
-            <div class="avatar">A</div>
-            <span style="font-weight: 600; font-size: 0.9rem;">Admin</span>
+          <div class="user-profile" style="position: relative; cursor: pointer;" onclick="toggleUserDropdown()">
+            <div class="avatar" id="nav-user-avatar">A</div>
+            <div style="display: flex; flex-direction: column;">
+              <span style="font-weight: 600; font-size: 0.85rem;" id="nav-user-name">Admin Pengurus</span>
+              <span class="badge badge-success" style="font-size: 0.65rem; padding: 0.1rem 0.4rem; width: fit-content;" id="nav-user-role">Admin</span>
+            </div>
             <i class="ri-arrow-down-s-line" style="color: var(--text-muted);"></i>
+
+            <!-- Dropdown Logout -->
+            <div id="user-dropdown-menu" style="display: none; position: absolute; top: 110%; right: 0; background: white; border: 1px solid var(--border-color); border-radius: 8px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); width: 160px; z-index: 100; padding: 0.5rem 0;">
+              <button onclick="handleLogout()" style="width: 100%; text-align: left; padding: 0.5rem 1rem; background: none; border: none; font-size: 0.85rem; color: var(--danger); cursor: pointer; display: flex; align-items: center; gap: 0.5rem;">
+                <i class="ri-logout-box-r-line"></i> Logout
+              </button>
+            </div>
           </div>
         </div>
       </header>
@@ -274,7 +328,7 @@
           <div class="card">
             <div class="card-header">
               <div class="card-title">1. Master Rumah</div>
-              <button class="btn btn-primary" onclick="openAddRumahModal()"><i class="ri-add-line"></i> Tambah Rumah</button>
+              <button class="btn btn-primary role-admin-only" onclick="openAddRumahModal()"><i class="ri-add-line"></i> Tambah Rumah</button>
             </div>
             
             <div style="margin-bottom: 1rem;">
@@ -293,7 +347,7 @@
                     <th>No HP</th>
                     <th>Status</th>
                     <th>Kelompok IPL</th>
-                    <th>Aksi</th>
+                    <th class="role-admin-only">Aksi</th>
                   </tr>
                 </thead>
                 <tbody id="master-rumah-tbody"></tbody>
@@ -309,7 +363,7 @@
           <div class="card">
             <div class="card-header">
               <div class="card-title">2. Master Komponen IPL</div>
-              <button class="btn btn-primary" onclick="openAddKomponenModal()"><i class="ri-add-line"></i> Tambah Komponen</button>
+              <button class="btn btn-primary role-admin-only" onclick="openAddKomponenModal()"><i class="ri-add-line"></i> Tambah Komponen</button>
             </div>
 
             <div class="table-responsive">
@@ -320,7 +374,7 @@
                     <th>Nominal (Total)</th>
                     <th>Dibayar Oleh</th>
                     <th>Aktif</th>
-                    <th>Aksi</th>
+                    <th class="role-admin-only">Aksi</th>
                   </tr>
                 </thead>
                 <tbody id="master-komponen-tbody"></tbody>
@@ -334,7 +388,7 @@
           <div class="card">
             <div class="card-header">
               <div class="card-title">Master Event & Biaya Tambahan (THR, Event 17an, dll.)</div>
-              <button class="btn btn-primary" onclick="openAddEventModal()"><i class="ri-add-line"></i> Tambah Event Baru</button>
+              <button class="btn btn-primary role-admin-only" onclick="openAddEventModal()"><i class="ri-add-line"></i> Tambah Event Baru</button>
             </div>
 
             <div class="table-responsive">
@@ -345,7 +399,7 @@
                     <th>Nominal Per Rumah</th>
                     <th>Dibayar Oleh</th>
                     <th>Status</th>
-                    <th>Aksi</th>
+                    <th class="role-admin-only">Aksi</th>
                   </tr>
                 </thead>
                 <tbody id="master-event-tbody"></tbody>
@@ -359,7 +413,7 @@
           <div class="card">
             <div class="card-header">
               <div class="card-title">3. Setting Target IPL & Tarif Sampah</div>
-              <button class="btn btn-primary" onclick="openEditTargetModal()"><i class="ri-edit-line"></i> Edit Target & Sampah</button>
+              <button class="btn btn-primary role-admin-only" onclick="openEditTargetModal()"><i class="ri-edit-line"></i> Edit Target & Sampah</button>
             </div>
 
             <div class="table-responsive">
@@ -382,14 +436,12 @@
             <div class="card-header" style="flex-wrap: wrap; gap: 1rem;">
               <div class="card-title">4. Perhitungan IPL (Rincian Live Calculator)</div>
               <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
-                <button class="btn btn-primary btn-sm" onclick="openAddKomponenModal()"><i class="ri-add-line"></i> Tambah Komponen</button>
+                <button class="btn btn-primary btn-sm role-admin-only" onclick="openAddKomponenModal()"><i class="ri-add-line"></i> Tambah Komponen</button>
                 <div style="display: flex; align-items: center; gap: 0.5rem;">
                   <span style="font-size: 0.85rem; color: var(--text-muted);">Periode</span>
                   <select id="perhitungan-tahun-select" class="form-control" style="width: auto;" onchange="updatePerhitunganMonthDropdown()">
-                    <!-- Rendered dynamically by JS -->
                   </select>
                   <select id="perhitungan-month-select" class="form-control" style="width: auto;">
-                    <!-- Rendered dynamically by JS -->
                   </select>
                 </div>
               </div>
@@ -404,7 +456,7 @@
                     <th>Dibayar Oleh</th>
                     <th>Jml Rumah</th>
                     <th>Per Rumah (Rp)</th>
-                    <th>Aksi</th>
+                    <th class="role-admin-only">Aksi</th>
                   </tr>
                 </thead>
                 <tbody id="perhitungan-ipl-tbody"></tbody>
@@ -412,12 +464,12 @@
                   <tr style="background: #f1f5f9; font-weight: 700;">
                     <td colspan="4" style="text-align: uppercase;">Total Biaya Umum Per Rumah (Tanpa Dev)</td>
                     <td id="perhitungan-general-total" style="color: #1e3a8a;">137.096,77</td>
-                    <td></td>
+                    <td class="role-admin-only"></td>
                   </tr>
                   <tr style="background: #e2e8f0; font-weight: 700;">
                     <td colspan="4" style="text-align: uppercase;">Grand Total Per Rumah (Termasuk Kas Base IPL 150.000)</td>
                     <td id="perhitungan-grand-total" style="color: #047857;">150.000,00</td>
-                    <td></td>
+                    <td class="role-admin-only"></td>
                   </tr>
                 </tfoot>
               </table>
@@ -453,7 +505,6 @@
               <div class="form-group">
                 <label>Tahun</label>
                 <select id="gen-tahun" class="form-control">
-                  <!-- Rendered dynamically by JS -->
                 </select>
               </div>
               <div class="form-group">
@@ -493,7 +544,6 @@
             <div class="form-group" style="margin-top: 1rem;">
               <label>Sertakan Event / Biaya Tambahan Khusus Bulan Ini:</label>
               <div class="checkbox-group-list" id="gen-event-checkboxes-container">
-                <!-- Rendered dynamically by JS -->
               </div>
             </div>
 
@@ -536,7 +586,6 @@
               <div style="display: flex; align-items: center; gap: 0.5rem;">
                 <span style="font-size: 0.8rem; color: var(--text-muted);">Tahun</span>
                 <select id="filter-tagihan-tahun" class="form-control" style="width: auto;">
-                  <!-- Rendered dynamically by JS -->
                 </select>
               </div>
               <button class="btn btn-outline" onclick="renderDaftarTagihan()"><i class="ri-filter-3-line"></i> Filter</button>
@@ -688,7 +737,7 @@
           <div class="card">
             <div class="card-header">
               <div class="card-title">9. Pengeluaran</div>
-              <button class="btn btn-primary" onclick="openAddPengeluaranModal()"><i class="ri-add-line"></i> Tambah Pengeluaran</button>
+              <button class="btn btn-primary role-admin-only" onclick="openAddPengeluaranModal()"><i class="ri-add-line"></i> Tambah Pengeluaran</button>
             </div>
 
             <div class="filter-bar">
@@ -713,7 +762,6 @@
               <div style="display: flex; align-items: center; gap: 0.5rem;">
                 <span style="font-size: 0.8rem; color: var(--text-muted);">Tahun</span>
                 <select id="filter-pgl-tahun" class="form-control" style="width: auto;">
-                  <!-- Rendered dynamically by JS -->
                 </select>
               </div>
               <button class="btn btn-outline" onclick="renderPengeluaranTable()"><i class="ri-filter-3-line"></i> Filter</button>
@@ -727,7 +775,7 @@
                     <th>Kategori</th>
                     <th>Penerima</th>
                     <th>Nominal</th>
-                    <th>Aksi</th>
+                    <th class="role-admin-only">Aksi</th>
                   </tr>
                 </thead>
                 <tbody id="pengeluaran-full-tbody"></tbody>
@@ -741,7 +789,7 @@
           <div class="card">
             <div class="card-header" style="flex-wrap: wrap; gap: 0.75rem;">
               <div class="card-title">10. Kas (Arus Kas)</div>
-              <button class="btn btn-primary" onclick="openModalRekonsiliasiBank()">
+              <button class="btn btn-primary role-admin-only" onclick="openModalRekonsiliasiBank()">
                 <i class="ri-bank-line"></i> Adjust / Rekonsiliasi Saldo Bank
               </button>
             </div>
@@ -768,7 +816,6 @@
               <div style="display: flex; align-items: center; gap: 0.5rem;">
                 <span style="font-size: 0.8rem; color: var(--text-muted);">Tahun</span>
                 <select id="filter-kas-tahun" class="form-control" style="width: auto;">
-                  <!-- Rendered dynamically by JS -->
                 </select>
               </div>
               <button class="btn btn-outline" onclick="renderKasArusKasTable()"><i class="ri-filter-3-line"></i> Filter</button>
@@ -830,7 +877,6 @@
               <div class="form-group">
                 <label>Tahun</label>
                 <select id="laporan-tahun" class="form-control">
-                  <!-- Rendered dynamically by JS -->
                 </select>
               </div>
             </div>
@@ -856,7 +902,7 @@
           <div class="card">
             <div class="card-header">
               <div class="card-title">12. Simulasi IPL</div>
-              <button class="btn btn-outline btn-sm" onclick="syncSimulasiFromMaster()"><i class="ri-refresh-line"></i> Reset Dari Perhitungan IPL</button>
+              <button class="btn btn-outline btn-sm role-admin-only" onclick="syncSimulasiFromMaster()"><i class="ri-refresh-line"></i> Reset Dari Perhitungan IPL</button>
             </div>
 
             <div style="display: grid; grid-template-columns: 1fr 1.2fr; gap: 1.5rem;">
@@ -864,7 +910,6 @@
               <div>
                 <h4 style="font-size: 0.95rem; margin-bottom: 1rem; color: var(--text-muted);">Komponen Biaya (Dapat Diedit Bebas)</h4>
                 <div id="simulasi-dynamic-inputs-container">
-                  <!-- Rendered dynamically as fully editable inputs by JS -->
                 </div>
 
                 <div style="margin-top: 1.5rem; display: flex; gap: 0.5rem; justify-content: flex-end;">
@@ -883,7 +928,6 @@
                       </tr>
                     </thead>
                     <tbody id="simulasi-result-tbody">
-                      <!-- Rendered by JS -->
                     </tbody>
                   </table>
                 </div>

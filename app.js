@@ -1,14 +1,20 @@
 /**
  * D'AMOUR Sistem IPL Perumahan - Core Application Logic
- * Feature: Fully Dynamic Current Real-World Year & Month Initialization across all views
+ * Feature: User Management & Role-Based Access Control (Admin vs Warga)
  */
 
 let appState = null;
+let currentUser = null;
 let currentHousePage = 1;
 let currentTagihanPage = 1;
 const itemsPerPage = 5;
 let donutChartInstance = null;
 let barChartInstance = null;
+
+const DEFAULT_USERS = [
+  { username: "admin", password: "admin123", name: "Admin Pengurus", role: "admin", avatar: "A" },
+  { username: "warga", password: "warga123", name: "Warga D'AMOUR", role: "warga", avatar: "W" }
+];
 
 const MONTH_NAMES = [
   "Januari", "Februari", "Maret", "April", "Mei", "Juni",
@@ -38,6 +44,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   await loadAppData();
   setupEventListeners();
   initDynamicDatesAndYears();
+  checkAuthSession();
   updateHouseGroupCounts();
   renderDashboard();
   renderMasterRumah();
@@ -53,6 +60,116 @@ document.addEventListener("DOMContentLoaded", async () => {
   runSimulasiIPL();
 });
 
+// Authentication & Role Management
+function checkAuthSession() {
+  const savedUser = localStorage.getItem("damour_ipl_user");
+  const loginOverlay = document.getElementById("login-overlay");
+
+  if (savedUser) {
+    try {
+      currentUser = JSON.parse(savedUser);
+      if (loginOverlay) loginOverlay.classList.remove("active");
+      updateNavbarProfile();
+      applyRolePermissions();
+      return;
+    } catch (e) {
+      console.error("Failed to parse user session", e);
+    }
+  }
+
+  // Not logged in -> Show login modal
+  if (loginOverlay) loginOverlay.classList.add("active");
+}
+
+function handleLoginSubmit(e) {
+  e.preventDefault();
+  const u = document.getElementById("login-username").value.trim().toLowerCase();
+  const p = document.getElementById("login-password").value;
+  const errBox = document.getElementById("login-error-msg");
+
+  const usersList = (appState && appState.users) ? appState.users : DEFAULT_USERS;
+  const found = usersList.find((user) => user.username.toLowerCase() === u && user.password === p);
+
+  if (found) {
+    currentUser = found;
+    localStorage.setItem("damour_ipl_user", JSON.stringify(currentUser));
+    document.getElementById("login-overlay").classList.remove("active");
+    if (errBox) errBox.style.display = "none";
+    updateNavbarProfile();
+    applyRolePermissions();
+    showView("dashboard");
+  } else {
+    if (errBox) {
+      errBox.textContent = "Username atau password salah!";
+      errBox.style.display = "block";
+    }
+  }
+}
+
+function quickLoginDemo(roleType) {
+  const usersList = (appState && appState.users) ? appState.users : DEFAULT_USERS;
+  const target = usersList.find((u) => u.role === roleType) || DEFAULT_USERS.find((u) => u.role === roleType);
+
+  if (target) {
+    currentUser = target;
+    localStorage.setItem("damour_ipl_user", JSON.stringify(currentUser));
+    document.getElementById("login-overlay").classList.remove("active");
+    updateNavbarProfile();
+    applyRolePermissions();
+    showView("dashboard");
+  }
+}
+
+function handleLogout() {
+  if (confirm("Apakah Anda yakin ingin keluar (logout)?")) {
+    localStorage.removeItem("damour_ipl_user");
+    currentUser = null;
+    location.reload();
+  }
+}
+
+function toggleUserDropdown() {
+  const menu = document.getElementById("user-dropdown-menu");
+  if (menu) {
+    menu.style.display = menu.style.display === "none" || !menu.style.display ? "block" : "none";
+  }
+}
+
+function updateNavbarProfile() {
+  if (!currentUser) return;
+
+  const avatarEl = document.getElementById("nav-user-avatar");
+  const nameEl = document.getElementById("nav-user-name");
+  const roleEl = document.getElementById("nav-user-role");
+
+  if (avatarEl) avatarEl.textContent = currentUser.avatar || currentUser.name.charAt(0);
+  if (nameEl) nameEl.textContent = currentUser.name;
+  if (roleEl) {
+    roleEl.textContent = currentUser.role === "admin" ? "Admin" : "Warga";
+    roleEl.className = currentUser.role === "admin" ? "badge badge-success" : "badge badge-warning";
+  }
+}
+
+function applyRolePermissions() {
+  const isAdmin = currentUser && currentUser.role === "admin";
+
+  // Hide or show elements with class role-admin-only
+  document.querySelectorAll(".role-admin-only").forEach((el) => {
+    if (isAdmin) {
+      el.style.display = "";
+    } else {
+      el.style.display = "none";
+    }
+  });
+
+  // Re-render views to strip inline action buttons if not admin
+  renderMasterRumah();
+  renderMasterKomponen();
+  renderMasterEvent();
+  renderPerhitunganIPL();
+  renderPengeluaranTable();
+}
+
 // Dynamic Year & Date Populator
 function initDynamicDatesAndYears() {
   const now = new Date();
@@ -61,7 +178,6 @@ function initDynamicDatesAndYears() {
   const currentMonthName = MONTH_NAMES[currentMonthIdx];
   const todayIso = now.toISOString().split("T")[0];
 
-  // Year Dropdowns List (currentYear - 2 to currentYear + 2)
   const years = [currentYear - 2, currentYear - 1, currentYear, currentYear + 1, currentYear + 2];
   
   const yearSelectIds = [
@@ -84,7 +200,6 @@ function initDynamicDatesAndYears() {
     }
   });
 
-  // Select Current Month in Month Selectors
   const monthSelectIds = [
     "gen-bulan",
     "filter-tagihan-bulan",
@@ -100,7 +215,6 @@ function initDynamicDatesAndYears() {
     }
   });
 
-  // Date Inputs Default Today
   const dateInputIds = ["gen-tanggal", "bayar-form-tanggal", "form-pgl-tanggal", "rekon-tanggal"];
   dateInputIds.forEach((id) => {
     const inp = document.getElementById(id);
@@ -169,6 +283,9 @@ async function loadAppData() {
 }
 
 function ensureMasterEventState() {
+  if (!appState.users) {
+    appState.users = DEFAULT_USERS;
+  }
   if (!appState.masterEvent) {
     appState.masterEvent = [
       { id: "evt-1", nama: "Iuran THR Satpam", nominal: 50000, dibayarOleh: "Semua", aktif: true },
@@ -225,6 +342,7 @@ function clearAllAppData() {
       settings: { appName: "D'AMOUR Sistem IPL", perumahan: "Perumahan D'AMOUR", periodeAktif: "2025-08", googleSheetApiUrl: appState.settings ? appState.settings.googleSheetApiUrl : "" },
       biayaSampahDefault: 25000,
       _transactionsCleared: true,
+      users: DEFAULT_USERS,
       targetIPL: [
         { id: "tgt-1", kelompok: "IPL + Sampah", target: 175000, keterangan: "IPL + Sampah" },
         { id: "tgt-2", kelompok: "IPL Tanpa Sampah", target: 150000, keterangan: "IPL Tanpa Sampah" },
@@ -258,6 +376,14 @@ function clearAllAppData() {
 
 // Navigation View Switcher
 function showView(viewId) {
+  const isAdmin = currentUser && currentUser.role === "admin";
+  const adminOnlyViews = ["generate-tagihan", "komponen", "event", "target", "pengaturan"];
+
+  if (!isAdmin && adminOnlyViews.includes(viewId)) {
+    alert("Akses Ditolak: Halaman ini hanya dapat diakses oleh Admin / Pengurus.");
+    return;
+  }
+
   document.querySelectorAll(".view-section").forEach((sec) => {
     sec.classList.remove("active");
   });
@@ -477,7 +603,6 @@ function renderCharts(lunas, menunggu, menunggak, total) {
   if (ctxBar) {
     if (barChartInstance) barChartInstance.destroy();
     
-    // Dynamic 6 months labels leading to current month
     const now = new Date();
     const dynamicMonths = [];
     for (let i = 5; i >= 0; i--) {
@@ -519,6 +644,7 @@ function renderCharts(lunas, menunggu, menunggak, total) {
 function renderMasterRumah() {
   if (!appState || !appState.rumah) return;
 
+  const isAdmin = currentUser && currentUser.role === "admin";
   const searchVal = (document.getElementById("search-rumah-input")?.value || "").toLowerCase();
   const filtered = appState.rumah.filter(
     (r) =>
@@ -537,7 +663,7 @@ function renderMasterRumah() {
   const tbody = document.getElementById("master-rumah-tbody");
   if (tbody) {
     if (paginated.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 1.5rem;">Belum ada data rumah. Klik tombol <strong>+ Tambah Rumah</strong> di atas.</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="${isAdmin ? 6 : 5}" style="text-align: center; color: var(--text-muted); padding: 1.5rem;">Belum ada data rumah terdaftar.</td></tr>`;
     } else {
       tbody.innerHTML = paginated
         .map(
@@ -548,10 +674,14 @@ function renderMasterRumah() {
             <td>${r.noHp}</td>
             <td><span class="badge badge-success">${r.status}</span></td>
             <td>${r.kelompokIPL}</td>
-            <td>
-              <button class="btn btn-outline btn-sm" onclick="editRumah('${r.id}')"><i class="ri-edit-line"></i></button>
-              <button class="btn btn-outline btn-sm" style="color: var(--danger);" onclick="deleteRumah('${r.id}')"><i class="ri-delete-bin-line"></i></button>
-            </td>
+            ${
+              isAdmin
+                ? `<td>
+                    <button class="btn btn-outline btn-sm" onclick="editRumah('${r.id}')"><i class="ri-edit-line"></i></button>
+                    <button class="btn btn-outline btn-sm" style="color: var(--danger);" onclick="deleteRumah('${r.id}')"><i class="ri-delete-bin-line"></i></button>
+                  </td>`
+                : ""
+            }
           </tr>
         `
         )
@@ -653,6 +783,7 @@ function deleteRumah(id) {
 function renderMasterKomponen() {
   if (!appState || !appState.komponenIPL) return;
 
+  const isAdmin = currentUser && currentUser.role === "admin";
   const tbody = document.getElementById("master-komponen-tbody");
   if (tbody) {
     tbody.innerHTML = appState.komponenIPL
@@ -663,12 +794,16 @@ function renderMasterKomponen() {
           <td>${k.isAutoKas ? "<span class='badge badge-secondary'>AUTO (Sisa)</span>" : formatRp(k.nominalTotal)}</td>
           <td>${k.dibayarOleh}</td>
           <td>
-            <input type="checkbox" ${k.aktif ? "checked" : ""} onchange="toggleKomponenAktif('${k.id}')" style="width: 18px; height: 18px; cursor: pointer;">
+            <input type="checkbox" ${k.aktif ? "checked" : ""} ${!isAdmin ? "disabled" : ""} onchange="toggleKomponenAktif('${k.id}')" style="width: 18px; height: 18px; cursor: pointer;">
           </td>
-          <td>
-            <button class="btn btn-outline btn-sm" onclick="editKomponen('${k.id}')"><i class="ri-edit-line"></i></button>
-            <button class="btn btn-outline btn-sm" style="color: var(--danger);" onclick="deleteKomponen('${k.id}')"><i class="ri-delete-bin-line"></i></button>
-          </td>
+          ${
+            isAdmin
+              ? `<td>
+                  <button class="btn btn-outline btn-sm" onclick="editKomponen('${k.id}')"><i class="ri-edit-line"></i></button>
+                  <button class="btn btn-outline btn-sm" style="color: var(--danger);" onclick="deleteKomponen('${k.id}')"><i class="ri-delete-bin-line"></i></button>
+                </td>`
+              : ""
+          }
         </tr>
       `
       )
@@ -762,10 +897,11 @@ function deleteKomponen(id) {
 function renderMasterEvent() {
   if (!appState || !appState.masterEvent) return;
 
+  const isAdmin = currentUser && currentUser.role === "admin";
   const tbody = document.getElementById("master-event-tbody");
   if (tbody) {
     if (appState.masterEvent.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 1.5rem;">Belum ada event / iuran tambahan. Klik tombol <strong>+ Tambah Event Baru</strong> di atas.</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="${isAdmin ? 5 : 4}" style="text-align: center; color: var(--text-muted); padding: 1.5rem;">Belum ada event / iuran tambahan.</td></tr>`;
     } else {
       tbody.innerHTML = appState.masterEvent
         .map(
@@ -775,12 +911,16 @@ function renderMasterEvent() {
             <td style="font-weight: 600;">${formatRp(e.nominal)} / rumah</td>
             <td>${e.dibayarOleh}</td>
             <td>
-              <input type="checkbox" ${e.aktif ? "checked" : ""} onchange="toggleEventAktif('${e.id}')" style="width: 18px; height: 18px; cursor: pointer;">
+              <input type="checkbox" ${e.aktif ? "checked" : ""} ${!isAdmin ? "disabled" : ""} onchange="toggleEventAktif('${e.id}')" style="width: 18px; height: 18px; cursor: pointer;">
             </td>
-            <td>
-              <button class="btn btn-outline btn-sm" onclick="editEvent('${e.id}')"><i class="ri-edit-line"></i></button>
-              <button class="btn btn-outline btn-sm" style="color: var(--danger);" onclick="deleteEvent('${e.id}')"><i class="ri-delete-bin-line"></i></button>
-            </td>
+            ${
+              isAdmin
+                ? `<td>
+                    <button class="btn btn-outline btn-sm" onclick="editEvent('${e.id}')"><i class="ri-edit-line"></i></button>
+                    <button class="btn btn-outline btn-sm" style="color: var(--danger);" onclick="deleteEvent('${e.id}')"><i class="ri-delete-bin-line"></i></button>
+                  </td>`
+                : ""
+            }
           </tr>
         `
         )
@@ -938,6 +1078,7 @@ function saveSettingTarget() {
 function renderPerhitunganIPL() {
   if (!appState) return;
 
+  const isAdmin = currentUser && currentUser.role === "admin";
   const hasHouses = appState.rumah && appState.rumah.length > 0;
   const totalRumahAll = hasHouses ? appState.rumah.length : 31;
   const totalRumahDev = hasHouses ? (appState.rumah.filter((r) => r.kelompokIPL === "IPL Developer").length || totalRumahAll) : 2;
@@ -966,9 +1107,13 @@ function renderPerhitunganIPL() {
           <td>${k.dibayarOleh}</td>
           <td>${targetJmlRumah}</td>
           <td id="cell-kas-per-rumah" style="font-weight: 700; color: var(--success);">-</td>
-          <td>
-            <button class="btn btn-outline btn-sm" onclick="editKomponen('${k.id}')"><i class="ri-edit-line"></i></button>
-          </td>
+          ${
+            isAdmin
+              ? `<td>
+                  <button class="btn btn-outline btn-sm" onclick="editKomponen('${k.id}')"><i class="ri-edit-line"></i></button>
+                </td>`
+              : ""
+          }
         </tr>`;
       }
 
@@ -984,16 +1129,20 @@ function renderPerhitunganIPL() {
           <td>
             <div style="display: flex; align-items: center; gap: 0.25rem;">
               <span style="font-size: 0.8rem; color: var(--text-muted);">Rp</span>
-              <input type="number" class="form-control" style="width: 140px; font-weight: 600;" value="${k.nominalTotal}" oninput="updatePerhitunganNominalDirect('${k.id}', this.value)">
+              <input type="number" class="form-control" style="width: 140px; font-weight: 600;" value="${k.nominalTotal}" ${!isAdmin ? "readonly style='background:#f1f5f9;'" : ""} oninput="updatePerhitunganNominalDirect('${k.id}', this.value)">
             </div>
           </td>
           <td>${k.dibayarOleh}</td>
           <td><strong style="color: var(--primary);">${targetJmlRumah}</strong></td>
           <td style="font-weight: 600;">${formatRpDecimal(costPerHome)}</td>
-          <td>
-            <button class="btn btn-outline btn-sm" onclick="editKomponen('${k.id}')" title="Edit Master"><i class="ri-edit-line"></i></button>
-            <button class="btn btn-outline btn-sm" style="color: var(--danger);" onclick="deleteKomponen('${k.id}')" title="Hapus"><i class="ri-delete-bin-line"></i></button>
-          </td>
+          ${
+            isAdmin
+              ? `<td>
+                  <button class="btn btn-outline btn-sm" onclick="editKomponen('${k.id}')" title="Edit Master"><i class="ri-edit-line"></i></button>
+                  <button class="btn btn-outline btn-sm" style="color: var(--danger);" onclick="deleteKomponen('${k.id}')" title="Hapus"><i class="ri-delete-bin-line"></i></button>
+                </td>`
+              : ""
+          }
         </tr>
       `;
     })
@@ -1020,6 +1169,8 @@ function renderPerhitunganIPL() {
 }
 
 function updatePerhitunganNominalDirect(id, value) {
+  if (currentUser && currentUser.role !== "admin") return;
+
   const nominal = parseFloat(value) || 0;
   const k = appState.komponenIPL.find((item) => item.id === id);
   if (k) {
@@ -1096,7 +1247,6 @@ function processGenerateTagihan() {
 
   const nominalSampahGen = parseFloat(document.getElementById("gen-sampah-nominal")?.value) || 25000;
 
-  // Selected events
   const selectedEvents = [];
   document.querySelectorAll(".chk-gen-event:checked").forEach((chk) => {
     selectedEvents.push({
@@ -1123,7 +1273,6 @@ function processGenerateTagihan() {
       rincianItems.push({ nama: "IPL Developer", nominal: baseTargetDeveloper });
       totalNominal += baseTargetDeveloper;
     } else {
-      // IPL Tanpa Sampah or IPL + Sampah
       rincianItems.push({ nama: "IPL Dasar", nominal: baseTargetTanpaSampah });
       totalNominal += baseTargetTanpaSampah;
 
@@ -1133,7 +1282,6 @@ function processGenerateTagihan() {
       }
     }
 
-    // Add selected active events
     selectedEvents.forEach((evt) => {
       rincianItems.push({ nama: evt.nama, nominal: evt.nominal });
       totalNominal += evt.nominal;
@@ -1170,6 +1318,7 @@ function processGenerateTagihan() {
 function renderDaftarTagihan() {
   if (!appState || !appState.tagihan) return;
 
+  const isAdmin = currentUser && currentUser.role === "admin";
   const now = new Date();
   const searchVal = (document.getElementById("filter-tagihan-search")?.value || "").toLowerCase();
   const filterBulan = document.getElementById("filter-tagihan-bulan")?.value || MONTH_NAMES[now.getMonth()];
@@ -1191,7 +1340,7 @@ function renderDaftarTagihan() {
   const tbody = document.getElementById("daftar-tagihan-tbody");
   if (tbody) {
     if (paginated.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--text-muted); padding: 1.5rem;">Belum ada data tagihan. Gunakan menu <strong>Generate Tagihan</strong> untuk membuat tagihan baru.</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--text-muted); padding: 1.5rem;">Belum ada data tagihan.</td></tr>`;
     } else {
       tbody.innerHTML = paginated
         .map((t, idx) => {
@@ -1212,7 +1361,7 @@ function renderDaftarTagihan() {
               <td><span class="badge ${badgeClass}">${t.status}</span></td>
               <td>
                 <button class="btn btn-outline btn-sm" onclick="viewDetailTagihan('${t.id}')" title="Lihat Detail"><i class="ri-eye-line"></i></button>
-                <button class="btn btn-outline btn-sm" onclick="openEditTagihanModal('${t.id}')" title="Edit Nominal Tagihan"><i class="ri-edit-line"></i></button>
+                ${isAdmin ? `<button class="btn btn-outline btn-sm" onclick="openEditTagihanModal('${t.id}')" title="Edit Nominal Tagihan"><i class="ri-edit-line"></i></button>` : ""}
                 ${
                   t.status !== "Lunas"
                     ? `<button class="btn btn-primary btn-sm" onclick="openFormPembayaran('${t.id}')" title="Bayar"><i class="ri-checkbox-circle-line"></i></button>`
@@ -1397,6 +1546,7 @@ function simpanFormPembayaran() {
 function renderPengeluaranTable() {
   if (!appState || !appState.pengeluaran) return;
 
+  const isAdmin = currentUser && currentUser.role === "admin";
   const now = new Date();
   const filterBulan = document.getElementById("filter-pgl-bulan")?.value || MONTH_NAMES[now.getMonth()];
   const filterTahun = document.getElementById("filter-pgl-tahun")?.value || now.getFullYear().toString();
@@ -1404,7 +1554,7 @@ function renderPengeluaranTable() {
 
   if (tbody) {
     if (appState.pengeluaran.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 1.5rem;">Belum ada catatan pengeluaran. Klik tombol <strong>+ Tambah Pengeluaran</strong> di atas.</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="${isAdmin ? 5 : 4}" style="text-align: center; color: var(--text-muted); padding: 1.5rem;">Belum ada catatan pengeluaran.</td></tr>`;
     } else {
       tbody.innerHTML = appState.pengeluaran
         .filter((p) => {
@@ -1419,10 +1569,14 @@ function renderPengeluaranTable() {
             <td><strong>${p.kategori}</strong></td>
             <td>${p.penerima || "-"}</td>
             <td style="font-weight: 600; color: var(--danger);">${formatRp(p.nominal)}</td>
-            <td>
-              <button class="btn btn-outline btn-sm" onclick="editPengeluaran('${p.id}')"><i class="ri-edit-line"></i></button>
-              <button class="btn btn-outline btn-sm" style="color: var(--danger);" onclick="deletePengeluaran('${p.id}')"><i class="ri-delete-bin-line"></i></button>
-            </td>
+            ${
+              isAdmin
+                ? `<td>
+                    <button class="btn btn-outline btn-sm" onclick="editPengeluaran('${p.id}')"><i class="ri-edit-line"></i></button>
+                    <button class="btn btn-outline btn-sm" style="color: var(--danger);" onclick="deletePengeluaran('${p.id}')"><i class="ri-delete-bin-line"></i></button>
+                  </td>`
+                : ""
+            }
           </tr>
         `
         )
@@ -1621,7 +1775,6 @@ function renderKasArusKasTable() {
   let currentBalance = 0;
   const ledgerRows = [];
 
-  // 1. Tagihan IPL Lunas
   const totalMasukTagihan = appState.tagihan
     ? appState.tagihan.filter((t) => t.status === "Lunas").reduce((sum, t) => sum + t.nominal, 0)
     : 0;
@@ -1637,7 +1790,6 @@ function renderKasArusKasTable() {
     });
   }
 
-  // 2. Pemasukan Lain (Bunga Bank / Penyesuaian)
   if (appState.pemasukanLain) {
     appState.pemasukanLain.forEach((m) => {
       currentBalance += m.nominal;
@@ -1651,7 +1803,6 @@ function renderKasArusKasTable() {
     });
   }
 
-  // 3. Pengeluaran
   if (appState.pengeluaran) {
     appState.pengeluaran.forEach((p) => {
       currentBalance -= p.nominal;
@@ -1807,6 +1958,7 @@ function renderSimulasiInputs() {
   const container = document.getElementById("simulasi-dynamic-inputs-container");
   if (!container || !appState || !appState.komponenIPL) return;
 
+  const isAdmin = currentUser && currentUser.role === "admin";
   const activeKomponen = appState.komponenIPL.filter((k) => k.aktif);
 
   let html = "";
@@ -1818,7 +1970,7 @@ function renderSimulasiInputs() {
     html += `
       <div class="form-group" style="display: flex; align-items: center; justify-content: space-between; gap: 1rem;">
         <label style="margin-bottom: 0;">${k.nama} (Total)</label>
-        <input type="number" class="form-control sim-input-komponen" data-id="${k.id}" data-dibayar="${k.dibayarOleh}" style="width: 160px; text-align: right;" value="${k.nominalTotal}" oninput="runSimulasiIPL()">
+        <input type="number" class="form-control sim-input-komponen" data-id="${k.id}" data-dibayar="${k.dibayarOleh}" style="width: 160px; text-align: right;" value="${k.nominalTotal}" ${!isAdmin ? "readonly style='background:#f1f5f9;'" : ""} oninput="runSimulasiIPL()">
       </div>
     `;
   });
