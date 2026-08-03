@@ -169,7 +169,7 @@
             <div>
               <div class="card">
                 <div class="card-header">
-                  <div class="card-title">Ringkasan Bulan Ini (Agustus 2025)</div>
+                  <div class="card-title" id="dash-summary-title">Ringkasan Bulan Ini</div>
                 </div>
                 <div class="summary-highlight-box">
                   <div class="summary-item">
@@ -386,9 +386,7 @@
                 <div style="display: flex; align-items: center; gap: 0.5rem;">
                   <span style="font-size: 0.85rem; color: var(--text-muted);">Periode</span>
                   <select id="perhitungan-tahun-select" class="form-control" style="width: auto;" onchange="updatePerhitunganMonthDropdown()">
-                    <option value="2025" selected>2025</option>
-                    <option value="2026">2026</option>
-                    <option value="2027">2027</option>
+                    <!-- Rendered dynamically by JS -->
                   </select>
                   <select id="perhitungan-month-select" class="form-control" style="width: auto;">
                     <!-- Rendered dynamically by JS -->
@@ -445,7 +443,7 @@
                   <option value="Mei">Mei</option>
                   <option value="Juni">Juni</option>
                   <option value="Juli">Juli</option>
-                  <option value="Agustus" selected>Agustus</option>
+                  <option value="Agustus">Agustus</option>
                   <option value="September">September</option>
                   <option value="Oktober">Oktober</option>
                   <option value="November">November</option>
@@ -455,15 +453,12 @@
               <div class="form-group">
                 <label>Tahun</label>
                 <select id="gen-tahun" class="form-control">
-                  <option value="2024">2024</option>
-                  <option value="2025" selected>2025</option>
-                  <option value="2026">2026</option>
-                  <option value="2027">2027</option>
+                  <!-- Rendered dynamically by JS -->
                 </select>
               </div>
               <div class="form-group">
                 <label>Tanggal Generate</label>
-                <input type="date" id="gen-tanggal" class="form-control" value="2025-08-01">
+                <input type="date" id="gen-tanggal" class="form-control">
               </div>
             </div>
 
@@ -531,7 +526,7 @@
                   <option value="Mei">Mei</option>
                   <option value="Juni">Juni</option>
                   <option value="Juli">Juli</option>
-                  <option value="Agustus" selected>Agustus</option>
+                  <option value="Agustus">Agustus</option>
                   <option value="September">September</option>
                   <option value="Oktober">Oktober</option>
                   <option value="November">November</option>
@@ -541,11 +536,7 @@
               <div style="display: flex; align-items: center; gap: 0.5rem;">
                 <span style="font-size: 0.8rem; color: var(--text-muted);">Tahun</span>
                 <select id="filter-tagihan-tahun" class="form-control" style="width: auto;">
-                  <option value="Semua">Semua Tahun</option>
-                  <option value="2024">2024</option>
-                  <option value="2025" selected>2025</option>
-                  <option value="2026">2026</option>
-                  <option value="2027">2027</option>
+                  <!-- Rendered dynamically by JS -->
                 </select>
               </div>
               <button class="btn btn-outline" onclick="renderDaftarTagihan()"><i class="ri-filter-3-line"></i> Filter</button>
@@ -591,7 +582,7 @@
               </div>
               <div class="detail-summary-item">
                 <p>Bulan</p>
-                <h4 id="detail-val-bulan">Agustus 2025</h4>
+                <h4 id="detail-val-bulan">-</h4>
               </div>
               <div class="detail-summary-item">
                 <p>Total Tagihan</p>
@@ -640,7 +631,7 @@
                 </div>
                 <div style="margin-bottom: 1rem;">
                   <span style="font-size: 0.75rem; color: var(--text-muted);">Bulan</span>
-                  <div id="bayar-form-bulan" style="font-weight: 600;">Agustus 2025</div>
+                  <div id="bayar-form-bulan" style="font-weight: 600;">-</div>
                 </div>
                 <div style="margin-bottom: 1rem;">
                   <span style="font-size: 0.75rem; color: var(--text-muted);">Total Tagihan</span>
@@ -656,7 +647,7 @@
                 <input type="hidden" id="bayar-form-id">
                 <div class="form-group">
                   <label>Tanggal Transfer</label>
-                  <input type="date" id="bayar-form-tanggal" class="form-control" value="2025-08-05">
+                  <input type="date" id="bayar-form-tanggal" class="form-control">
                 </div>
                 <div class="form-group">
                   <label>Metode</label>
@@ -712,7 +703,7 @@
                   <option value="Mei">Mei</option>
                   <option value="Juni">Juni</option>
                   <option value="Juli">Juli</option>
-                  <option value="Agustus" selected>Agustus</option>
+                  <option value="Agustus">Agustus</option>
                   <option value="September">September</option>
                   <option value="Oktober">Oktober</option>
                   <option value="November">November</option>
@@ -722,11 +713,7 @@
               <div style="display: flex; align-items: center; gap: 0.5rem;">
                 <span style="font-size: 0.8rem; color: var(--text-muted);">Tahun</span>
                 <select id="filter-pgl-tahun" class="form-control" style="width: auto;">
-                  <option value="Semua">Semua Tahun</option>
-                  <option value="2024">2024</option>
-                  <option value="2025" selected>2025</option>
-                  <option value="2026">2026</option>
-                  <option value="2027">2027</option>
+                  <!-- Rendered dynamically by JS -->
                 </select>
               </div>
               <button class="btn btn-outline" onclick="renderPengeluaranTable()"><i class="ri-filter-3-line"></i> Filter</button>
@@ -749,7 +736,7 @@
           </div>
         </section>
 
-        <!-- 10. KAS (ARUS KAS) VIEW - WITH REKONSILIASI BANK BUTTON -->
+        <!-- 10. KAS (ARUS KAS) VIEW -->
         <section id="view-kas" class="view-section">
           <div class="card">
             <div class="card-header" style="flex-wrap: wrap; gap: 0.75rem;">
@@ -771,7 +758,7 @@
                   <option value="Mei">Mei</option>
                   <option value="Juni">Juni</option>
                   <option value="Juli">Juli</option>
-                  <option value="Agustus" selected>Agustus</option>
+                  <option value="Agustus">Agustus</option>
                   <option value="September">September</option>
                   <option value="Oktober">Oktober</option>
                   <option value="November">November</option>
@@ -781,11 +768,7 @@
               <div style="display: flex; align-items: center; gap: 0.5rem;">
                 <span style="font-size: 0.8rem; color: var(--text-muted);">Tahun</span>
                 <select id="filter-kas-tahun" class="form-control" style="width: auto;">
-                  <option value="Semua">Semua Tahun</option>
-                  <option value="2024">2024</option>
-                  <option value="2025" selected>2025</option>
-                  <option value="2026">2026</option>
-                  <option value="2027">2027</option>
+                  <!-- Rendered dynamically by JS -->
                 </select>
               </div>
               <button class="btn btn-outline" onclick="renderKasArusKasTable()"><i class="ri-filter-3-line"></i> Filter</button>
@@ -837,7 +820,7 @@
                   <option value="Mei">Mei</option>
                   <option value="Juni">Juni</option>
                   <option value="Juli">Juli</option>
-                  <option value="Agustus" selected>Agustus</option>
+                  <option value="Agustus">Agustus</option>
                   <option value="September">September</option>
                   <option value="Oktober">Oktober</option>
                   <option value="November">November</option>
@@ -847,10 +830,7 @@
               <div class="form-group">
                 <label>Tahun</label>
                 <select id="laporan-tahun" class="form-control">
-                  <option value="2024">2024</option>
-                  <option value="2025" selected>2025</option>
-                  <option value="2026">2026</option>
-                  <option value="2027">2027</option>
+                  <!-- Rendered dynamically by JS -->
                 </select>
               </div>
             </div>

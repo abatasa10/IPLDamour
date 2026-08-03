@@ -1,6 +1,6 @@
 /**
  * D'AMOUR Sistem IPL Perumahan - Core Application Logic
- * Feature: Automatic Real-Time Sync with Google Spreadsheet on every change
+ * Feature: Fully Dynamic Current Real-World Year & Month Initialization across all views
  */
 
 let appState = null;
@@ -37,7 +37,7 @@ const formatRpDecimal = (num) => {
 document.addEventListener("DOMContentLoaded", async () => {
   await loadAppData();
   setupEventListeners();
-  updatePerhitunganMonthDropdown();
+  initDynamicDatesAndYears();
   updateHouseGroupCounts();
   renderDashboard();
   renderMasterRumah();
@@ -52,6 +52,78 @@ document.addEventListener("DOMContentLoaded", async () => {
   renderGenerateTagihanForm();
   runSimulasiIPL();
 });
+
+// Dynamic Year & Date Populator
+function initDynamicDatesAndYears() {
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonthIdx = now.getMonth();
+  const currentMonthName = MONTH_NAMES[currentMonthIdx];
+  const todayIso = now.toISOString().split("T")[0];
+
+  // Year Dropdowns List (currentYear - 2 to currentYear + 2)
+  const years = [currentYear - 2, currentYear - 1, currentYear, currentYear + 1, currentYear + 2];
+  
+  const yearSelectIds = [
+    "perhitungan-tahun-select",
+    "gen-tahun",
+    "filter-tagihan-tahun",
+    "filter-pgl-tahun",
+    "filter-kas-tahun",
+    "laporan-tahun"
+  ];
+
+  yearSelectIds.forEach((id) => {
+    const sel = document.getElementById(id);
+    if (sel) {
+      const isFilter = id.startsWith("filter-");
+      let html = isFilter ? `<option value="Semua">Semua Tahun</option>` : "";
+      html += years.map((y) => `<option value="${y}" ${y === currentYear ? "selected" : ""}>${y}</option>`).join("");
+      sel.innerHTML = html;
+      sel.value = currentYear.toString();
+    }
+  });
+
+  // Select Current Month in Month Selectors
+  const monthSelectIds = [
+    "gen-bulan",
+    "filter-tagihan-bulan",
+    "filter-pgl-bulan",
+    "filter-kas-bulan",
+    "laporan-bulan"
+  ];
+
+  monthSelectIds.forEach((id) => {
+    const sel = document.getElementById(id);
+    if (sel) {
+      sel.value = currentMonthName;
+    }
+  });
+
+  // Date Inputs Default Today
+  const dateInputIds = ["gen-tanggal", "bayar-form-tanggal", "form-pgl-tanggal", "rekon-tanggal"];
+  dateInputIds.forEach((id) => {
+    const inp = document.getElementById(id);
+    if (inp) inp.value = todayIso;
+  });
+
+  updatePerhitunganMonthDropdown();
+}
+
+function updatePerhitunganMonthDropdown() {
+  const yearSelect = document.getElementById("perhitungan-tahun-select");
+  const monthSelect = document.getElementById("perhitungan-month-select");
+  if (!yearSelect || !monthSelect) return;
+
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonthName = MONTH_NAMES[now.getMonth()];
+
+  const selYear = yearSelect.value || currentYear;
+  monthSelect.innerHTML = MONTH_NAMES.map(
+    (m) => `<option value="${selYear}-${m}" ${m === currentMonthName ? "selected" : ""}>${m} ${selYear}</option>`
+  ).join("");
+}
 
 // Load App Data from LocalStorage or data.json
 async function loadAppData() {
@@ -280,23 +352,20 @@ function setupEventListeners() {
   }
 }
 
-function updatePerhitunganMonthDropdown() {
-  const yearSelect = document.getElementById("perhitungan-tahun-select");
-  const monthSelect = document.getElementById("perhitungan-month-select");
-  if (!yearSelect || !monthSelect) return;
-
-  const selYear = yearSelect.value;
-  monthSelect.innerHTML = MONTH_NAMES.map(
-    (m) => `<option value="${selYear}-${m}">${m} ${selYear}</option>`
-  ).join("");
-  monthSelect.value = `${selYear}-Agustus`;
-}
-
 /* ==========================================================================
    1. DASHBOARD
    ========================================================================== */
 function renderDashboard() {
   if (!appState) return;
+
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonthName = MONTH_NAMES[now.getMonth()];
+
+  const dashTitle = document.getElementById("dash-summary-title");
+  if (dashTitle) {
+    dashTitle.textContent = `Ringkasan Bulan Ini (${currentMonthName} ${currentYear})`;
+  }
 
   const totalRumah = appState.rumah ? appState.rumah.length : 0;
   const lunasCount = appState.tagihan ? appState.tagihan.filter((t) => t.status === "Lunas").length : 0;
@@ -407,16 +476,18 @@ function renderCharts(lunas, menunggu, menunggak, total) {
   const ctxBar = document.getElementById("chart-pembayaran-history");
   if (ctxBar) {
     if (barChartInstance) barChartInstance.destroy();
+    
+    // Dynamic 6 months labels leading to current month
+    const now = new Date();
+    const dynamicMonths = [];
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      dynamicMonths.push(MONTH_NAMES[d.getMonth()].substring(0, 3));
+    }
+
     const historyData = appState.grafik6Bulan && appState.grafik6Bulan.length > 0
       ? appState.grafik6Bulan
-      : [
-          { bulan: "Mar", tagihan: 0, pembayaran: 0 },
-          { bulan: "Apr", tagihan: 0, pembayaran: 0 },
-          { bulan: "Mei", tagihan: 0, pembayaran: 0 },
-          { bulan: "Jun", tagihan: 0, pembayaran: 0 },
-          { bulan: "Jul", tagihan: 0, pembayaran: 0 },
-          { bulan: "Agu", tagihan: 0, pembayaran: 0 }
-        ];
+      : dynamicMonths.map((m) => ({ bulan: m, tagihan: 0, pembayaran: 0 }));
 
     const labels = historyData.map((g) => g.bulan);
     const dataTagihan = historyData.map((g) => g.tagihan / 1000000);
@@ -1099,9 +1170,10 @@ function processGenerateTagihan() {
 function renderDaftarTagihan() {
   if (!appState || !appState.tagihan) return;
 
+  const now = new Date();
   const searchVal = (document.getElementById("filter-tagihan-search")?.value || "").toLowerCase();
-  const filterBulan = document.getElementById("filter-tagihan-bulan")?.value || "Agustus";
-  const filterTahun = document.getElementById("filter-tagihan-tahun")?.value || "2025";
+  const filterBulan = document.getElementById("filter-tagihan-bulan")?.value || MONTH_NAMES[now.getMonth()];
+  const filterTahun = document.getElementById("filter-tagihan-tahun")?.value || now.getFullYear().toString();
 
   const filtered = appState.tagihan.filter((t) => {
     const matchesSearch = t.blokNo.toLowerCase().includes(searchVal) || t.pemilik.toLowerCase().includes(searchVal);
@@ -1200,7 +1272,7 @@ function viewDetailTagihan(id) {
 
   document.getElementById("detail-val-rumah").textContent = `${t.blokNo} - ${t.pemilik}`;
   document.getElementById("detail-val-kelompok").textContent = t.kelompokIPL;
-  document.getElementById("detail-val-bulan").textContent = `${t.bulan || "Agustus"} ${t.tahun || "2025"}`;
+  document.getElementById("detail-val-bulan").textContent = `${t.bulan || MONTH_NAMES[new Date().getMonth()]} ${t.tahun || new Date().getFullYear()}`;
   document.getElementById("detail-val-nominal").textContent = formatRp(t.nominal);
 
   let badgeClass = "badge-secondary";
@@ -1264,7 +1336,7 @@ function openFormPembayaran(id) {
 
   document.getElementById("bayar-form-id").value = t.id;
   document.getElementById("bayar-form-rumah").textContent = `${t.blokNo} - ${t.pemilik}`;
-  document.getElementById("bayar-form-bulan").textContent = `${t.bulan || "Agustus"} ${t.tahun || "2025"}`;
+  document.getElementById("bayar-form-bulan").textContent = `${t.bulan || MONTH_NAMES[new Date().getMonth()]} ${t.tahun || new Date().getFullYear()}`;
   document.getElementById("bayar-form-total").textContent = formatRp(t.nominal);
   document.getElementById("bayar-form-nominal").value = t.nominal;
 
@@ -1303,7 +1375,7 @@ function simpanFormPembayaran() {
   const t = appState.tagihan.find((item) => item.id === id);
   if (t) {
     t.status = "Lunas";
-    t.tglBayar = tgl.split("-").reverse().join("/");
+    t.tglBayar = tgl ? tgl.split("-").reverse().join("/") : new Date().toLocaleDateString("id-ID");
     t.metode = metode;
     if (previewImg && !previewImg.endsWith("#")) {
       t.buktiTransfer = previewImg;
@@ -1325,8 +1397,9 @@ function simpanFormPembayaran() {
 function renderPengeluaranTable() {
   if (!appState || !appState.pengeluaran) return;
 
-  const filterBulan = document.getElementById("filter-pgl-bulan")?.value || "Agustus";
-  const filterTahun = document.getElementById("filter-pgl-tahun")?.value || "2025";
+  const now = new Date();
+  const filterBulan = document.getElementById("filter-pgl-bulan")?.value || MONTH_NAMES[now.getMonth()];
+  const filterTahun = document.getElementById("filter-pgl-tahun")?.value || now.getFullYear().toString();
   const tbody = document.getElementById("pengeluaran-full-tbody");
 
   if (tbody) {
@@ -1335,7 +1408,7 @@ function renderPengeluaranTable() {
     } else {
       tbody.innerHTML = appState.pengeluaran
         .filter((p) => {
-          const matchesBulan = filterBulan === "Semua" || p.tanggal.includes(filterBulan) || p.tanggal.includes("08");
+          const matchesBulan = filterBulan === "Semua" || p.tanggal.includes(filterBulan);
           const matchesTahun = filterTahun === "Semua" || p.tanggal.includes(filterTahun);
           return matchesBulan && matchesTahun;
         })
