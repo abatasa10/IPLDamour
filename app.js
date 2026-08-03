@@ -1166,6 +1166,7 @@ function setupEventListeners() {
    ========================================================================== */
 function renderDashboard() {
   if (!appState) return;
+  getCalculatedKasBalance();
 
   const now = new Date();
   const currentYear = now.getFullYear();
@@ -2347,10 +2348,7 @@ function verifikasiLunasTagihan(id) {
       t.tglBayar = new Date().toLocaleDateString("id-ID");
     }
     
-    if (!appState.ringkasanKas) appState.ringkasanKas = { kasSaatIni: 0, masuk: 0, keluar: 0, selisih: 0 };
-    appState.ringkasanKas.kasSaatIni += t.nominal;
-    appState.ringkasanKas.masuk += t.nominal;
-    appState.ringkasanKas.selisih = appState.ringkasanKas.masuk - appState.ringkasanKas.keluar;
+    getCalculatedKasBalance();
 
     saveState();
     renderDaftarTagihan();
@@ -2416,6 +2414,7 @@ function matchesMonthAndYear(dateStr, filterBulan, filterTahun) {
 
 function renderPengeluaranTable() {
   if (!appState || !appState.pengeluaran) return;
+  getCalculatedKasBalance();
 
   const isAdmin = currentUser && currentUser.role === "admin";
   const now = new Date();
@@ -2575,11 +2574,9 @@ function savePengeluaran() {
       nominal: nom
     });
 
-    if (!appState.ringkasanKas) appState.ringkasanKas = { kasSaatIni: 0, masuk: 0, keluar: 0, selisih: 0 };
-    appState.ringkasanKas.kasSaatIni -= nom;
-    appState.ringkasanKas.keluar += nom;
-    appState.ringkasanKas.selisih = appState.ringkasanKas.masuk - appState.ringkasanKas.keluar;
   }
+
+  getCalculatedKasBalance();
 
   saveState();
 
@@ -2765,27 +2762,9 @@ function simpanRekonsiliasiBank() {
       nominal: selisih
     });
 
-    if (!appState.ringkasanKas) appState.ringkasanKas = { kasSaatIni: 0, masuk: 0, keluar: 0, selisih: 0 };
-    appState.ringkasanKas.kasSaatIni += selisih;
-    appState.ringkasanKas.masuk += selisih;
-    appState.ringkasanKas.selisih = appState.ringkasanKas.masuk - appState.ringkasanKas.keluar;
-  } else {
-    const nomAbs = Math.abs(selisih);
-    if (!appState.pengeluaran) appState.pengeluaran = [];
-    appState.pengeluaran.unshift({
-      id: `PGL-${Date.now()}`,
-      tanggal: tglFormatted,
-      kategori: "Admin Bank",
-      penerima: "Bank (Biaya Admin)",
-      keterangan: ket,
-      nominal: nomAbs
-    });
-
-    if (!appState.ringkasanKas) appState.ringkasanKas = { kasSaatIni: 0, masuk: 0, keluar: 0, selisih: 0 };
-    appState.ringkasanKas.kasSaatIni -= nomAbs;
-    appState.ringkasanKas.keluar += nomAbs;
-    appState.ringkasanKas.selisih = appState.ringkasanKas.masuk - appState.ringkasanKas.keluar;
   }
+
+  getCalculatedKasBalance();
 
   saveState();
   closeModal("modal-rekon-bank");
@@ -2797,6 +2776,7 @@ function simpanRekonsiliasiBank() {
 
 function renderKasArusKasTable() {
   if (!appState) return;
+  getCalculatedKasBalance();
 
   const tbody = document.getElementById("kas-arus-tbody");
   if (!tbody) return;
