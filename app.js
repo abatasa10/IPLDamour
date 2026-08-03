@@ -1,6 +1,6 @@
 /**
  * D'AMOUR Sistem IPL Perumahan - Core Application Logic
- * Feature: User Management & Role-Based Access Control (Admin Warga, Warga Biasa, & IPL Developer)
+ * Feature: Full User Management UI & Role Assignment System (Admin Warga vs Warga Biasa vs Developer)
  */
 
 let appState = null;
@@ -12,9 +12,9 @@ let donutChartInstance = null;
 let barChartInstance = null;
 
 const DEFAULT_USERS = [
-  { username: "admin", password: "admin123", name: "Pak Budi (Admin Warga)", role: "admin", avatar: "A" },
-  { username: "warga", password: "warga123", name: "Warga D'AMOUR", role: "warga", avatar: "W" },
-  { username: "developer", password: "dev123", name: "Perwakilan Developer", role: "developer", avatar: "D" }
+  { username: "admin", password: "admin123", name: "Pak Budi (Admin Warga)", blokNo: "A01", role: "admin", avatar: "A" },
+  { username: "warga", password: "warga123", name: "Warga D'AMOUR", blokNo: "A02", role: "warga", avatar: "W" },
+  { username: "developer", password: "dev123", name: "Perwakilan Developer", blokNo: "-", role: "developer", avatar: "D" }
 ];
 
 const MONTH_NAMES = [
@@ -48,6 +48,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   checkAuthSession();
   updateHouseGroupCounts();
   renderDashboard();
+  renderMasterUsers();
   renderMasterRumah();
   renderMasterKomponen();
   renderMasterEvent();
@@ -169,11 +170,144 @@ function applyRolePermissions() {
     }
   });
 
+  renderMasterUsers();
   renderMasterRumah();
   renderMasterKomponen();
   renderMasterEvent();
   renderPerhitunganIPL();
   renderPengeluaranTable();
+}
+
+/* ==========================================================================
+   USER MANAGEMENT (SETTING AKUN ADMIN VS WARGA)
+   ========================================================================== */
+function renderMasterUsers() {
+  if (!appState || !appState.users) return;
+
+  const isAdmin = currentUser && currentUser.role === "admin";
+  const tbody = document.getElementById("master-users-tbody");
+  if (tbody) {
+    tbody.innerHTML = appState.users
+      .map((u) => {
+        let badge = `<span class="badge badge-warning">Warga biasa</span>`;
+        if (u.role === "admin") badge = `<span class="badge badge-success">👑 Admin Pengurus</span>`;
+        if (u.role === "developer") badge = `<span class="badge badge-secondary">🏗️ IPL Developer</span>`;
+
+        return `
+          <tr>
+            <td><strong>${u.username}</strong></td>
+            <td>${u.name}</td>
+            <td><strong>${u.blokNo || "-"}</strong></td>
+            <td>${badge}</td>
+            ${
+              isAdmin
+                ? `<td>
+                    <button class="btn btn-outline btn-sm" onclick="editUser('${u.username}')" title="Edit Akun & Role"><i class="ri-edit-line"></i> Edit</button>
+                    ${u.username !== "admin" ? `<button class="btn btn-outline btn-sm" style="color: var(--danger);" onclick="deleteUser('${u.username}')" title="Hapus Akun"><i class="ri-delete-bin-line"></i></button>` : ""}
+                  </td>`
+                : ""
+            }
+          </tr>
+        `;
+      })
+      .join("");
+  }
+}
+
+function openAddUserModal() {
+  populateUserBlokDropdown();
+  document.getElementById("form-user-old-username").value = "";
+  document.getElementById("form-user-username").value = "";
+  document.getElementById("form-user-password").value = "";
+  document.getElementById("form-user-name").value = "";
+  document.getElementById("form-user-role").value = "warga";
+  document.getElementById("modal-user-title").textContent = "Tambah Akun User Baru";
+  openModal("modal-user");
+}
+
+function editUser(username) {
+  const u = appState.users.find((user) => user.username === username);
+  if (!u) return;
+
+  populateUserBlokDropdown();
+  document.getElementById("form-user-old-username").value = u.username;
+  document.getElementById("form-user-username").value = u.username;
+  document.getElementById("form-user-password").value = u.password;
+  document.getElementById("form-user-name").value = u.name;
+  document.getElementById("form-user-blok").value = u.blokNo || "-";
+  document.getElementById("form-user-role").value = u.role;
+  document.getElementById("modal-user-title").textContent = `Edit Akun User: ${u.username}`;
+  openModal("modal-user");
+}
+
+function populateUserBlokDropdown() {
+  const sel = document.getElementById("form-user-blok");
+  if (!sel || !appState || !appState.rumah) return;
+
+  let html = `<option value="-">Tanpa Rumah (Umum / Dev)</option>`;
+  html += appState.rumah.map((r) => `<option value="${r.blokNo}">${r.blokNo} - ${r.pemilik}</option>`).join("");
+  sel.innerHTML = html;
+}
+
+function saveUser() {
+  const oldUsername = document.getElementById("form-user-old-username").value;
+  const username = document.getElementById("form-user-username").value.trim().toLowerCase();
+  const password = document.getElementById("form-user-password").value.trim();
+  const name = document.getElementById("form-user-name").value.trim();
+  const blokNo = document.getElementById("form-user-blok").value;
+  const role = document.getElementById("form-user-role").value;
+
+  if (!username || !password || !name) {
+    alert("Username, password, dan nama pengguna wajib diisi.");
+    return;
+  }
+
+  if (oldUsername) {
+    const idx = appState.users.findIndex((u) => u.username === oldUsername);
+    if (idx !== -1) {
+      appState.users[idx] = {
+        ...appState.users[idx],
+        username,
+        password,
+        name,
+        blokNo,
+        role,
+        avatar: name.charAt(0).toUpperCase()
+      };
+    }
+  } else {
+    const exists = appState.users.some((u) => u.username === username);
+    if (exists) {
+      alert("Username tersebut sudah digunakan. Pilih username lain.");
+      return;
+    }
+
+    appState.users.push({
+      username,
+      password,
+      name,
+      blokNo,
+      role,
+      avatar: name.charAt(0).toUpperCase()
+    });
+  }
+
+  saveState();
+  closeModal("modal-user");
+  renderMasterUsers();
+  alert(`Berhasil menyimpan akun user "${username}" dengan role ${role}!`);
+}
+
+function deleteUser(username) {
+  if (username === "admin") {
+    alert("Akun admin utama tidak boleh dihapus.");
+    return;
+  }
+  if (confirm(`Apakah Anda yakin ingin menghapus akun user "${username}"?`)) {
+    appState.users = appState.users.filter((u) => u.username !== username);
+    saveState();
+    renderMasterUsers();
+  }
 }
 
 // Dynamic Year & Date Populator
@@ -383,7 +517,7 @@ function clearAllAppData() {
 // Navigation View Switcher
 function showView(viewId) {
   const isAdmin = currentUser && currentUser.role === "admin";
-  const adminOnlyViews = ["generate-tagihan", "komponen", "event", "target", "pengaturan"];
+  const adminOnlyViews = ["users", "generate-tagihan", "komponen", "event", "target", "pengaturan"];
 
   if (!isAdmin && adminOnlyViews.includes(viewId)) {
     alert("Akses Ditolak: Halaman ini hanya dapat diakses oleh Admin / Pengurus.");
@@ -413,6 +547,7 @@ function showView(viewId) {
     const titles = {
       dashboard: "Dashboard",
       rumah: "Master Rumah",
+      users: "Management User & Hak Akses",
       komponen: "Master Komponen IPL",
       event: "Master Event & Biaya Tambahan",
       target: "Setting Target IPL & Sampah",
@@ -431,6 +566,7 @@ function showView(viewId) {
   }
 
   if (viewId === "dashboard") renderDashboard();
+  if (viewId === "users") renderMasterUsers();
   if (viewId === "rumah") renderMasterRumah();
   if (viewId === "komponen") renderMasterKomponen();
   if (viewId === "event") renderMasterEvent();
@@ -1335,7 +1471,6 @@ function renderDaftarTagihan() {
     const matchesBulan = filterBulan === "Semua" || t.bulan === filterBulan || t.periode.includes(filterBulan);
     const matchesTahun = filterTahun === "Semua" || t.tahun === filterTahun || t.periode.includes(filterTahun);
 
-    // If logged in as developer role, filter Developer tagihan easily
     if (currentUser && currentUser.role === "developer") {
       return t.kelompokIPL === "IPL Developer" && matchesSearch && matchesBulan && matchesTahun;
     }

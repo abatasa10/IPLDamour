@@ -129,6 +129,10 @@
         </a>
 
         <div class="nav-group-title role-admin-only">Master Data</div>
+        <a href="#" class="nav-item role-admin-only" data-view="users">
+          <i class="ri-user-settings-line"></i>
+          <span>Management User</span>
+        </a>
         <a href="#" class="nav-item role-admin-only" data-view="komponen">
           <i class="ri-list-check-2"></i>
           <span>Master Komponen</span>
@@ -358,6 +362,31 @@
             </div>
 
             <div class="pagination-wrapper" id="rumah-pagination"></div>
+          </div>
+        </section>
+
+        <!-- MANAGEMENT USER VIEW -->
+        <section id="view-users" class="view-section">
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">Management User & Hak Akses Role (Admin vs Warga)</div>
+              <button class="btn btn-primary role-admin-only" onclick="openAddUserModal()"><i class="ri-user-add-line"></i> Tambah Akun User</button>
+            </div>
+
+            <div class="table-responsive">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>Username</th>
+                    <th>Nama Pengguna</th>
+                    <th>Rumah / Blok</th>
+                    <th>Role / Hak Akses</th>
+                    <th class="role-admin-only">Aksi</th>
+                  </tr>
+                </thead>
+                <tbody id="master-users-tbody"></tbody>
+              </table>
+            </div>
           </div>
         </section>
 
@@ -985,6 +1014,49 @@
   </div>
 
   <!-- MODALS -->
+
+  <!-- Modal User Management -->
+  <div class="modal-overlay" id="modal-user">
+    <div class="modal-box">
+      <div class="modal-header">
+        <div class="modal-title" id="modal-user-title">Tambah / Edit Akun User</div>
+        <button class="close-modal-btn" onclick="closeModal('modal-user')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="form-user-old-username">
+        <div class="form-group">
+          <label>Username (Login)</label>
+          <input type="text" id="form-user-username" class="form-control" placeholder="Contoh: a01_budi">
+        </div>
+        <div class="form-group">
+          <label>Password</label>
+          <input type="password" id="form-user-password" class="form-control" placeholder="Masukkan password">
+        </div>
+        <div class="form-group">
+          <label>Nama Pengguna / Pemilik</label>
+          <input type="text" id="form-user-name" class="form-control" placeholder="Contoh: Pak Budi">
+        </div>
+        <div class="form-group">
+          <label>Hubungkan Dengan Rumah / Blok</label>
+          <select id="form-user-blok" class="form-control">
+            <option value="-">Tanpa Rumah (Umum / Dev)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Role / Hak Akses</label>
+          <select id="form-user-role" class="form-control">
+            <option value="admin">👑 Admin Pengurus (Akses Penuh)</option>
+            <option value="warga">🏠 Warga biasa (Lihat & Bayar)</option>
+            <option value="developer">🏗️ IPL Developer (1 Akun Developer)</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" onclick="closeModal('modal-user')">Batal</button>
+        <button class="btn btn-primary" onclick="saveUser()">Simpan Akun User</button>
+      </div>
+    </div>
+  </div>
 
   <!-- Modal Rekonsiliasi Bank -->
   <div class="modal-overlay" id="modal-rekon-bank">
