@@ -1476,6 +1476,7 @@ function deleteRumah(id) {
 }
 
 function renderMasterKomponen() {
+  ensureMasterKomponenState();
   if (!appState || !appState.komponenIPL) return;
 
   const isAdmin = currentUser && currentUser.role === "admin";
@@ -1771,6 +1772,7 @@ function saveSettingTarget() {
    4. PERHITUNGAN IPL (DYNAMIC CALCULATION FOR ADDITIONS & REDUCTIONS)
    ========================================================================== */
 function renderPerhitunganIPL() {
+  ensureMasterKomponenState();
   if (!appState) return;
 
   const isAdmin = currentUser && currentUser.role === "admin";
@@ -1778,7 +1780,7 @@ function renderPerhitunganIPL() {
   const totalRumahAll = hasHouses ? appState.rumah.length : 31;
   const totalRumahDev = hasHouses ? (appState.rumah.filter((r) => r.kelompokIPL === "IPL Developer").length || totalRumahAll) : 2;
 
-  const targetTanpaSampahObj = appState.targetIPL.find((t) => t.kelompok === "IPL Tanpa Sampah");
+  const targetTanpaSampahObj = appState.targetIPL ? appState.targetIPL.find((t) => t.kelompok === "IPL Tanpa Sampah") : null;
   const baseTargetTanpaSampah = targetTanpaSampahObj ? targetTanpaSampahObj.target : 150000;
 
   let generalCostsPerHomeSum = 0;
@@ -1786,7 +1788,9 @@ function renderPerhitunganIPL() {
   const tbody = document.getElementById("perhitungan-ipl-tbody");
   if (!tbody) return;
 
-  const activeKomponen = appState.komponenIPL.filter((k) => k.aktif);
+  const activeKomponen = (appState.komponenIPL || []).filter((k) => {
+    return k.aktif === true || String(k.aktif).toLowerCase() === "true" || k.aktif === undefined;
+  });
 
   const rowsHtml = activeKomponen
     .map((k) => {
