@@ -1928,6 +1928,9 @@ function renderDaftarTagihan() {
           if (t.status === "Menunggak") badgeClass = "badge-danger";
 
           const globalIndex = startIdx + idx + 1;
+          const userBlokClean = currentUser && currentUser.blokNo ? normalizeBlok(currentUser.blokNo) : "";
+          const billBlokClean = normalizeBlok(t.blokNo);
+          const isMyHouse = userBlokClean !== "" && userBlokClean !== "-" && userBlokClean === billBlokClean;
 
           return `
             <tr>
@@ -1941,7 +1944,7 @@ function renderDaftarTagihan() {
                 <button class="btn btn-outline btn-sm" onclick="viewDetailTagihan('${t.id}')" title="Lihat Detail"><i class="ri-eye-line"></i></button>
                 ${isAdmin ? `<button class="btn btn-outline btn-sm" onclick="openEditTagihanModal('${t.id}')" title="Edit Nominal Tagihan"><i class="ri-edit-line"></i></button>` : ""}
                 ${
-                  t.status !== "Lunas"
+                  t.status !== "Lunas" && isMyHouse
                     ? `<button class="btn btn-primary btn-sm" onclick="openFormPembayaran('${t.id}')" title="Bayar / Upload Bukti"><i class="ri-checkbox-circle-line"></i> Bayar</button>`
                     : ""
                 }
@@ -2059,6 +2062,22 @@ function viewDetailTagihan(id) {
   }
 
   document.getElementById("detail-val-total-rounded").textContent = formatRp(t.nominal).replace("Rp ", "");
+
+  const wrapper = document.getElementById("detail-bukti-wrapper");
+  const imgEl = document.getElementById("detail-bukti-img");
+  const infoEl = document.getElementById("detail-bukti-info");
+
+  if (wrapper && imgEl && infoEl) {
+    if (t.buktiTransfer && t.buktiTransfer.length > 10) {
+      imgEl.src = t.buktiTransfer;
+      infoEl.textContent = `Tanggal Bayar: ${t.tglBayar || "-"} | Metode: ${t.metode || "-"}`;
+      wrapper.style.display = "block";
+    } else {
+      wrapper.style.display = "none";
+      imgEl.src = "";
+    }
+  }
+
   showView("detail-tagihan");
 }
 
@@ -2104,7 +2123,6 @@ function simpanFormPembayaran() {
   const nominal = parseFloat(document.getElementById("bayar-form-nominal").value) || 0;
   const previewImg = document.getElementById("img-preview-bukti").src;
 
-  const isAdmin = currentUser && currentUser.role === "admin";
   const t = appState.tagihan.find((item) => item.id === id);
   if (t) {
     t.tglBayar = tgl ? tgl.split("-").reverse().join("/") : new Date().toLocaleDateString("id-ID");
@@ -2113,20 +2131,9 @@ function simpanFormPembayaran() {
       t.buktiTransfer = previewImg;
     }
 
-    if (isAdmin) {
-      t.status = "Lunas";
-      if (!appState.ringkasanKas) appState.ringkasanKas = { kasSaatIni: 0, masuk: 0, keluar: 0, selisih: 0 };
-      appState.ringkasanKas.kasSaatIni += nominal;
-      appState.ringkasanKas.masuk += nominal;
-      appState.ringkasanKas.selisih = appState.ringkasanKas.masuk - appState.ringkasanKas.keluar;
-
-      saveState();
-      alert("Pembayaran berhasil diverifikasi dan disetujui (LUNAS). Uang resmi masuk ke Kas!");
-    } else {
-      t.status = "Menunggu Verifikasi";
-      saveState();
-      alert("Bukti pembayaran berhasil dikirim! Menunggu verifikasi dari Admin/Pengurus sebelum masuk ke Kas.");
-    }
+    t.status = "Menunggu Verifikasi";
+    saveState();
+    alert("Bukti pembayaran berhasil dikirim! Silakan lakukan Verifikasi untuk memasukkan nominal ke dalam Kas.");
 
     showView("daftar-tagihan");
     renderDashboard();
