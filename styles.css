@@ -288,6 +288,29 @@ button {
   gap: 0.5rem;
 }
 
+/* Summary Box Highlight */
+.summary-highlight-box {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 1rem;
+  background: #f8fafc;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 1rem;
+}
+
+.summary-item h5 {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.summary-item p {
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin-top: 0.25rem;
+}
+
 /* KPI Summary Cards Grid */
 .kpi-grid {
   display: grid;
@@ -347,16 +370,11 @@ button {
   gap: 1.25rem;
 }
 
-@media (max-width: 1024px) {
-  .dashboard-grid {
-    grid-template-columns: 1fr;
-  }
-}
-
 /* Tables */
 .table-responsive {
   width: 100%;
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .table {
@@ -375,6 +393,7 @@ button {
   padding: 0.75rem 1rem;
   text-align: left;
   border-bottom: 1px solid var(--border-color);
+  white-space: nowrap;
 }
 
 .table td {
@@ -383,6 +402,7 @@ button {
   font-size: 0.875rem;
   color: var(--text-main);
   vertical-align: middle;
+  white-space: nowrap;
 }
 
 .table tbody tr:last-child td {
@@ -419,6 +439,7 @@ button {
   font-size: 0.875rem;
   font-weight: 500;
   transition: all 0.2s ease;
+  touch-action: manipulation;
 }
 
 .btn-primary {
@@ -464,6 +485,7 @@ button {
   outline: none;
   font-family: inherit;
   transition: border-color 0.2s;
+  background-color: #ffffff;
 }
 
 .form-control:focus {
@@ -473,6 +495,7 @@ button {
 .input-search-wrapper {
   position: relative;
   max-width: 320px;
+  width: 100%;
 }
 
 .input-search-wrapper i {
@@ -519,7 +542,7 @@ button {
   background: var(--bg-main);
 }
 
-/* Checkbox Item List (Generate Tagihan mockup 5) */
+/* Checkbox Item List */
 .checkbox-group-list {
   display: flex;
   flex-direction: column;
@@ -542,7 +565,7 @@ button {
   cursor: pointer;
 }
 
-/* File Upload Zone (Pembayaran mockup 8) */
+/* File Upload Zone */
 .upload-dropzone {
   border: 2px dashed var(--border-color);
   border-radius: var(--radius-md);
@@ -575,7 +598,7 @@ button {
   color: var(--text-muted);
 }
 
-/* Detail Tagihan Summary Box (mockup 7) */
+/* Detail Tagihan Summary Box */
 .detail-summary-header {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
@@ -623,6 +646,7 @@ button {
   opacity: 0;
   visibility: hidden;
   transition: all 0.2s ease;
+  padding: 1rem;
 }
 
 .modal-overlay.active {
@@ -633,7 +657,7 @@ button {
 .modal-box {
   background: var(--bg-card);
   border-radius: var(--radius-lg);
-  width: 90%;
+  width: 100%;
   max-width: 550px;
   max-height: 90vh;
   overflow-y: auto;
@@ -698,10 +722,19 @@ button {
   display: block;
 }
 
-/* Responsive sidebar drawer */
+/* ==========================================================================
+   COMPREHENSIVE MOBILE & TABLET RESPONSIVE STYLES
+   ========================================================================== */
+@media (max-width: 1024px) {
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 @media (max-width: 768px) {
   .sidebar {
     transform: translateX(-100%);
+    box-shadow: var(--shadow-lg);
   }
   
   .sidebar.open {
@@ -711,8 +744,103 @@ button {
   .main-wrapper {
     margin-left: 0;
   }
+
+  .navbar {
+    padding: 0 1rem;
+  }
   
   .toggle-sidebar-btn {
     display: block;
+  }
+
+  .content-body {
+    padding: 1rem;
+  }
+
+  .kpi-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+  }
+
+  .kpi-card {
+    padding: 1rem;
+  }
+
+  .kpi-value {
+    font-size: 1.25rem;
+  }
+
+  .card-header {
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+
+  .card-header .btn {
+    width: 100%;
+  }
+
+  .summary-highlight-box {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+    text-align: center;
+  }
+
+  .filter-bar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.5rem;
+  }
+
+  .filter-bar .form-control,
+  .filter-bar .input-search-wrapper {
+    max-width: 100% !important;
+    width: 100% !important;
+  }
+
+  .filter-bar button {
+    width: 100%;
+  }
+
+  /* Form Grids stack on mobile */
+  #view-generate-tagihan .card > div[style*="grid-template-columns"],
+  #view-form-pembayaran .card > div[style*="grid-template-columns"],
+  #view-laporan .card > div[style*="grid-template-columns"],
+  #view-simulasi .card > div[style*="grid-template-columns"] {
+    grid-template-columns: 1fr !important;
+  }
+
+  .detail-summary-header {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .modal-box {
+    width: 96%;
+    padding: 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .page-breadcrumb {
+    font-size: 0.95rem;
+  }
+
+  .nav-user-name {
+    display: none;
+  }
+
+  .kpi-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .detail-summary-header {
+    grid-template-columns: 1fr;
+  }
+
+  .btn {
+    width: 100%;
+  }
+
+  .pagination-wrapper {
+    justify-content: center;
   }
 }
