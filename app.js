@@ -2296,35 +2296,86 @@ function openFormPembayaran(id) {
   showView("form-pembayaran");
 }
 
-function previewBuktiTransfer(input) {
-  if (input.files && input.files[0]) {
+function compressImageBase64(file, maxWidth = 800, maxHeight = 800, quality = 0.65) {
+  return new Promise((resolve) => {
+    if (!file || !file.type || !file.type.startsWith("image/")) {
+      resolve("");
+      return;
+    }
+
     const reader = new FileReader();
-    reader.onload = function (e) {
-      document.getElementById("img-preview-bukti").src = e.target.result;
-      document.getElementById("preview-bukti-wrapper").style.display = "block";
+    reader.onerror = () => resolve("");
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onerror = () => resolve(e.target.result);
+      img.onload = () => {
+        let width = img.width;
+        let height = img.height;
+
+        if (width > maxWidth || height > maxHeight) {
+          if (width > height) {
+            height = Math.round((height * maxWidth) / width);
+            width = maxWidth;
+          } else {
+            width = Math.round((width * maxHeight) / height);
+            height = maxHeight;
+          }
+        }
+
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+
+        const ctx = canvas.getContext("2d");
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, width, height);
+        ctx.drawImage(img, 0, 0, width, height);
+
+        const compressedDataUrl = canvas.toDataURL("image/jpeg", quality);
+        resolve(compressedDataUrl);
+      };
+      img.src = e.target.result;
     };
-    reader.readAsDataURL(input.files[0]);
+    reader.readAsDataURL(file);
+  });
+}
+
+async function previewBuktiTransfer(input) {
+  if (input.files && input.files[0]) {
+    const file = input.files[0];
+    const compressedBase64 = await compressImageBase64(file, 800, 800, 0.65);
+    document.getElementById("img-preview-bukti").src = compressedBase64;
+    document.getElementById("preview-bukti-wrapper").style.display = "block";
   }
 }
 
-function simpanFormPembayaran() {
+async function simpanFormPembayaran() {
   const id = document.getElementById("bayar-form-id").value;
   const tgl = document.getElementById("bayar-form-tanggal").value;
   const metode = document.getElementById("bayar-form-metode").value;
-  const nominal = parseFloat(document.getElementById("bayar-form-nominal").value) || 0;
-  const previewImg = document.getElementById("img-preview-bukti").src;
+  const fileInput = document.getElementById("bayar-form-bukti");
+  let previewImg = document.getElementById("img-preview-bukti").src;
+
+  if (fileInput && fileInput.files && fileInput.files[0]) {
+    try {
+      previewImg = await compressImageBase64(fileInput.files[0], 800, 800, 0.65);
+    } catch (e) {
+      console.error("Image compression error:", e);
+    }
+  }
 
   const t = appState.tagihan.find((item) => item.id === id);
   if (t) {
     t.tglBayar = tgl ? tgl.split("-").reverse().join("/") : new Date().toLocaleDateString("id-ID");
     t.metode = metode;
-    if (previewImg && !previewImg.endsWith("#")) {
+    if (previewImg && !previewImg.endsWith("#") && previewImg.length > 50) {
       t.buktiTransfer = previewImg;
     }
 
     t.status = "Menunggu Verifikasi";
     saveState();
-    alert("Bukti pembayaran berhasil dikirim! Silakan lakukan Verifikasi untuk memasukkan nominal ke dalam Kas.");
+    addAuditLog("Upload Pembayaran", `Warga rumah ${t.blokNo} (${t.pemilik}) mengunggah bukti transfer sebesar ${formatRp(t.nominal)}`);
+    alert("Bukti pembayaran berhasil dikompresi & dikirim! Silakan verifikasi untuk memasukkan nominal ke dalam Kas.");
 
     showView("daftar-tagihan");
     renderDashboard();
