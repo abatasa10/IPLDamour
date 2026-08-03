@@ -606,10 +606,10 @@ function updatePerhitunganMonthDropdown() {
 
 // Load App Data from LocalStorage, data.json, or Cloud Google Spreadsheet API
 async function loadAppData() {
-  // Clear old stale cache once to purge 67-house duplicates from browser localStorage
-  if (!localStorage.getItem("damour_ipl_v3_clean")) {
+  // Clear old stale cache once to purge old dummy bills and enforce live house names
+  if (!localStorage.getItem("damour_ipl_v4_clean")) {
     localStorage.removeItem("damour_ipl_db");
-    localStorage.setItem("damour_ipl_v3_clean", "true");
+    localStorage.setItem("damour_ipl_v4_clean", "true");
   }
 
   let jsonBackup = null;
@@ -653,9 +653,30 @@ async function loadAppData() {
   ensureMasterEventState();
   generateAllMissingHouseUsers(true);
   autoEnsureCurrentMonthBills();
+  syncTagihanWithMasterRumah();
   cleanUpSampahFromKomponen();
   deduplicateAppState();
   saveState();
+}
+
+function syncTagihanWithMasterRumah() {
+  if (!appState) return;
+  if (!appState.tagihan) appState.tagihan = [];
+  if (!appState.rumah || appState.rumah.length === 0) return;
+
+  appState.tagihan = appState.tagihan.filter((t) => {
+    if (!t || !t.blokNo) return false;
+    const cleanBlok = normalizeBlok(t.blokNo);
+    const house = appState.rumah.find((r) => normalizeBlok(r.blokNo) === cleanBlok);
+    
+    if (!house) return false; // Delete tagihan for non-existent houses!
+
+    // Sync live owner name & IPL group from Master Rumah
+    t.blokNo = house.blokNo;
+    t.pemilik = house.pemilik;
+    t.kelompokIPL = house.kelompokIPL;
+    return true;
+  });
 }
 
 function normalizeBlok(b) {
@@ -1831,6 +1852,7 @@ function processGenerateTagihan() {
 
 function renderDaftarTagihan() {
   autoEnsureCurrentMonthBills();
+  syncTagihanWithMasterRumah();
   if (!appState || !appState.tagihan) return;
 
   const isAdmin = currentUser && currentUser.role === "admin";
