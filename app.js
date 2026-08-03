@@ -2492,16 +2492,24 @@ function renderKasArusKasTable() {
   let currentBalance = 0;
   const ledgerRows = [];
 
-  const totalMasukTagihan = appState.tagihan
-    ? appState.tagihan.filter((t) => t.status === "Lunas").reduce((sum, t) => sum + t.nominal, 0)
-    : 0;
+  const lunasBills = appState.tagihan ? appState.tagihan.filter((t) => t.status === "Lunas") : [];
 
-  if (totalMasukTagihan > 0) {
-    currentBalance += totalMasukTagihan;
+  if (lunasBills.length > 0) {
+    lunasBills.forEach((t) => {
+      currentBalance += t.nominal;
+      ledgerRows.push({
+        tanggal: t.tglBayar || new Date().toLocaleDateString("id-ID"),
+        referensi: `Pembayaran IPL Blok ${t.blokNo} (${t.pemilik}) - ${t.bulan || ""} ${t.tahun || ""}`,
+        masuk: t.nominal,
+        keluar: null,
+        saldo: currentBalance
+      });
+    });
+  } else {
     ledgerRows.push({
       tanggal: new Date().toLocaleDateString("id-ID"),
-      referensi: "Tagihan IPL (Total Pembayaran Lunas)",
-      masuk: totalMasukTagihan,
+      referensi: "Tagihan IPL Warga (Belum Ada Pembayaran Lunas)",
+      masuk: 0,
       keluar: null,
       saldo: currentBalance
     });
