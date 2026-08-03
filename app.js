@@ -755,6 +755,21 @@ async function loadAppData() {
 
   if (!appState.tagihan) appState.tagihan = [];
 
+  // Enforce Reset of C16 (Ridwan) payment status & empty pengeluaran list
+  if (appState && appState.tagihan) {
+    appState.tagihan.forEach((t) => {
+      const blokClean = (t.blokNo || "").toLowerCase().trim();
+      const ownerClean = (t.pemilik || "").toLowerCase().trim();
+      if (blokClean === "c16" || ownerClean.includes("ridwan")) {
+        t.status = "Menunggu Pembayaran";
+        t.tglBayar = "-";
+        t.buktiTransfer = "";
+        t.metode = "-";
+      }
+    });
+  }
+  appState.pengeluaran = [];
+
   ensureMasterKomponenState();
   ensureMasterEventState();
   generateAllMissingHouseUsers(true);
@@ -762,9 +777,20 @@ async function loadAppData() {
   cleanUpSampahFromKomponen();
   deduplicateAppState();
   autoUpdateMenunggakStatus();
+  getCalculatedKasBalance();
   
   if (appState) {
     localStorage.setItem("damour_ipl_db", JSON.stringify(appState));
+  }
+
+  // Push cleaned state to Google Sheet database so Cloud DB is also updated
+  if (activeUrl) {
+    fetch(activeUrl, {
+      method: "POST",
+      mode: "no-cors",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify(appState)
+    }).catch((e) => console.log("Cloud sync error:", e));
   }
 }
 
