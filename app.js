@@ -607,10 +607,10 @@ function updatePerhitunganMonthDropdown() {
 
 // Load App Data from LocalStorage, data.json, or Cloud Google Spreadsheet API
 async function loadAppData() {
-  // Clear old stale cache once to start tagihan persistence
-  if (!localStorage.getItem("damour_ipl_v10_persist_tagihan")) {
+  // Clear test bills once and reset database cleanly
+  if (!localStorage.getItem("damour_ipl_v11_clear_test_bills")) {
     localStorage.removeItem("damour_ipl_db");
-    localStorage.setItem("damour_ipl_v10_persist_tagihan", "true");
+    localStorage.setItem("damour_ipl_v11_clear_test_bills", "true");
   }
 
   let jsonBackup = null;
