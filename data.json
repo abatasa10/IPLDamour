@@ -11,7 +11,7 @@
       "username": "admin",
       "password": "admin123",
       "name": "Pak Budi (Admin Warga)",
-      "blokNo": "A01",
+      "blokNo": "A1",
       "role": "admin",
       "avatar": "A",
       "mustChangePassword": false
@@ -20,7 +20,7 @@
       "username": "warga",
       "password": "damour123",
       "name": "Warga D'AMOUR",
-      "blokNo": "A02",
+      "blokNo": "A2",
       "role": "warga",
       "avatar": "W",
       "mustChangePassword": false
@@ -38,7 +38,7 @@
       "username": "ridwan",
       "password": "123qwe",
       "name": "Ridwan (Admin)",
-      "blokNo": "A01",
+      "blokNo": "A1",
       "role": "admin",
       "avatar": "R",
       "mustChangePassword": false
@@ -47,7 +47,7 @@
       "username": "jamal",
       "password": "123qwe",
       "name": "Jamal (Admin Warga)",
-      "blokNo": "A03",
+      "blokNo": "A3",
       "role": "admin",
       "avatar": "J",
       "mustChangePassword": false
@@ -140,15 +140,15 @@
     }
   ],
   "rumah": [
-    { "id": "RMH-A01", "blokNo": "A01", "pemilik": "Pak Budi", "noHp": "081234567801", "status": "Aktif", "kelompokIPL": "IPL + Sampah" },
-    { "id": "RMH-A02", "blokNo": "A02", "pemilik": "Pak Joko", "noHp": "081234567802", "status": "Aktif", "kelompokIPL": "IPL + Sampah" },
-    { "id": "RMH-A03", "blokNo": "A03", "pemilik": "Pak Jamal", "noHp": "081234567803", "status": "Aktif", "kelompokIPL": "IPL + Sampah" },
-    { "id": "RMH-A04", "blokNo": "A04", "pemilik": "Bu Maya", "noHp": "081234567804", "status": "Aktif", "kelompokIPL": "IPL + Sampah" },
-    { "id": "RMH-A05", "blokNo": "A05", "pemilik": "Pak Hendra", "noHp": "081234567805", "status": "Aktif", "kelompokIPL": "IPL + Sampah" },
-    { "id": "RMH-A06", "blokNo": "A06", "pemilik": "Pak Bambang", "noHp": "081234567806", "status": "Aktif", "kelompokIPL": "IPL + Sampah" },
-    { "id": "RMH-A07", "blokNo": "A07", "pemilik": "Bu Ani", "noHp": "081234567807", "status": "Aktif", "kelompokIPL": "IPL + Sampah" },
-    { "id": "RMH-A08", "blokNo": "A08", "pemilik": "Pak Rudi", "noHp": "081234567808", "status": "Aktif", "kelompokIPL": "IPL + Sampah" },
-    { "id": "RMH-A09", "blokNo": "A09", "pemilik": "Pak Agus", "noHp": "081234567809", "status": "Aktif", "kelompokIPL": "IPL + Sampah" },
+    { "id": "RMH-A1", "blokNo": "A1", "pemilik": "Pak Budi", "noHp": "081234567801", "status": "Aktif", "kelompokIPL": "IPL + Sampah" },
+    { "id": "RMH-A2", "blokNo": "A2", "pemilik": "Pak Joko", "noHp": "081234567802", "status": "Aktif", "kelompokIPL": "IPL + Sampah" },
+    { "id": "RMH-A3", "blokNo": "A3", "pemilik": "Pak Jamal", "noHp": "081234567803", "status": "Aktif", "kelompokIPL": "IPL + Sampah" },
+    { "id": "RMH-A4", "blokNo": "A4", "pemilik": "Bu Maya", "noHp": "081234567804", "status": "Aktif", "kelompokIPL": "IPL + Sampah" },
+    { "id": "RMH-A5", "blokNo": "A5", "pemilik": "Pak Hendra", "noHp": "081234567805", "status": "Aktif", "kelompokIPL": "IPL + Sampah" },
+    { "id": "RMH-A6", "blokNo": "A6", "pemilik": "Pak Bambang", "noHp": "081234567806", "status": "Aktif", "kelompokIPL": "IPL + Sampah" },
+    { "id": "RMH-A7", "blokNo": "A7", "pemilik": "Bu Ani", "noHp": "081234567807", "status": "Aktif", "kelompokIPL": "IPL + Sampah" },
+    { "id": "RMH-A8", "blokNo": "A8", "pemilik": "Pak Rudi", "noHp": "081234567808", "status": "Aktif", "kelompokIPL": "IPL + Sampah" },
+    { "id": "RMH-A9", "blokNo": "A9", "pemilik": "Pak Agus", "noHp": "081234567809", "status": "Aktif", "kelompokIPL": "IPL + Sampah" },
     { "id": "RMH-A10", "blokNo": "A10", "pemilik": "Bu Siska", "noHp": "081234567810", "status": "Aktif", "kelompokIPL": "IPL + Sampah" },
     { "id": "RMH-A11", "blokNo": "A11", "pemilik": "Pak Dedi", "noHp": "081234567811", "status": "Aktif", "kelompokIPL": "IPL + Sampah" },
     { "id": "RMH-A12", "blokNo": "A12", "pemilik": "Bu Rita", "noHp": "081234567812", "status": "Aktif", "kelompokIPL": "IPL + Sampah" },
@@ -169,8 +169,8 @@
     { "id": "RMH-A27", "blokNo": "A27", "pemilik": "Pak Ridwan", "noHp": "081234567827", "status": "Aktif", "kelompokIPL": "IPL Tanpa Sampah" },
     { "id": "RMH-A28", "blokNo": "A28", "pemilik": "Bu Sri", "noHp": "081234567828", "status": "Aktif", "kelompokIPL": "IPL Tanpa Sampah" },
     { "id": "RMH-A29", "blokNo": "A29", "pemilik": "Pak Taufik", "noHp": "081234567829", "status": "Aktif", "kelompokIPL": "IPL Tanpa Sampah" },
-    { "id": "RMH-B01", "blokNo": "B01", "pemilik": "Developer Unit 1", "noHp": "081234567830", "status": "Aktif", "kelompokIPL": "IPL Developer" },
-    { "id": "RMH-B02", "blokNo": "B02", "pemilik": "Developer Unit 2", "noHp": "081234567831", "status": "Aktif", "kelompokIPL": "IPL Developer" }
+    { "id": "RMH-B1", "blokNo": "B1", "pemilik": "Developer Unit 1", "noHp": "081234567830", "status": "Aktif", "kelompokIPL": "IPL Developer" },
+    { "id": "RMH-B2", "blokNo": "B2", "pemilik": "Developer Unit 2", "noHp": "081234567831", "status": "Aktif", "kelompokIPL": "IPL Developer" }
   ],
   "tagihan": [],
   "pengeluaran": [],

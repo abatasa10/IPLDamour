@@ -671,6 +671,11 @@ async function loadAppData() {
   saveState();
 }
 
+function normalizeBlok(b) {
+  if (!b) return "";
+  return b.trim().toUpperCase().replace(/^([A-Z]+)0+(\d+)$/, "$1$2");
+}
+
 function deduplicateAppState() {
   if (!appState) return;
 
@@ -678,7 +683,7 @@ function deduplicateAppState() {
     const seenBlocks = new Set();
     appState.rumah = appState.rumah.filter((r) => {
       if (!r || !r.blokNo) return false;
-      const cleanBlok = r.blokNo.trim().toUpperCase();
+      const cleanBlok = normalizeBlok(r.blokNo);
       if (seenBlocks.has(cleanBlok)) {
         return false;
       }
@@ -692,11 +697,14 @@ function deduplicateAppState() {
     const seenUsers = new Set();
     appState.users = appState.users.filter((u) => {
       if (!u || !u.username) return false;
-      const cleanU = u.username.trim().toLowerCase();
+      const cleanU = normalizeBlok(u.username).toLowerCase();
       if (seenUsers.has(cleanU)) {
         return false;
       }
       seenUsers.add(cleanU);
+      if (u.blokNo && u.blokNo !== "-") {
+        u.blokNo = normalizeBlok(u.blokNo);
+      }
       return true;
     });
   }
@@ -705,7 +713,9 @@ function deduplicateAppState() {
     const seenTagihan = new Set();
     appState.tagihan = appState.tagihan.filter((t) => {
       if (!t || !t.blokNo) return false;
-      const key = `${t.blokNo.trim().toUpperCase()}-${t.bulan}-${t.tahun}`;
+      const cleanBlok = normalizeBlok(t.blokNo);
+      t.blokNo = cleanBlok;
+      const key = `${cleanBlok}-${t.bulan}-${t.tahun}`;
       if (seenTagihan.has(key)) {
         return false;
       }
