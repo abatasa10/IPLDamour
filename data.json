@@ -178,7 +178,28 @@
     { "id": "RMH-C05", "blokNo": "C05", "pemilik": "Warga Blok C05", "noHp": "081234567836", "status": "Aktif", "kelompokIPL": "IPL + Sampah" },
     { "id": "RMH-C19", "blokNo": "C19", "pemilik": "Warga Blok C19", "noHp": "081234567850", "status": "Aktif", "kelompokIPL": "IPL + Sampah" }
   ],
-  "tagihan": [],
+  "tagihan": [
+    {
+      "id": "TAG-2026Agustus-C19",
+      "periode": "2026-Agustus",
+      "bulan": "Agustus",
+      "tahun": "2026",
+      "rumahId": "RMH-C19",
+      "blokNo": "C19",
+      "pemilik": "Warga Blok C19",
+      "kelompokIPL": "IPL + Sampah",
+      "nominal": 225000,
+      "rincianItems": [
+        { "nama": "IPL Dasar", "nominal": 150000 },
+        { "nama": "Iuran Sampah", "nominal": 25000 },
+        { "nama": "Iuran THR Satpam", "nominal": 50000 }
+      ],
+      "status": "Menunggu",
+      "tglBayar": "-",
+      "metode": "-",
+      "buktiTransfer": ""
+    }
+  ],
   "pengeluaran": [],
   "pemasukanLain": [],
   "grafik6Bulan": [],

@@ -626,15 +626,25 @@ async function loadAppData() {
 
   if (!appState) {
     appState = jsonBackup;
-  } else if (jsonBackup && jsonBackup.rumah) {
-    // Sync houses from data.json if missing in appState
-    if (!appState.rumah) appState.rumah = [];
-    jsonBackup.rumah.forEach((rJson) => {
-      const exists = appState.rumah.some((r) => r.blokNo.trim().toLowerCase() === rJson.blokNo.trim().toLowerCase());
-      if (!exists) {
-        appState.rumah.push(rJson);
-      }
-    });
+  } else if (jsonBackup) {
+    if (jsonBackup.rumah) {
+      if (!appState.rumah) appState.rumah = [];
+      jsonBackup.rumah.forEach((rJson) => {
+        const exists = appState.rumah.some((r) => r.blokNo.trim().toLowerCase() === rJson.blokNo.trim().toLowerCase());
+        if (!exists) {
+          appState.rumah.push(rJson);
+        }
+      });
+    }
+    if (jsonBackup.tagihan && Array.isArray(jsonBackup.tagihan)) {
+      if (!appState.tagihan) appState.tagihan = [];
+      jsonBackup.tagihan.forEach((tJson) => {
+        const exists = appState.tagihan.some((t) => t.id === tJson.id || (t.blokNo === tJson.blokNo && t.bulan === tJson.bulan && t.tahun === tJson.tahun));
+        if (!exists) {
+          appState.tagihan.push(tJson);
+        }
+      });
+    }
   }
 
   if (appState && appState.settings && appState.settings.googleSheetApiUrl) {
@@ -1778,6 +1788,7 @@ function processGenerateTagihan() {
 }
 
 function renderDaftarTagihan() {
+  autoEnsureCurrentMonthBills();
   if (!appState || !appState.tagihan) return;
 
   const isAdmin = currentUser && currentUser.role === "admin";
