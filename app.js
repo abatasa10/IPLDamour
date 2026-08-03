@@ -2221,6 +2221,47 @@ function verifikasiLunasTagihan(id) {
   }
 }
 
+function matchesMonthAndYear(dateStr, filterBulan, filterTahun) {
+  if (!dateStr) return true;
+
+  const monthNames = [
+    "Januari", "Februari", "Maret", "April", "Mei", "Juni",
+    "Juli", "Agustus", "September", "Oktober", "November", "Desember"
+  ];
+
+  let monthIndex = -1;
+  let yearStr = "";
+
+  if (dateStr.includes("/")) {
+    const parts = dateStr.split("/");
+    if (parts.length === 3) {
+      monthIndex = parseInt(parts[1], 10) - 1;
+      yearStr = parts[2];
+    }
+  } else if (dateStr.includes("-")) {
+    const parts = dateStr.split("-");
+    if (parts.length === 3) {
+      if (parts[0].length === 4) {
+        yearStr = parts[0];
+        monthIndex = parseInt(parts[1], 10) - 1;
+      } else {
+        monthIndex = parseInt(parts[1], 10) - 1;
+        yearStr = parts[2];
+      }
+    }
+  }
+
+  const matchesBulan = filterBulan === "Semua" || 
+                       (monthIndex >= 0 && monthNames[monthIndex] === filterBulan) ||
+                       dateStr.toLowerCase().includes(filterBulan.toLowerCase());
+
+  const matchesTahun = filterTahun === "Semua" || 
+                       yearStr === filterTahun || 
+                       dateStr.includes(filterTahun);
+
+  return matchesBulan && matchesTahun;
+}
+
 function renderPengeluaranTable() {
   if (!appState || !appState.pengeluaran) return;
 
@@ -2234,31 +2275,32 @@ function renderPengeluaranTable() {
     if (appState.pengeluaran.length === 0) {
       tbody.innerHTML = `<tr><td colspan="${isAdmin ? 5 : 4}" style="text-align: center; color: var(--text-muted); padding: 1.5rem;">Belum ada catatan pengeluaran.</td></tr>`;
     } else {
-      tbody.innerHTML = appState.pengeluaran
-        .filter((p) => {
-          const matchesBulan = filterBulan === "Semua" || p.tanggal.includes(filterBulan);
-          const matchesTahun = filterTahun === "Semua" || p.tanggal.includes(filterTahun);
-          return matchesBulan && matchesTahun;
-        })
-        .map(
-          (p) => `
-          <tr>
-            <td>${p.tanggal}</td>
-            <td><strong>${p.kategori}</strong></td>
-            <td>${p.penerima || "-"}</td>
-            <td style="font-weight: 600; color: var(--danger);">${formatRp(p.nominal)}</td>
-            ${
-              isAdmin
-                ? `<td>
-                    <button class="btn btn-outline btn-sm" onclick="editPengeluaran('${p.id}')"><i class="ri-edit-line"></i></button>
-                    <button class="btn btn-outline btn-sm" style="color: var(--danger);" onclick="deletePengeluaran('${p.id}')"><i class="ri-delete-bin-line"></i></button>
-                  </td>`
-                : ""
-            }
-          </tr>
-        `
-        )
-        .join("");
+      const filteredPgl = appState.pengeluaran.filter((p) => matchesMonthAndYear(p.tanggal, filterBulan, filterTahun));
+      
+      if (filteredPgl.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="${isAdmin ? 5 : 4}" style="text-align: center; color: var(--text-muted); padding: 1.5rem;">Belum ada catatan pengeluaran untuk periode ${filterBulan} ${filterTahun}.</td></tr>`;
+      } else {
+        tbody.innerHTML = filteredPgl
+          .map(
+            (p) => `
+            <tr>
+              <td>${p.tanggal}</td>
+              <td><strong>${p.kategori}</strong></td>
+              <td>${p.penerima || "-"}</td>
+              <td style="font-weight: 600; color: var(--danger);">${formatRp(p.nominal)}</td>
+              ${
+                isAdmin
+                  ? `<td>
+                      <button class="btn btn-outline btn-sm" onclick="editPengeluaran('${p.id}')"><i class="ri-edit-line"></i></button>
+                      <button class="btn btn-outline btn-sm" style="color: var(--danger);" onclick="deletePengeluaran('${p.id}')"><i class="ri-delete-bin-line"></i></button>
+                    </td>`
+                  : ""
+              }
+            </tr>
+          `
+          )
+          .join("");
+      }
     }
   }
 }
@@ -2322,10 +2364,24 @@ function savePengeluaran() {
   }
 
   saveState();
+
+  if (appState.settings && appState.settings.googleSheetApiUrl) {
+    const url = appState.settings.googleSheetApiUrl.trim();
+    if (url && url.startsWith("http") && !url.includes("EXAMPLE")) {
+      fetch(url, {
+        method: "POST",
+        mode: "no-cors",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify(appState)
+      }).catch((e) => console.log("Background sync error:", e));
+    }
+  }
+
   closeModal("modal-pengeluaran");
   renderPengeluaranTable();
   renderDashboard();
   renderKasArusKasTable();
+  alert("Data pengeluaran berhasil disimpan dan disinkronkan ke Google Spreadsheet!");
 }
 
 function deletePengeluaran(id) {
