@@ -12,11 +12,11 @@ let donutChartInstance = null;
 let barChartInstance = null;
 
 const DEFAULT_USERS = [
-  { username: "admin", password: "admin123", name: "Pak Budi (Admin Warga)", blokNo: "A01", role: "admin", avatar: "A", mustChangePassword: false },
-  { username: "warga", password: "damour123", name: "Warga D'AMOUR", blokNo: "A02", role: "warga", avatar: "W", mustChangePassword: false },
+  { username: "admin", password: "admin123", name: "Admin Pengurus IPL", blokNo: "A1", role: "admin", avatar: "A", mustChangePassword: false },
+  { username: "warga", password: "damour123", name: "Warga D'AMOUR", blokNo: "A2", role: "warga", avatar: "W", mustChangePassword: false },
   { username: "developer", password: "dev123", name: "Perwakilan Developer", blokNo: "-", role: "developer", avatar: "D", mustChangePassword: false },
-  { username: "ridwan", password: "123qwe", name: "Ridwan (Admin)", blokNo: "A01", role: "admin", avatar: "R", mustChangePassword: false },
-  { username: "jamal", password: "123qwe", name: "Jamal (Admin Warga)", blokNo: "A03", role: "admin", avatar: "J", mustChangePassword: false }
+  { username: "ridwan", password: "123qwe", name: "Ridwan (Admin)", blokNo: "A1", role: "admin", avatar: "R", mustChangePassword: false },
+  { username: "jamal", password: "123qwe", name: "Jamal (Admin)", blokNo: "A3", role: "admin", avatar: "J", mustChangePassword: false }
 ];
 
 const MONTH_NAMES = [
@@ -606,10 +606,10 @@ function updatePerhitunganMonthDropdown() {
 
 // Load App Data from LocalStorage, data.json, or Cloud Google Spreadsheet API
 async function loadAppData() {
-  // Clear old stale cache once to purge all dummy transaction history and enforce clean database
-  if (!localStorage.getItem("damour_ipl_v6_clear_all_dummy")) {
+  // Clear old stale cache once to purge all dummy names (Pak Budi, Pak Joko) and enforce clean names
+  if (!localStorage.getItem("damour_ipl_v7_clean_dummy_names")) {
     localStorage.removeItem("damour_ipl_db");
-    localStorage.setItem("damour_ipl_v6_clear_all_dummy", "true");
+    localStorage.setItem("damour_ipl_v7_clean_dummy_names", "true");
   }
 
   let jsonBackup = null;
