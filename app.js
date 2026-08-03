@@ -755,20 +755,17 @@ async function loadAppData() {
 
   if (!appState.tagihan) appState.tagihan = [];
 
-  // Enforce Reset of C16 (Ridwan) payment status & empty pengeluaran list
+  // Complete Reset: Set ALL bills to "Menunggu Pembayaran" and clear test pengeluaran & pemasukanLain
   if (appState && appState.tagihan) {
     appState.tagihan.forEach((t) => {
-      const blokClean = (t.blokNo || "").toLowerCase().trim();
-      const ownerClean = (t.pemilik || "").toLowerCase().trim();
-      if (blokClean === "c16" || ownerClean.includes("ridwan")) {
-        t.status = "Menunggu Pembayaran";
-        t.tglBayar = "-";
-        t.buktiTransfer = "";
-        t.metode = "-";
-      }
+      t.status = "Menunggu Pembayaran";
+      t.tglBayar = "-";
+      t.buktiTransfer = "";
+      t.metode = "-";
     });
   }
   appState.pengeluaran = [];
+  appState.pemasukanLain = [];
 
   ensureMasterKomponenState();
   ensureMasterEventState();
