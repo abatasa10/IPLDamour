@@ -145,6 +145,14 @@
           <i class="ri-money-dollar-circle-line"></i>
           <span>Setting Target IPL</span>
         </a>
+        <a href="#" class="nav-item" data-view="laporan-neraca">
+          <i class="ri-file-chart-line"></i>
+          <span>Laporan Kas & Neraca</span>
+        </a>
+        <a href="#" class="nav-item role-admin-only" data-view="audit-log">
+          <i class="ri-history-line"></i>
+          <span>Audit Trail / Log Aktivitas</span>
+        </a>
         <a href="#" class="nav-item role-admin-only" data-view="pengaturan">
           <i class="ri-settings-3-line"></i>
           <span>Pengaturan & Sync</span>
@@ -954,13 +962,130 @@
           <div class="card" id="card-laporan-preview" style="display: none; margin-top: 1rem;">
             <div class="card-header">
               <div class="card-title" id="preview-laporan-title">Hasil Laporan</div>
-              <button class="btn btn-outline btn-sm" onclick="window.print()"><i class="ri-printer-line"></i> Cetak / PDF</button>
+              <button class="btn btn-primary" onclick="generateReportPDF()"><i class="ri-printer-line"></i> Cetak / Download Laporan PDF</button>
             </div>
             <div class="table-responsive" id="laporan-preview-table-wrapper"></div>
           </div>
         </section>
 
-        <!-- 12. FULLY EDITABLE SIMULASI IPL VIEW -->
+        <!-- 12. LAPORAN KAS & NERACA PER PERIODE VIEW -->
+        <section id="view-laporan-neraca" class="view-section">
+          <div class="card">
+            <div class="card-header" style="flex-wrap: wrap; gap: 0.75rem;">
+              <div class="card-title"><i class="ri-file-chart-line"></i> Laporan Kas & Neraca Per Periode</div>
+              <button class="btn btn-outline" onclick="window.print()"><i class="ri-printer-line"></i> Cetak Laporan Neraca</button>
+            </div>
+
+            <div class="filter-bar">
+              <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <span style="font-size: 0.8rem; color: var(--text-muted);">Bulan</span>
+                <select id="filter-neraca-bulan" class="form-control" style="width: auto;" onchange="renderLaporanNeraca()">
+                  <option value="Semua">Semua Bulan (Setahun)</option>
+                  <option value="Januari">Januari</option>
+                  <option value="Februari">Februari</option>
+                  <option value="Maret">Maret</option>
+                  <option value="April">April</option>
+                  <option value="Mei">Mei</option>
+                  <option value="Juni">Juni</option>
+                  <option value="Juli">Juli</option>
+                  <option value="Agustus">Agustus</option>
+                  <option value="September">September</option>
+                  <option value="Oktober">Oktober</option>
+                  <option value="November">November</option>
+                  <option value="Desember">Desember</option>
+                </select>
+              </div>
+              <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <span style="font-size: 0.8rem; color: var(--text-muted);">Tahun</span>
+                <select id="filter-neraca-tahun" class="form-control" style="width: auto;" onchange="renderLaporanNeraca()">
+                </select>
+              </div>
+            </div>
+
+            <div class="kpi-grid" style="margin-bottom: 1.5rem;">
+              <div class="kpi-card">
+                <div class="kpi-info">
+                  <p>Saldo Awal Kas</p>
+                  <div class="kpi-value" id="neraca-saldo-awal">Rp 0</div>
+                  <span class="kpi-subtext">Awal Periode</span>
+                </div>
+                <div class="kpi-icon blue"><i class="ri-wallet-line"></i></div>
+              </div>
+
+              <div class="kpi-card">
+                <div class="kpi-info">
+                  <p>Total Pemasukan IPL</p>
+                  <div class="kpi-value" id="neraca-masuk-ipl">Rp 0</div>
+                  <span class="kpi-subtext">IPL Warga Lunas</span>
+                </div>
+                <div class="kpi-icon green"><i class="ri-arrow-down-circle-line"></i></div>
+              </div>
+
+              <div class="kpi-card">
+                <div class="kpi-info">
+                  <p>Total Pengeluaran</p>
+                  <div class="kpi-value" id="neraca-keluar">Rp 0</div>
+                  <span class="kpi-subtext">Biaya Operasional</span>
+                </div>
+                <div class="kpi-icon orange"><i class="ri-arrow-up-circle-line"></i></div>
+              </div>
+
+              <div class="kpi-card">
+                <div class="kpi-info">
+                  <p>Saldo Akhir Kas Netto</p>
+                  <div class="kpi-value" id="neraca-saldo-akhir" style="color: var(--primary);">Rp 0</div>
+                  <span class="kpi-subtext">Kas Tersedia</span>
+                </div>
+                <div class="kpi-icon green"><i class="ri-safe-2-line"></i></div>
+              </div>
+            </div>
+
+            <h4 style="font-size: 0.95rem; margin-bottom: 0.75rem;">Rincian Laporan Neraca & Mutasi Periode</h4>
+            <div class="table-responsive">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>Kategori / Uraian Mutasi</th>
+                    <th style="text-align: right;">Pemasukan (Rp)</th>
+                    <th style="text-align: right;">Pengeluaran (Rp)</th>
+                    <th style="text-align: right;">Netto / Saldo (Rp)</th>
+                  </tr>
+                </thead>
+                <tbody id="neraca-table-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- 13. AUDIT TRAIL / LOG AKTIVITAS SYSTEM VIEW -->
+        <section id="view-audit-log" class="view-section">
+          <div class="card">
+            <div class="card-header" style="flex-wrap: wrap; gap: 0.75rem;">
+              <div class="card-title"><i class="ri-history-line"></i> Audit Trail & Log Aktivitas Sistem</div>
+              <div class="input-search-wrapper" style="max-width: 280px;">
+                <i class="ri-search-line"></i>
+                <input type="text" id="filter-audit-search" class="form-control" placeholder="Cari aktivitas / user" oninput="renderAuditLogTable()">
+              </div>
+            </div>
+
+            <div class="table-responsive">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>No</th>
+                    <th>Waktu (Timestamp)</th>
+                    <th>Pelaksana (User)</th>
+                    <th>Jenis Aktivitas</th>
+                    <th>Detail Transaksi</th>
+                  </tr>
+                </thead>
+                <tbody id="audit-log-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- 14. FULLY EDITABLE SIMULASI IPL VIEW -->
         <section id="view-simulasi" class="view-section">
           <div class="card">
             <div class="card-header">

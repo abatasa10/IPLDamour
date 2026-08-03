@@ -997,6 +997,8 @@ function showView(viewId) {
       pengeluaran: "Data Pengeluaran",
       kas: "Kas (Arus Kas)",
       laporan: "Laporan IPL",
+      "laporan-neraca": "Laporan Kas & Neraca Per Periode",
+      "audit-log": "Audit Trail & Log Aktivitas Sistem",
       simulasi: "Simulasi IPL",
       pengaturan: "Pengaturan Sistem"
     };
@@ -1008,6 +1010,8 @@ function showView(viewId) {
   if (viewId === "rumah") renderMasterRumah();
   if (viewId === "komponen") renderMasterKomponen();
   if (viewId === "event") renderMasterEvent();
+  if (viewId === "laporan-neraca") renderLaporanNeraca();
+  if (viewId === "audit-log") renderAuditLogTable();
   if (viewId === "target") renderSettingTarget();
   if (viewId === "perhitungan") renderPerhitunganIPL();
   if (viewId === "generate-tagihan") {
@@ -2938,6 +2942,165 @@ function exportDataJSON() {
   const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(appState, null, 2));
   const downloadAnchor = document.createElement("a");
   downloadAnchor.setAttribute("href", dataStr);
+  downloadAnchor.setAttribute("download", `damour_ipl_backup_${new Date().toISOString().split("T")[0]}.json`);
+  document.body.appendChild(downloadAnchor);
+  downloadAnchor.click();
+  downloadAnchor.remove();
+}
+
+/* ==========================================================================
+   PASSWORD HASHING (SHA-256 WITH SALT)
+   ========================================================================== */
+async function hashPassword(plainText) {
+  if (!plainText) return "";
+  if (/^[a-f0-9]{64}$/i.test(plainText)) return plainText;
+
+  try {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(plainText + "_DAMOUR_SALT_2026");
+    const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+  } catch (e) {
+    return plainText;
+  }
+}
+
+/* ==========================================================================
+   AUDIT TRAIL / LOG AKTIVITAS SYSTEM
+   ========================================================================== */
+function addAuditLog(action, detail) {
+  if (!appState) return;
+  if (!appState.auditLog) appState.auditLog = [];
+
+  const timestamp = new Date().toLocaleString("id-ID");
+  const actor = currentUser ? `${currentUser.name} (${currentUser.username})` : "Sistem";
+
+  appState.auditLog.unshift({
+    id: `LOG-${Date.now()}`,
+    timestamp: timestamp,
+    actor: actor,
+    action: action,
+    detail: detail
+  });
+
+  if (appState.auditLog.length > 500) {
+    appState.auditLog = appState.auditLog.slice(0, 500);
+  }
+}
+
+function renderAuditLogTable() {
+  if (!appState) return;
+  if (!appState.auditLog) appState.auditLog = [];
+
+  const searchInput = document.getElementById("filter-audit-search");
+  const searchVal = (searchInput?.value || "").toLowerCase();
+  const tbody = document.getElementById("audit-log-tbody");
+
+  if (!tbody) return;
+
+  const filtered = appState.auditLog.filter((log) => {
+    return (
+      log.actor.toLowerCase().includes(searchVal) ||
+      log.action.toLowerCase().includes(searchVal) ||
+      log.detail.toLowerCase().includes(searchVal)
+    );
+  });
+
+  if (filtered.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 1.5rem;">Belum ada catatan log aktivitas.</td></tr>`;
+  } else {
+    tbody.innerHTML = filtered
+      .map(
+        (log, idx) => `
+        <tr>
+          <td>${idx + 1}</td>
+          <td><span style="font-size: 0.8rem; color: var(--text-muted);"><i class="ri-time-line"></i> ${log.timestamp}</span></td>
+          <td><strong>${log.actor}</strong></td>
+          <td><span class="badge badge-info">${log.action}</span></td>
+          <td>${log.detail}</td>
+        </tr>
+      `
+      )
+      .join("");
+  }
+}
+
+/* ==========================================================================
+   LAPORAN KAS & NERACA PER PERIODE
+   ========================================================================== */
+function renderLaporanNeraca() {
+  if (!appState) return;
+
+  const now = new Date();
+  const filterBulan = document.getElementById("filter-neraca-bulan")?.value || "Semua";
+  const filterTahunSelect = document.getElementById("filter-neraca-tahun");
+  const filterTahun = filterTahunSelect?.value || now.getFullYear().toString();
+
+  if (filterTahunSelect && filterTahunSelect.options.length === 0) {
+    const years = [now.getFullYear().toString(), (now.getFullYear() - 1).toString(), (now.getFullYear() + 1).toString()];
+    filterTahunSelect.innerHTML = years.map((y) => `<option value="${y}">${y}</option>`).join("");
+  }
+
+  const lunasBills = (appState.tagihan || []).filter((t) => {
+    if (t.status !== "Lunas") return false;
+    const matchesBulan = filterBulan === "Semua" || t.bulan === filterBulan || (t.periode && t.periode.includes(filterBulan));
+    const matchesTahun = filterTahun === "Semua" || t.tahun === filterTahun || (t.periode && t.periode.includes(filterTahun));
+    return matchesBulan && matchesTahun;
+  });
+
+  const totalMasukIPL = lunasBills.reduce((sum, t) => sum + t.nominal, 0);
+
+  const masukLain = (appState.pemasukanLain || []).filter((p) => matchesMonthAndYear(p.tanggal, filterBulan, filterTahun));
+  const totalMasukLain = masukLain.reduce((sum, p) => sum + p.nominal, 0);
+
+  const pglList = (appState.pengeluaran || []).filter((p) => matchesMonthAndYear(p.tanggal, filterBulan, filterTahun));
+  const totalPengeluaran = pglList.reduce((sum, p) => sum + p.nominal, 0);
+
+  const saldoKasSaatIni = appState.ringkasanKas ? appState.ringkasanKas.kasSaatIni : 0;
+  const totalMasukPeriod = totalMasukIPL + totalMasukLain;
+  const saldoAkhirNetto = totalMasukPeriod - totalPengeluaran;
+
+  const saldoAwalEl = document.getElementById("neraca-saldo-awal");
+  const masukIplEl = document.getElementById("neraca-masuk-ipl");
+  const keluarEl = document.getElementById("neraca-keluar");
+  const saldoAkhirEl = document.getElementById("neraca-saldo-akhir");
+
+  if (saldoAwalEl) saldoAwalEl.textContent = formatRp(saldoKasSaatIni);
+  if (masukIplEl) masukIplEl.textContent = formatRp(totalMasukIPL);
+  if (keluarEl) keluarEl.textContent = formatRp(totalPengeluaran);
+  if (saldoAkhirEl) saldoAkhirEl.textContent = formatRp(saldoAkhirNetto >= 0 ? saldoAkhirNetto : 0);
+
+  const tbody = document.getElementById("neraca-table-tbody");
+  if (tbody) {
+    tbody.innerHTML = `
+      <tr>
+        <td><strong>Pemasukan Tagihan IPL (Warga Lunas)</strong> (${lunasBills.length} Tagihan)</td>
+        <td style="text-align: right; color: var(--success); font-weight: 600;">+ ${formatRp(totalMasukIPL)}</td>
+        <td style="text-align: right;">-</td>
+        <td style="text-align: right; font-weight: 600;">${formatRp(totalMasukIPL)}</td>
+      </tr>
+      <tr>
+        <td><strong>Pemasukan Lain-Lain / Kas Tambahan</strong> (${masukLain.length} Transaksi)</td>
+        <td style="text-align: right; color: var(--success); font-weight: 600;">+ ${formatRp(totalMasukLain)}</td>
+        <td style="text-align: right;">-</td>
+        <td style="text-align: right; font-weight: 600;">${formatRp(totalMasukIPL + totalMasukLain)}</td>
+      </tr>
+      <tr>
+        <td><strong>Pengeluaran Operasional Perumahan</strong> (${pglList.length} Transaksi)</td>
+        <td style="text-align: right;">-</td>
+        <td style="text-align: right; color: var(--danger); font-weight: 600;">- ${formatRp(totalPengeluaran)}</td>
+        <td style="text-align: right; font-weight: 600;">${formatRp(saldoAkhirNetto)}</td>
+      </tr>
+      <tr style="background: #f1f5f9; font-size: 1rem; font-weight: 700;">
+        <td>SURPLUS / (DEFISIT) KAS NETTO PERIODE ${filterBulan.toUpperCase()} ${filterTahun}</td>
+        <td style="text-align: right; color: var(--success);">${formatRp(totalMasukPeriod)}</td>
+        <td style="text-align: right; color: var(--danger);">${formatRp(totalPengeluaran)}</td>
+        <td style="text-align: right; color: var(--primary);">${formatRp(saldoAkhirNetto)}</td>
+      </tr>
+    `;
+  }
+}
   downloadAnchor.setAttribute("download", `damour_ipl_backup_${Date.now()}.json`);
   document.body.appendChild(downloadAnchor);
   downloadAnchor.click();

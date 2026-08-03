@@ -27,6 +27,7 @@ function doGet(e) {
     var komponenSheet = ss.getSheetByName("Komponen") || createKomponenSheet(ss);
     var eventSheet = ss.getSheetByName("Event") || createEventSheet(ss);
     var usersSheet = ss.getSheetByName("Users") || createUsersSheet(ss);
+    var auditSheet = ss.getSheetByName("AuditLog") || createAuditLogSheet(ss);
     
     result = {
       status: "success",
@@ -36,7 +37,8 @@ function doGet(e) {
       pemasukanLain: getSheetData(pemasukanLainSheet, "id"),
       komponenIPL: getSheetData(komponenSheet, "id"),
       masterEvent: getSheetData(eventSheet, "id"),
-      users: getSheetData(usersSheet, "username")
+      users: getSheetData(usersSheet, "username"),
+      auditLog: getSheetData(auditSheet, "id")
     };
   } catch (err) {
     result = { status: "error", message: err.toString() };
@@ -72,6 +74,9 @@ function doPost(e) {
     }
     if (contents.users) {
       updateSheetData(ss.getSheetByName("Users") || createUsersSheet(ss), contents.users, "username");
+    }
+    if (contents.auditLog) {
+      updateSheetData(ss.getSheetByName("AuditLog") || createAuditLogSheet(ss), contents.auditLog, "id");
     }
     
     result = { status: "success", message: "Data Google Spreadsheet berhasil dibersihkan & disinkronkan tanpa duplikat!" };
@@ -195,5 +200,11 @@ function createEventSheet(ss) {
 function createUsersSheet(ss) {
   var sheet = ss.insertSheet("Users");
   sheet.appendRow(["username", "password", "name", "blokNo", "role", "avatar", "mustChangePassword"]);
+  return sheet;
+}
+
+function createAuditLogSheet(ss) {
+  var sheet = ss.insertSheet("AuditLog");
+  sheet.appendRow(["id", "timestamp", "actor", "action", "detail"]);
   return sheet;
 }
