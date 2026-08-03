@@ -64,7 +64,7 @@
           <i class="ri-arrow-down-s-line" id="hint-chevron"></i>
         </div>
         <div id="login-hint-body" style="display: none; margin-top: 0.75rem; border-top: 1px dashed var(--border-color); padding-top: 0.5rem; color: var(--text-main);">
-          <div style="margin-bottom: 0.35rem;">🏠 <strong>Warga</strong>: Masukkan Username akun / No. Blok (misal: <code>a01</code> / <code>a02</code>)</div>
+          <div style="margin-bottom: 0.35rem;">🏠 <strong>Warga</strong>: Username = Blok Rumah (misal: <code>a01</code>) / Password default: <code>damour123</code></div>
           <div>🏗️ <strong>Developer</strong>: <code>developer</code> / Password: <code>dev123</code></div>
         </div>
       </div>
@@ -372,9 +372,12 @@
         <!-- MANAGEMENT USER VIEW -->
         <section id="view-users" class="view-section">
           <div class="card">
-            <div class="card-header">
-              <div class="card-title">Management User & Hak Akses Role (Admin vs Warga)</div>
-              <button class="btn btn-primary role-admin-only" onclick="openAddUserModal()"><i class="ri-user-add-line"></i> Tambah Akun User</button>
+            <div class="card-header" style="flex-wrap: wrap; gap: 0.75rem;">
+              <div class="card-title">Management User & Hak Akses Role</div>
+              <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                <button class="btn btn-outline role-admin-only" onclick="generateAllMissingHouseUsers()"><i class="ri-magic-line"></i> Auto-Create Akun Warga (Pass: damour123)</button>
+                <button class="btn btn-primary role-admin-only" onclick="openAddUserModal()"><i class="ri-user-add-line"></i> Tambah Akun Manual</button>
+              </div>
             </div>
 
             <div class="table-responsive">
@@ -1057,11 +1060,11 @@
         <input type="hidden" id="form-user-old-username">
         <div class="form-group">
           <label>Username (Login)</label>
-          <input type="text" id="form-user-username" class="form-control" placeholder="Contoh: a01_budi">
+          <input type="text" id="form-user-username" class="form-control" placeholder="Contoh: a01">
         </div>
         <div class="form-group">
-          <label>Password</label>
-          <input type="password" id="form-user-password" class="form-control" placeholder="Masukkan password">
+          <label>Password Default</label>
+          <input type="password" id="form-user-password" class="form-control" placeholder="Default: damour123" value="damour123">
         </div>
         <div class="form-group">
           <label>Nama Pengguna / Pemilik</label>
@@ -1076,8 +1079,8 @@
         <div class="form-group">
           <label>Role / Hak Akses</label>
           <select id="form-user-role" class="form-control">
-            <option value="admin">👑 Admin Pengurus (Akses Penuh)</option>
             <option value="warga">🏠 Warga biasa (Lihat & Bayar)</option>
+            <option value="admin">👑 Admin Pengurus (Akses Penuh)</option>
             <option value="developer">🏗️ IPL Developer (1 Akun Developer)</option>
           </select>
         </div>

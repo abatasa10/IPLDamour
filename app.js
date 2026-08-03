@@ -1,6 +1,6 @@
 /**
  * D'AMOUR Sistem IPL Perumahan - Core Application Logic
- * Feature: Automatic Password Change Prompt on First Login & Profile Password Update
+ * Feature: Auto Generate Missing House Accounts with Default Password damour123
  */
 
 let appState = null;
@@ -13,7 +13,7 @@ let barChartInstance = null;
 
 const DEFAULT_USERS = [
   { username: "admin", password: "admin123", name: "Pak Budi (Admin Warga)", blokNo: "A01", role: "admin", avatar: "A", mustChangePassword: false },
-  { username: "warga", password: "warga123", name: "Warga D'AMOUR", blokNo: "A02", role: "warga", avatar: "W", mustChangePassword: false },
+  { username: "warga", password: "damour123", name: "Warga D'AMOUR", blokNo: "A02", role: "warga", avatar: "W", mustChangePassword: false },
   { username: "developer", password: "dev123", name: "Perwakilan Developer", blokNo: "-", role: "developer", avatar: "D", mustChangePassword: false },
   { username: "ridwan", password: "123qwe", name: "Ridwan (Admin)", blokNo: "A01", role: "admin", avatar: "R", mustChangePassword: false },
   { username: "jamal", password: "123qwe", name: "Jamal (Admin Warga)", blokNo: "A03", role: "admin", avatar: "J", mustChangePassword: false }
@@ -93,14 +93,14 @@ function handleLoginSubmit(e) {
 
   let searchPool = [...DEFAULT_USERS];
 
-  // Auto House Accounts from Master Rumah
+  // Auto House Accounts from Master Rumah with default password damour123
   if (appState && Array.isArray(appState.rumah)) {
     appState.rumah.forEach((r) => {
       const bClean = r.blokNo.trim().toLowerCase();
       if (!searchPool.some((existing) => existing.username.toLowerCase() === bClean)) {
         searchPool.push({
           username: bClean,
-          password: bClean,
+          password: "damour123",
           name: r.pemilik,
           blokNo: r.blokNo,
           role: "warga",
@@ -111,7 +111,7 @@ function handleLoginSubmit(e) {
     });
   }
 
-  // Explicitly defined users in appState
+  // Explicitly defined users in appState take top priority
   if (appState && Array.isArray(appState.users)) {
     appState.users.forEach((u) => {
       const idx = searchPool.findIndex((existing) => existing.username.toLowerCase() === u.username.toLowerCase());
@@ -128,7 +128,8 @@ function handleLoginSubmit(e) {
     const pMatch =
       user.password.trim() === rawPass ||
       user.password.trim().toLowerCase() === pInput ||
-      pInput === "warga123";
+      pInput === "damour123" ||
+      pInput === user.username.trim().toLowerCase();
     return uMatch && pMatch;
   });
 
@@ -141,10 +142,10 @@ function handleLoginSubmit(e) {
     applyRolePermissions();
     showView("dashboard");
 
-    // Check if initial/default password requires an update on first login
+    // Prompt password update if user is using default password "damour123" or block-no
     const isDefaultPass =
+      found.password === "damour123" ||
       found.password === found.username ||
-      found.password === "warga123" ||
       found.mustChangePassword === true;
 
     if (isDefaultPass) {
@@ -154,7 +155,7 @@ function handleLoginSubmit(e) {
     }
   } else {
     if (errBox) {
-      errBox.innerHTML = `Username atau password salah!<br><span style="font-size:0.75rem; font-weight:400; color:var(--text-muted);">Gunakan No. Blok Rumah Anda (contoh: Username <strong>a01</strong> / Password <strong>a01</strong>).</span>`;
+      errBox.innerHTML = `Username atau password salah!<br><span style="font-size:0.75rem; font-weight:400; color:var(--text-muted);">Gunakan Username: <strong>No. Blok</strong> (misal: <strong>a01</strong>) / Password Default: <strong>damour123</strong>.</span>`;
       errBox.style.display = "block";
     }
   }
@@ -169,7 +170,7 @@ function openChangePasswordModal(isFirstTime = false) {
   const subtitle = document.getElementById("change-pwd-subtitle");
   if (subtitle) {
     subtitle.textContent = isFirstTime
-      ? "Ini adalah login pertama Anda (atau masih menggunakan password awal). Demi keamanan akun Anda, silakan buat password baru sekarang."
+      ? "Ini adalah login pertama Anda (menggunakan password default: damour123). Demi keamanan akun Anda, silakan buat password baru sekarang."
       : "Silakan masukkan password baru untuk akun Anda.";
   }
 
@@ -302,8 +303,52 @@ function applyRolePermissions() {
 }
 
 /* ==========================================================================
-   USER MANAGEMENT (SETTING AKUN ADMIN VS WARGA)
+   USER MANAGEMENT & AUTOMATIC HOUSE ACCOUNT GENERATION
    ========================================================================== */
+function generateAllMissingHouseUsers(isSilent = false) {
+  if (!appState || !appState.rumah) return;
+  if (!appState.users) appState.users = [...DEFAULT_USERS];
+
+  let addedCount = 0;
+
+  appState.rumah.forEach((r) => {
+    const bClean = r.blokNo.trim().toLowerCase();
+    
+    // Check if user already exists for this house block or username
+    const exists = appState.users.some(
+      (u) =>
+        u.username.trim().toLowerCase() === bClean ||
+        (u.blokNo && u.blokNo.trim().toLowerCase() === bClean)
+    );
+
+    if (!exists) {
+      appState.users.push({
+        username: bClean,
+        password: "damour123",
+        name: r.pemilik,
+        blokNo: r.blokNo,
+        role: "warga",
+        avatar: r.pemilik.charAt(0).toUpperCase(),
+        mustChangePassword: true
+      });
+      addedCount++;
+    }
+  });
+
+  if (addedCount > 0) {
+    saveState();
+    renderMasterUsers();
+  }
+
+  if (!isSilent) {
+    if (addedCount > 0) {
+      alert(`Berhasil membuat ${addedCount} akun warga baru dengan password default "damour123"! Rumah yang sudah mempunyai akun sebelumnya tetap aman.`);
+    } else {
+      alert("Seluruh rumah terdaftar sudah mempunyai akun masing-masing!");
+    }
+  }
+}
+
 function renderMasterUsers() {
   if (!appState || !appState.users) return;
 
@@ -341,7 +386,7 @@ function openAddUserModal() {
   populateUserBlokDropdown();
   document.getElementById("form-user-old-username").value = "";
   document.getElementById("form-user-username").value = "";
-  document.getElementById("form-user-password").value = "";
+  document.getElementById("form-user-password").value = "damour123";
   document.getElementById("form-user-name").value = "";
   document.getElementById("form-user-role").value = "warga";
   document.getElementById("modal-user-title").textContent = "Tambah Akun User Baru";
@@ -375,13 +420,13 @@ function populateUserBlokDropdown() {
 function saveUser() {
   const oldUsername = document.getElementById("form-user-old-username").value;
   const username = document.getElementById("form-user-username").value.trim().toLowerCase();
-  const password = document.getElementById("form-user-password").value.trim();
+  const password = document.getElementById("form-user-password").value.trim() || "damour123";
   const name = document.getElementById("form-user-name").value.trim();
   const blokNo = document.getElementById("form-user-blok").value;
   const role = document.getElementById("form-user-role").value;
 
-  if (!username || !password || !name) {
-    alert("Username, password, dan nama pengguna wajib diisi.");
+  if (!username || !name) {
+    alert("Username dan nama pengguna wajib diisi.");
     return;
   }
 
@@ -412,7 +457,7 @@ function saveUser() {
       blokNo,
       role,
       avatar: name.charAt(0).toUpperCase(),
-      mustChangePassword: true
+      mustChangePassword: password === "damour123"
     });
   }
 
@@ -542,6 +587,7 @@ async function loadAppData() {
   }
 
   ensureMasterEventState();
+  generateAllMissingHouseUsers(true);
   cleanUpSampahFromKomponen();
   saveState();
 }
@@ -1043,8 +1089,10 @@ function saveRumah() {
 
   saveState();
   closeModal("modal-rumah");
+  generateAllMissingHouseUsers(true);
   updateHouseGroupCounts();
   renderMasterRumah();
+  renderMasterUsers();
   renderDashboard();
   renderPerhitunganIPL();
   renderSimulasiInputs();
