@@ -655,8 +655,69 @@ async function loadAppData() {
 
   ensureMasterEventState();
   generateAllMissingHouseUsers(true);
+  autoEnsureCurrentMonthBills();
   cleanUpSampahFromKomponen();
   saveState();
+}
+
+function autoEnsureCurrentMonthBills() {
+  if (!appState || !appState.rumah || appState.rumah.length === 0) return;
+  if (!appState.tagihan) appState.tagihan = [];
+
+  const now = new Date();
+  const currentYear = now.getFullYear().toString();
+  const currentMonth = MONTH_NAMES[now.getMonth()];
+
+  const baseTargetTanpaSampah = (appState.targetIPL && appState.targetIPL.find((t) => t.kelompok === "IPL Tanpa Sampah")?.target) || 150000;
+  const baseTargetDeveloper = (appState.targetIPL && appState.targetIPL.find((t) => t.kelompok === "IPL Developer")?.target) || 166000;
+  const defaultSampah = appState.biayaSampahDefault || 25000;
+
+  appState.rumah.forEach((r) => {
+    const tagihanId = `TAG-${currentYear}${currentMonth}-${r.blokNo}`;
+    const exists = appState.tagihan.some((t) => t.id === tagihanId || (t.blokNo === r.blokNo && t.bulan === currentMonth && t.tahun === currentYear));
+
+    if (!exists) {
+      const rincianItems = [];
+      let totalNominal = 0;
+
+      if (r.kelompokIPL === "IPL Developer") {
+        rincianItems.push({ nama: "IPL Developer", nominal: baseTargetDeveloper });
+        totalNominal += baseTargetDeveloper;
+      } else {
+        rincianItems.push({ nama: "IPL Dasar", nominal: baseTargetTanpaSampah });
+        totalNominal += baseTargetTanpaSampah;
+
+        if (r.kelompokIPL === "IPL + Sampah") {
+          rincianItems.push({ nama: "Iuran Sampah", nominal: defaultSampah });
+          totalNominal += defaultSampah;
+        }
+      }
+
+      if (appState.masterEvent) {
+        appState.masterEvent.filter((e) => e.aktif).forEach((evt) => {
+          rincianItems.push({ nama: evt.nama, nominal: evt.nominal });
+          totalNominal += evt.nominal;
+        });
+      }
+
+      appState.tagihan.unshift({
+        id: tagihanId,
+        periode: `${currentYear}-${currentMonth}`,
+        bulan: currentMonth,
+        tahun: currentYear,
+        rumahId: r.id,
+        blokNo: r.blokNo,
+        pemilik: r.pemilik,
+        kelompokIPL: r.kelompokIPL,
+        nominal: totalNominal,
+        rincianItems: rincianItems,
+        status: "Menunggu",
+        tglBayar: "-",
+        metode: "-",
+        buktiTransfer: ""
+      });
+    }
+  });
 }
 
 function ensureMasterEventState() {
