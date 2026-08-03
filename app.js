@@ -1,6 +1,6 @@
 /**
  * D'AMOUR Sistem IPL Perumahan - Core Application Logic
- * Feature: Automatic cleanup of Developer house accounts from Management User
+ * Feature: Cross-Device Data Initializer & Default Houses Pre-loader
  */
 
 let appState = null;
@@ -359,9 +359,9 @@ function generateAllMissingHouseUsers(isSilent = false) {
 
   if (!isSilent) {
     if (addedCount > 0) {
-      alert(`Berhasil membuat ${addedCount} akun warga baru (Default: damour123). Akun ber-label Developer telah dibersihkan.`);
+      alert(`Berhasil membuat ${addedCount} akun warga baru (Default: damour123).`);
     } else {
-      alert("Seluruh rumah warga terdaftar sudah mempunyai akun masing-masing. Akun Developer per unit telah dibersihkan.");
+      alert("Seluruh rumah warga terdaftar sudah mempunyai akun masing-masing.");
     }
   }
 }
@@ -567,24 +567,28 @@ function updatePerhitunganMonthDropdown() {
 
 // Load App Data from LocalStorage, data.json, or Cloud Google Spreadsheet API
 async function loadAppData() {
+  let jsonBackup = null;
+  try {
+    const res = await fetch("data.json");
+    jsonBackup = await res.json();
+  } catch (err) {
+    console.error("Error loading data.json:", err);
+  }
+
   const saved = localStorage.getItem("damour_ipl_db");
   if (saved) {
     try {
       appState = JSON.parse(saved);
       console.log("Data loaded from LocalStorage.");
     } catch (e) {
-      console.error("Failed to parse LocalStorage data, loading default data.json", e);
+      console.error("Failed to parse LocalStorage data", e);
     }
   }
 
   if (!appState) {
-    try {
-      const res = await fetch("data.json");
-      appState = await res.json();
-      console.log("Data loaded from data.json.");
-    } catch (err) {
-      console.error("Error loading data.json:", err);
-    }
+    appState = jsonBackup;
+  } else if (jsonBackup && jsonBackup.rumah && (!appState.rumah || appState.rumah.length === 0)) {
+    appState.rumah = jsonBackup.rumah;
   }
 
   if (appState && appState.settings && appState.settings.googleSheetApiUrl) {
@@ -593,7 +597,7 @@ async function loadAppData() {
       try {
         const cloudRes = await fetch(url);
         const cloudData = await cloudRes.json();
-        if (cloudData && cloudData.users) {
+        if (cloudData && (cloudData.users || cloudData.rumah)) {
           appState = cloudData;
           console.log("Synced live appState from Google Spreadsheet Web App.");
         }
