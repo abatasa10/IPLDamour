@@ -1,6 +1,6 @@
 /**
  * D'AMOUR Sistem IPL Perumahan - Core Application Logic
- * Feature: Automatic Cross-Device Synchronization for ridwan & jamal and Cloud Google Sheet Sync
+ * Feature: House-bound Personal Bill Visibility for Warga Role
  */
 
 let appState = null;
@@ -97,7 +97,6 @@ function handleLoginSubmit(e) {
       if (!searchPool.some((existing) => existing.username.toLowerCase() === u.username.toLowerCase())) {
         searchPool.push(u);
       } else {
-        // Update credentials if modified in appState
         const idx = searchPool.findIndex((existing) => existing.username.toLowerCase() === u.username.toLowerCase());
         if (idx !== -1) searchPool[idx] = u;
       }
@@ -161,7 +160,7 @@ function updateNavbarProfile() {
   const roleEl = document.getElementById("nav-user-role");
 
   if (avatarEl) avatarEl.textContent = currentUser.avatar || currentUser.name.charAt(0);
-  if (nameEl) nameEl.textContent = currentUser.name;
+  if (nameEl) nameEl.textContent = `${currentUser.name}${currentUser.blokNo && currentUser.blokNo !== "-" ? ` (${currentUser.blokNo})` : ""}`;
   if (roleEl) {
     if (currentUser.role === "admin") {
       roleEl.textContent = "Admin Warga";
@@ -192,6 +191,7 @@ function applyRolePermissions() {
   renderMasterKomponen();
   renderMasterEvent();
   renderPerhitunganIPL();
+  renderDaftarTagihan();
   renderPengeluaranTable();
 }
 
@@ -418,7 +418,6 @@ async function loadAppData() {
     }
   }
 
-  // Fetch live cloud data from Google Sheet Web App API if URL exists in settings
   if (appState && appState.settings && appState.settings.googleSheetApiUrl) {
     const url = appState.settings.googleSheetApiUrl.trim();
     if (url && url.startsWith("http")) {
@@ -690,12 +689,22 @@ function renderDashboard() {
     selisihEl.style.color = selisih < 0 ? "var(--danger)" : "var(--success)";
   }
 
+  // Dashboard Recent Tagihan filtered to personal house for Warga role
   const recentTagihanTbody = document.getElementById("recent-tagihan-tbody");
   if (recentTagihanTbody) {
-    if (!appState.tagihan || appState.tagihan.length === 0) {
+    let recentTagihanList = appState.tagihan || [];
+
+    if (currentUser && currentUser.role === "warga" && currentUser.blokNo && currentUser.blokNo !== "-") {
+      const userBlok = currentUser.blokNo.toLowerCase().trim();
+      recentTagihanList = recentTagihanList.filter((t) => t.blokNo.toLowerCase().trim() === userBlok);
+    } else if (currentUser && currentUser.role === "developer") {
+      recentTagihanList = recentTagihanList.filter((t) => t.kelompokIPL === "IPL Developer");
+    }
+
+    if (recentTagihanList.length === 0) {
       recentTagihanTbody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: var(--text-muted);">Belum ada data tagihan.</td></tr>`;
     } else {
-      recentTagihanTbody.innerHTML = appState.tagihan
+      recentTagihanTbody.innerHTML = recentTagihanList
         .slice(0, 4)
         .map((t) => {
           let badgeClass = "badge-secondary";
@@ -1487,10 +1496,28 @@ function renderDaftarTagihan() {
   if (!appState || !appState.tagihan) return;
 
   const isAdmin = currentUser && currentUser.role === "admin";
+  const isWarga = currentUser && currentUser.role === "warga";
+  const userBlok = currentUser && currentUser.blokNo ? currentUser.blokNo.toLowerCase().trim() : "";
+
   const now = new Date();
-  const searchVal = (document.getElementById("filter-tagihan-search")?.value || "").toLowerCase();
+  const searchInput = document.getElementById("filter-tagihan-search");
+  const searchVal = (searchInput?.value || "").toLowerCase();
   const filterBulan = document.getElementById("filter-tagihan-bulan")?.value || MONTH_NAMES[now.getMonth()];
   const filterTahun = document.getElementById("filter-tagihan-tahun")?.value || now.getFullYear().toString();
+
+  // If role is Warga and assigned to a house, lock search input to their block
+  if (isWarga && userBlok && userBlok !== "-") {
+    if (searchInput) {
+      searchInput.value = currentUser.blokNo;
+      searchInput.setAttribute("readonly", "true");
+      searchInput.style.background = "#f1f5f9";
+    }
+  } else {
+    if (searchInput && searchInput.hasAttribute("readonly")) {
+      searchInput.removeAttribute("readonly");
+      searchInput.style.background = "";
+    }
+  }
 
   const filtered = appState.tagihan.filter((t) => {
     const matchesSearch = t.blokNo.toLowerCase().includes(searchVal) || t.pemilik.toLowerCase().includes(searchVal);
@@ -1499,6 +1526,11 @@ function renderDaftarTagihan() {
 
     if (currentUser && currentUser.role === "developer") {
       return t.kelompokIPL === "IPL Developer" && matchesSearch && matchesBulan && matchesTahun;
+    }
+
+    if (isWarga && userBlok && userBlok !== "-") {
+      const isMyBill = t.blokNo.toLowerCase().trim() === userBlok;
+      return isMyBill && matchesBulan && matchesTahun;
     }
 
     return matchesSearch && matchesBulan && matchesTahun;
@@ -1513,7 +1545,7 @@ function renderDaftarTagihan() {
   const tbody = document.getElementById("daftar-tagihan-tbody");
   if (tbody) {
     if (paginated.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--text-muted); padding: 1.5rem;">Belum ada data tagihan.</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--text-muted); padding: 1.5rem;">${isWarga ? `Belum ada tagihan untuk rumah ${currentUser.blokNo}.` : "Belum ada data tagihan."}</td></tr>`;
     } else {
       tbody.innerHTML = paginated
         .map((t, idx) => {
