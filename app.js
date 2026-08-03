@@ -606,6 +606,12 @@ function updatePerhitunganMonthDropdown() {
 
 // Load App Data from LocalStorage, data.json, or Cloud Google Spreadsheet API
 async function loadAppData() {
+  // Clear old stale cache once to purge 67-house duplicates from browser localStorage
+  if (!localStorage.getItem("damour_ipl_v3_clean")) {
+    localStorage.removeItem("damour_ipl_db");
+    localStorage.setItem("damour_ipl_v3_clean", "true");
+  }
+
   let jsonBackup = null;
   try {
     const res = await fetch("data.json");
@@ -624,12 +630,8 @@ async function loadAppData() {
     }
   }
 
-  if (!appState) {
+  if (!appState || !appState.rumah || appState.rumah.length === 0 || appState.rumah.length > 31) {
     appState = jsonBackup;
-  } else if (jsonBackup) {
-    if (!appState.rumah || appState.rumah.length === 0) {
-      appState.rumah = jsonBackup.rumah || [];
-    }
   }
 
   if (appState && appState.settings && appState.settings.googleSheetApiUrl) {
