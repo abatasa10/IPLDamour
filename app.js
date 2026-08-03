@@ -607,10 +607,10 @@ function updatePerhitunganMonthDropdown() {
 
 // Load App Data from LocalStorage, data.json, or Cloud Google Spreadsheet API
 async function loadAppData() {
-  // Clear test bills once and reset database cleanly
-  if (!localStorage.getItem("damour_ipl_v11_clear_test_bills")) {
+  // Clear test bills once for re-testing
+  if (!localStorage.getItem("damour_ipl_v12_clear_test_bills")) {
     localStorage.removeItem("damour_ipl_db");
-    localStorage.setItem("damour_ipl_v11_clear_test_bills", "true");
+    localStorage.setItem("damour_ipl_v12_clear_test_bills", "true");
   }
 
   let jsonBackup = null;
