@@ -1,6 +1,6 @@
 /**
  * D'AMOUR Sistem IPL Perumahan - Core Application Logic
- * Feature: Enhanced Login Verification with Password Visibility Toggle, Hint Box & Auto-Merge Users
+ * Feature: Cross-Device Bulletproof Login with Auto-Fallback to DEFAULT_USERS
  */
 
 let appState = null;
@@ -88,9 +88,21 @@ function handleLoginSubmit(e) {
   const pInput = document.getElementById("login-password").value.trim();
   const errBox = document.getElementById("login-error-msg");
 
-  const usersList = (appState && appState.users && appState.users.length > 0) ? appState.users : DEFAULT_USERS;
-  
-  const found = usersList.find((user) => 
+  // Collect all available users across appState and hardcoded defaults
+  let searchPool = [...DEFAULT_USERS];
+  if (appState && Array.isArray(appState.users)) {
+    appState.users.forEach((u) => {
+      if (!searchPool.some((existing) => existing.username.toLowerCase() === u.username.toLowerCase())) {
+        searchPool.push(u);
+      } else {
+        // Update credentials if modified in appState
+        const idx = searchPool.findIndex((existing) => existing.username.toLowerCase() === u.username.toLowerCase());
+        if (idx !== -1) searchPool[idx] = u;
+      }
+    });
+  }
+
+  const found = searchPool.find((user) => 
     user.username.trim().toLowerCase() === uInput && user.password.trim() === pInput
   );
 
@@ -104,7 +116,7 @@ function handleLoginSubmit(e) {
     showView("dashboard");
   } else {
     if (errBox) {
-      errBox.innerHTML = `Username atau password salah!<br><span style="font-size:0.75rem; font-weight:400; color:var(--text-muted);">Gunakan <strong>admin / admin123</strong> untuk Login Admin.</span>`;
+      errBox.innerHTML = `Username atau password salah!<br><span style="font-size:0.75rem; font-weight:400; color:var(--text-muted);">Contoh Admin: <strong>admin</strong> / Password: <strong>admin123</strong></span>`;
       errBox.style.display = "block";
     }
   }

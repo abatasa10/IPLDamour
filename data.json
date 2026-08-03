@@ -6,6 +6,32 @@
     "googleSheetApiUrl": ""
   },
   "biayaSampahDefault": 25000,
+  "users": [
+    {
+      "username": "admin",
+      "password": "admin123",
+      "name": "Pak Budi (Admin Warga)",
+      "blokNo": "A01",
+      "role": "admin",
+      "avatar": "A"
+    },
+    {
+      "username": "warga",
+      "password": "warga123",
+      "name": "Warga D'AMOUR",
+      "blokNo": "A02",
+      "role": "warga",
+      "avatar": "W"
+    },
+    {
+      "username": "developer",
+      "password": "dev123",
+      "name": "Perwakilan Developer",
+      "blokNo": "-",
+      "role": "developer",
+      "avatar": "D"
+    }
+  ],
   "targetIPL": [
     {
       "id": "tgt-1",
@@ -95,6 +121,7 @@
   "rumah": [],
   "tagihan": [],
   "pengeluaran": [],
+  "pemasukanLain": [],
   "grafik6Bulan": [],
   "ringkasanKas": {
     "kasSaatIni": 0,
