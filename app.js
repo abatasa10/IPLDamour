@@ -605,14 +605,41 @@ function updatePerhitunganMonthDropdown() {
   ).join("");
 }
 
-// Load App Data from LocalStorage, data.json, or Cloud Google Spreadsheet API
-async function loadAppData() {
-  // Clear non-IPL cash flow entries (pemasukanLain)
-  if (!localStorage.getItem("damour_ipl_v13_clear_pemasukan_lain")) {
-    localStorage.removeItem("damour_ipl_db");
-    localStorage.setItem("damour_ipl_v13_clear_pemasukan_lain", "true");
+function getGoogleSheetUrl() {
+  if (appState && appState.settings && appState.settings.googleSheetApiUrl) {
+    const url = appState.settings.googleSheetApiUrl.trim();
+    if (url && url.startsWith("http") && !url.includes("EXAMPLE")) return url;
   }
+  const savedUrl = localStorage.getItem("damour_ipl_gs_url");
+  if (savedUrl && savedUrl.startsWith("http") && !savedUrl.includes("EXAMPLE")) return savedUrl;
+  return "";
+}
 
+function updateStorageBadge(status, text) {
+  const badge = document.getElementById("gs-storage-badge");
+  const badgeText = document.getElementById("gs-storage-text");
+  if (!badge || !badgeText) return;
+
+  if (status === "connected") {
+    badge.style.background = "#dcfce7";
+    badge.style.color = "#15803d";
+    badge.style.borderColor = "#86efac";
+    badgeText.textContent = text || "Storage: Google Sheet (Aktif)";
+  } else if (status === "syncing") {
+    badge.style.background = "#e0f2fe";
+    badge.style.color = "#0369a1";
+    badge.style.borderColor = "#bae6fd";
+    badgeText.textContent = text || "Syncing ke Google Sheet...";
+  } else {
+    badge.style.background = "#fef9c3";
+    badge.style.color = "#a16207";
+    badge.style.borderColor = "#fde047";
+    badgeText.textContent = text || "Storage: Cache Lokal (Offline)";
+  }
+}
+
+// Load App Data with GOOGLE SPREADSHEET as PRIMARY STORAGE
+async function loadAppData() {
   let jsonBackup = null;
   try {
     const res = await fetch("data.json");
@@ -621,11 +648,11 @@ async function loadAppData() {
     console.error("Error loading data.json:", err);
   }
 
+  // 1. Check local cache as fallback
   const saved = localStorage.getItem("damour_ipl_db");
   if (saved) {
     try {
       appState = JSON.parse(saved);
-      console.log("Data loaded from LocalStorage.");
     } catch (e) {
       console.error("Failed to parse LocalStorage data", e);
     }
@@ -635,31 +662,40 @@ async function loadAppData() {
     appState = jsonBackup;
   }
 
-  if (!appState.tagihan) appState.tagihan = [];
-
-  if (appState && appState.settings && appState.settings.googleSheetApiUrl) {
-    const url = appState.settings.googleSheetApiUrl.trim();
-    if (url && url.startsWith("http") && !url.includes("EXAMPLE")) {
-      try {
-        const cloudRes = await fetch(url);
-        const cloudData = await cloudRes.json();
-        if (cloudData && (cloudData.users || cloudData.rumah)) {
-          appState = cloudData;
-          if (!appState.tagihan) appState.tagihan = [];
-          console.log("Synced live appState from Google Spreadsheet Web App.");
-        }
-      } catch (e) {
-        console.log("Cloud sync fetch failed, using local database cache.", e);
+  // 2. PRIMARY DATA SOURCE: FETCH LIVE FROM GOOGLE SPREADSHEET API FIRST
+  const activeUrl = getGoogleSheetUrl();
+  if (activeUrl) {
+    updateStorageBadge("syncing", "Memuat data Google Sheet...");
+    try {
+      const cloudRes = await fetch(activeUrl);
+      const cloudData = await cloudRes.json();
+      if (cloudData && (cloudData.users || cloudData.rumah || cloudData.tagihan)) {
+        appState = cloudData;
+        if (!appState.settings) appState.settings = {};
+        appState.settings.googleSheetApiUrl = activeUrl;
+        localStorage.setItem("damour_ipl_gs_url", activeUrl);
+        updateStorageBadge("connected", "Storage Utama: Google Sheet");
+        console.log("PRIMARY DATA LOADED FROM GOOGLE SPREADSHEET WEB APP.");
       }
+    } catch (e) {
+      console.log("Cloud primary fetch failed, falling back to local cache.", e);
+      updateStorageBadge("offline", "Cache Lokal (Google Sheet Offline)");
     }
+  } else {
+    updateStorageBadge("offline", "Storage: Cache Lokal (Set URL di Settings)");
   }
+
+  if (!appState.tagihan) appState.tagihan = [];
 
   ensureMasterEventState();
   generateAllMissingHouseUsers(true);
   syncTagihanWithMasterRumah();
   cleanUpSampahFromKomponen();
   deduplicateAppState();
-  saveState();
+  
+  if (appState) {
+    localStorage.setItem("damour_ipl_db", JSON.stringify(appState));
+  }
 }
 
 function syncTagihanWithMasterRumah() {
@@ -847,26 +883,34 @@ function saveState() {
   }
 }
 
-// Automatic Real-Time Background Sync to Google Sheet
+// Automatic Real-Time Background Sync to Google Sheet (PRIMARY STORAGE)
 function autoSyncToGoogleSheet() {
-  if (!appState || !appState.settings || !appState.settings.googleSheetApiUrl) return;
+  if (!appState) return;
 
-  const url = appState.settings.googleSheetApiUrl.trim();
-  if (!url || !url.startsWith("http") || url.includes("EXAMPLE")) return;
+  const activeUrl = getGoogleSheetUrl();
+  if (!activeUrl) {
+    updateStorageBadge("offline", "Storage: Cache Lokal (Belum Set URL)");
+    return;
+  }
+
+  updateStorageBadge("syncing", "Menyimpan ke Google Sheet...");
 
   try {
-    fetch(url, {
+    fetch(activeUrl, {
       method: "POST",
       mode: "no-cors",
       headers: { "Content-Type": "text/plain;charset=utf-8" },
       body: JSON.stringify(appState)
     }).then(() => {
-      console.log("Auto-synced data to Google Spreadsheet successfully.");
+      console.log("PRIMARY STORAGE: Synced data to Google Spreadsheet successfully.");
+      updateStorageBadge("connected", "Storage Utama: Google Sheet");
     }).catch((err) => {
-      console.log("Auto-sync background error:", err);
+      console.log("Primary storage sync error:", err);
+      updateStorageBadge("offline", "Cache Lokal (GSheet Error)");
     });
   } catch (e) {
-    console.log("Failed to trigger background auto-sync:", e);
+    console.log("Failed to trigger background primary sync:", e);
+    updateStorageBadge("offline", "Cache Lokal (GSheet Error)");
   }
 }
 
