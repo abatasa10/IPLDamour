@@ -3577,6 +3577,46 @@ function importDataJSON(input) {
   reader.readAsText(file);
 }
 
+function resetPembayaranRidwanDanPengeluaran() {
+  if (!appState) return;
+
+  if (confirm("Apakah Anda yakin ingin mengembalikan status pembayaran Ridwan (C16) ke 'Menunggu Pembayaran' dan menghapus SELURUH catatan pengeluaran?")) {
+    if (appState.tagihan && Array.isArray(appState.tagihan)) {
+      appState.tagihan.forEach((t) => {
+        const blokClean = (t.blokNo || "").toLowerCase().trim();
+        const ownerClean = (t.pemilik || "").toLowerCase().trim();
+        if (blokClean === "c16" || ownerClean.includes("ridwan")) {
+          t.status = "Menunggu Pembayaran";
+          t.tglBayar = "-";
+          t.buktiTransfer = "";
+          t.metode = "-";
+        }
+      });
+    }
+
+    appState.pengeluaran = [];
+
+    getCalculatedKasBalance();
+    saveState();
+
+    if (appState.settings && appState.settings.googleSheetApiUrl) {
+      const url = appState.settings.googleSheetApiUrl.trim();
+      if (url && url.startsWith("http") && !url.includes("EXAMPLE")) {
+        fetch(url, {
+          method: "POST",
+          mode: "no-cors",
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          body: JSON.stringify(appState)
+        }).catch((e) => console.log("Background sync error:", e));
+      }
+    }
+
+    addAuditLog("Reset Data", "Admin mereset status pembayaran Ridwan (C16) ke Menunggu Pembayaran & menghapus seluruh data pengeluaran");
+    alert("Status pembayaran Ridwan (C16) telah dikembalikan ke Menunggu Pembayaran dan seluruh data pengeluaran telah berhasil dihapus!");
+    location.reload();
+  }
+}
+
 function resetDataDefault() {
   clearAllAppData();
 }

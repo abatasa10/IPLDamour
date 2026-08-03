@@ -1300,7 +1300,13 @@
               <hr style="margin: 1.5rem 0; border: none; border-top: 1px solid var(--border-color);">
 
               <div class="form-group">
-                <label>Reset System</label>
+                <label>Reset Transaksi Tertentu</label>
+                <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.5rem;">Mengembalikan status pembayaran Ridwan (C16) ke "Menunggu Pembayaran" dan menghapus seluruh catatan pengeluaran.</p>
+                <button class="btn btn-outline" style="color: var(--danger); border-color: var(--danger); margin-bottom: 1rem;" onclick="resetPembayaranRidwanDanPengeluaran()"><i class="ri-refresh-line"></i> Reset Status Ridwan & Hapus Pengeluaran</button>
+              </div>
+
+              <div class="form-group">
+                <label>Reset System Utuh</label>
                 <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.5rem;">Mengembalikan seluruh data transaksi ke keadaan default awal.</p>
                 <button class="btn btn-danger" onclick="resetDataDefault()"><i class="ri-refresh-line"></i> Reset Data Default</button>
               </div>
@@ -1631,7 +1637,7 @@
     </div>
   </div>
 
-  <script src="app.js?v=20260803_02"></script>
+  <script src="app.js?v=20260803_03"></script>
   <script>
     function togglePasswordVisibility() {
       const pwdInp = document.getElementById("login-password");
