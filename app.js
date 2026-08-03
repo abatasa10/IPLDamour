@@ -1927,10 +1927,17 @@ function renderDaftarTagihan() {
     } else {
       tbody.innerHTML = paginated
         .map((t, idx) => {
+          let displayStatus = t.status;
+          if (!displayStatus || displayStatus === "Menunggu") {
+            displayStatus = "Menunggu Pembayaran";
+            t.status = "Menunggu Pembayaran";
+          }
+
           let badgeClass = "badge-secondary";
-          if (t.status === "Lunas") badgeClass = "badge-success";
-          if (t.status === "Menunggu" || t.status === "Menunggu Verifikasi") badgeClass = "badge-warning";
-          if (t.status === "Menunggak") badgeClass = "badge-danger";
+          if (displayStatus === "Lunas") badgeClass = "badge-success";
+          if (displayStatus === "Menunggu Pembayaran") badgeClass = "badge-warning";
+          if (displayStatus === "Menunggu Verifikasi") badgeClass = "badge-info";
+          if (displayStatus === "Menunggak") badgeClass = "badge-danger";
 
           const globalIndex = startIdx + idx + 1;
           const userBlokClean = currentUser && currentUser.blokNo ? normalizeBlok(currentUser.blokNo) : "";
@@ -1944,7 +1951,7 @@ function renderDaftarTagihan() {
               <td>${t.pemilik}</td>
               <td>${t.kelompokIPL}</td>
               <td style="font-weight: 600;">${formatRp(t.nominal)}</td>
-              <td><span class="badge ${badgeClass}">${t.status}</span></td>
+              <td><span class="badge ${badgeClass}">${displayStatus}</span></td>
               <td>
                 <button class="btn btn-outline btn-sm" onclick="viewDetailTagihan('${t.id}')" title="Lihat Detail"><i class="ri-eye-line"></i></button>
                 ${isAdmin ? `<button class="btn btn-outline btn-sm" onclick="openEditTagihanModal('${t.id}')" title="Edit Nominal Tagihan"><i class="ri-edit-line"></i></button>` : ""}
@@ -2015,12 +2022,16 @@ function viewDetailTagihan(id) {
   document.getElementById("detail-val-bulan").textContent = `${t.bulan || MONTH_NAMES[new Date().getMonth()]} ${t.tahun || new Date().getFullYear()}`;
   document.getElementById("detail-val-nominal").textContent = formatRp(t.nominal);
 
-  let badgeClass = "badge-secondary";
-  if (t.status === "Lunas") badgeClass = "badge-success";
-  if (t.status === "Menunggu") badgeClass = "badge-warning";
-  if (t.status === "Menunggak") badgeClass = "badge-danger";
+  let displayStatus = t.status;
+  if (!displayStatus || displayStatus === "Menunggu") displayStatus = "Menunggu Pembayaran";
 
-  document.getElementById("detail-val-status").innerHTML = `<span class="badge ${badgeClass}">${t.status}</span>`;
+  let badgeClass = "badge-secondary";
+  if (displayStatus === "Lunas") badgeClass = "badge-success";
+  if (displayStatus === "Menunggu Pembayaran") badgeClass = "badge-warning";
+  if (displayStatus === "Menunggu Verifikasi") badgeClass = "badge-info";
+  if (displayStatus === "Menunggak") badgeClass = "badge-danger";
+
+  document.getElementById("detail-val-status").innerHTML = `<span class="badge ${badgeClass}">${displayStatus}</span>`;
 
   const tbody = document.getElementById("detail-rincian-tbody");
 
