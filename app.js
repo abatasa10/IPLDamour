@@ -1924,7 +1924,7 @@ function renderDaftarTagihan() {
         .map((t, idx) => {
           let badgeClass = "badge-secondary";
           if (t.status === "Lunas") badgeClass = "badge-success";
-          if (t.status === "Menunggu") badgeClass = "badge-warning";
+          if (t.status === "Menunggu" || t.status === "Menunggu Verifikasi") badgeClass = "badge-warning";
           if (t.status === "Menunggak") badgeClass = "badge-danger";
 
           const globalIndex = startIdx + idx + 1;
@@ -1941,8 +1941,13 @@ function renderDaftarTagihan() {
                 <button class="btn btn-outline btn-sm" onclick="viewDetailTagihan('${t.id}')" title="Lihat Detail"><i class="ri-eye-line"></i></button>
                 ${isAdmin ? `<button class="btn btn-outline btn-sm" onclick="openEditTagihanModal('${t.id}')" title="Edit Nominal Tagihan"><i class="ri-edit-line"></i></button>` : ""}
                 ${
-                  t.status !== "Lunas"
-                    ? `<button class="btn btn-primary btn-sm" onclick="openFormPembayaran('${t.id}')" title="Bayar"><i class="ri-checkbox-circle-line"></i></button>`
+                  t.status !== "Lunas" && isAdmin
+                    ? `<button class="btn btn-success btn-sm" onclick="verifikasiLunasTagihan('${t.id}')" title="Verifikasi LUNAS & Masuk Kas"><i class="ri-check-double-line"></i> Verifikasi</button>`
+                    : ""
+                }
+                ${
+                  t.status !== "Lunas" && !isAdmin
+                    ? `<button class="btn btn-primary btn-sm" onclick="openFormPembayaran('${t.id}')" title="Bayar"><i class="ri-checkbox-circle-line"></i> Upload Bukti</button>`
                     : ""
                 }
               </td>
@@ -2099,25 +2104,75 @@ function simpanFormPembayaran() {
   const nominal = parseFloat(document.getElementById("bayar-form-nominal").value) || 0;
   const previewImg = document.getElementById("img-preview-bukti").src;
 
+  const isAdmin = currentUser && currentUser.role === "admin";
   const t = appState.tagihan.find((item) => item.id === id);
   if (t) {
-    t.status = "Lunas";
     t.tglBayar = tgl ? tgl.split("-").reverse().join("/") : new Date().toLocaleDateString("id-ID");
     t.metode = metode;
     if (previewImg && !previewImg.endsWith("#")) {
       t.buktiTransfer = previewImg;
     }
 
-    if (!appState.ringkasanKas) appState.ringkasanKas = { kasSaatIni: 0, masuk: 0, keluar: 0, selisih: 0 };
-    appState.ringkasanKas.kasSaatIni += nominal;
-    appState.ringkasanKas.masuk += nominal;
-    appState.ringkasanKas.selisih = appState.ringkasanKas.masuk - appState.ringkasanKas.keluar;
+    if (isAdmin) {
+      t.status = "Lunas";
+      if (!appState.ringkasanKas) appState.ringkasanKas = { kasSaatIni: 0, masuk: 0, keluar: 0, selisih: 0 };
+      appState.ringkasanKas.kasSaatIni += nominal;
+      appState.ringkasanKas.masuk += nominal;
+      appState.ringkasanKas.selisih = appState.ringkasanKas.masuk - appState.ringkasanKas.keluar;
 
-    saveState();
-    alert("Pembayaran berhasil disimpan!");
+      saveState();
+      alert("Pembayaran berhasil diverifikasi dan disetujui (LUNAS). Uang resmi masuk ke Kas!");
+    } else {
+      t.status = "Menunggu Verifikasi";
+      saveState();
+      alert("Bukti pembayaran berhasil dikirim! Menunggu verifikasi dari Admin/Pengurus sebelum masuk ke Kas.");
+    }
+
     showView("daftar-tagihan");
     renderDashboard();
     renderKasArusKasTable();
+  }
+}
+
+function verifikasiLunasTagihan(id) {
+  const isAdmin = currentUser && currentUser.role === "admin";
+  if (!isAdmin) {
+    alert("Hanya Admin yang berhak mengverifikasi pembayaran.");
+    return;
+  }
+
+  const t = appState.tagihan.find((item) => item.id === id);
+  if (!t) return;
+
+  if (confirm(`Verifikasi pembayaran LUNAS untuk rumah ${t.blokNo} - ${t.pemilik} (Nominal: ${formatRp(t.nominal)})?`)) {
+    t.status = "Lunas";
+    if (!t.tglBayar || t.tglBayar === "-") {
+      t.tglBayar = new Date().toLocaleDateString("id-ID");
+    }
+    
+    if (!appState.ringkasanKas) appState.ringkasanKas = { kasSaatIni: 0, masuk: 0, keluar: 0, selisih: 0 };
+    appState.ringkasanKas.kasSaatIni += t.nominal;
+    appState.ringkasanKas.masuk += t.nominal;
+    appState.ringkasanKas.selisih = appState.ringkasanKas.masuk - appState.ringkasanKas.keluar;
+
+    saveState();
+    renderDaftarTagihan();
+    renderDashboard();
+    renderKasArusKasTable();
+
+    if (appState.settings && appState.settings.googleSheetApiUrl) {
+      const url = appState.settings.googleSheetApiUrl.trim();
+      if (url && url.startsWith("http") && !url.includes("EXAMPLE")) {
+        fetch(url, {
+          method: "POST",
+          mode: "no-cors",
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          body: JSON.stringify(appState)
+        }).catch((e) => console.log("Background sync error:", e));
+      }
+    }
+
+    alert(`Pembayaran rumah ${t.blokNo} (${t.pemilik}) berhasil diverifikasi LUNAS dan Rp ${t.nominal.toLocaleString("id-ID")} resmi masuk ke Kas!`);
   }
 }
 
