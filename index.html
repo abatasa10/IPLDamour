@@ -35,7 +35,7 @@
           <label>Username</label>
           <div class="input-search-wrapper">
             <i class="ri-user-line"></i>
-            <input type="text" id="login-username" class="form-control" placeholder="Masukkan username" required style="padding-left: 2.25rem;" autocomplete="username">
+            <input type="text" id="login-username" class="form-control" placeholder="Masukkan username / Blok Rumah" required style="padding-left: 2.25rem;" autocomplete="username">
           </div>
         </div>
 
@@ -60,12 +60,11 @@
       <!-- Account Hint Accordion / Callout -->
       <div style="margin-top: 1.25rem; padding: 0.85rem; background: #f8fafc; border: 1px solid var(--border-color); border-radius: 10px; font-size: 0.8rem;">
         <div style="display: flex; align-items: center; justify-content: space-between; font-weight: 600; color: var(--primary); cursor: pointer;" onclick="toggleLoginHint()">
-          <span><i class="ri-lightbulb-line"></i> Hint Akun Login (Petunjuk Bantuan)</span>
+          <span><i class="ri-lightbulb-line"></i> Hint Akun Login Warga</span>
           <i class="ri-arrow-down-s-line" id="hint-chevron"></i>
         </div>
         <div id="login-hint-body" style="display: none; margin-top: 0.75rem; border-top: 1px dashed var(--border-color); padding-top: 0.5rem; color: var(--text-main);">
-          <div style="margin-bottom: 0.35rem;">👑 <strong>Admin</strong>: <code>admin</code> / Password: <code>admin123</code></div>
-          <div style="margin-bottom: 0.35rem;">🏠 <strong>Warga</strong>: <code>warga</code> / Password: <code>warga123</code></div>
+          <div style="margin-bottom: 0.35rem;">🏠 <strong>Warga</strong>: Masukkan Username akun / No. Blok (misal: <code>a01</code> / <code>a02</code>)</div>
           <div>🏗️ <strong>Developer</strong>: <code>developer</code> / Password: <code>dev123</code></div>
         </div>
       </div>
@@ -1291,7 +1290,7 @@
         </div>
       </div>
       <div class="modal-footer">
-        <button class="btn btn-outline" onclick="closeModal('modal-pengeluaran')">Batal</button>
+        <button class="btn btn-outline" onclick="closeModal('modal-pgl-title')">Batal</button>
         <button class="btn btn-primary" onclick="savePengeluaran()">Simpan Pengeluaran</button>
       </div>
     </div>
