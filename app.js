@@ -2353,7 +2353,7 @@ async function simpanFormPembayaran() {
   const id = document.getElementById("bayar-form-id").value;
   const tgl = document.getElementById("bayar-form-tanggal").value;
   const metode = document.getElementById("bayar-form-metode").value;
-  const fileInput = document.getElementById("bayar-form-bukti");
+  const fileInput = document.getElementById("file-bukti-transfer") || document.getElementById("bayar-form-bukti");
   let previewImg = document.getElementById("img-preview-bukti").src;
 
   if (fileInput && fileInput.files && fileInput.files[0]) {
