@@ -11,18 +11,9 @@
       "username": "admin",
       "password": "admin123",
       "name": "Admin Pengurus IPL",
-      "blokNo": "A1",
+      "blokNo": "C16",
       "role": "admin",
       "avatar": "A",
-      "mustChangePassword": false
-    },
-    {
-      "username": "warga",
-      "password": "damour123",
-      "name": "Warga D'AMOUR",
-      "blokNo": "A2",
-      "role": "warga",
-      "avatar": "W",
       "mustChangePassword": false
     },
     {
@@ -37,8 +28,17 @@
     {
       "username": "ridwan",
       "password": "123qwe",
-      "name": "Ridwan (Admin)",
-      "blokNo": "A1",
+      "name": "Ridwan",
+      "blokNo": "C16",
+      "role": "admin",
+      "avatar": "R",
+      "mustChangePassword": false
+    },
+    {
+      "username": "c16",
+      "password": "123qwe",
+      "name": "Ridwan",
+      "blokNo": "C16",
       "role": "admin",
       "avatar": "R",
       "mustChangePassword": false
@@ -46,8 +46,17 @@
     {
       "username": "jamal",
       "password": "123qwe",
-      "name": "Jamal (Admin)",
-      "blokNo": "A3",
+      "name": "Jamal",
+      "blokNo": "C14",
+      "role": "admin",
+      "avatar": "J",
+      "mustChangePassword": false
+    },
+    {
+      "username": "c14",
+      "password": "123qwe",
+      "name": "Jamal",
+      "blokNo": "C14",
       "role": "admin",
       "avatar": "J",
       "mustChangePassword": false
@@ -140,37 +149,8 @@
     }
   ],
   "rumah": [
-    { "id": "RMH-A1", "blokNo": "A1", "pemilik": "Warga Unit A1", "noHp": "081234567801", "status": "Aktif", "kelompokIPL": "IPL + Sampah" },
-    { "id": "RMH-A2", "blokNo": "A2", "pemilik": "Warga Unit A2", "noHp": "081234567802", "status": "Aktif", "kelompokIPL": "IPL + Sampah" },
-    { "id": "RMH-A3", "blokNo": "A3", "pemilik": "Warga Unit A3", "noHp": "081234567803", "status": "Aktif", "kelompokIPL": "IPL + Sampah" },
-    { "id": "RMH-A4", "blokNo": "A4", "pemilik": "Warga Unit A4", "noHp": "081234567804", "status": "Aktif", "kelompokIPL": "IPL + Sampah" },
-    { "id": "RMH-A5", "blokNo": "A5", "pemilik": "Warga Unit A5", "noHp": "081234567805", "status": "Aktif", "kelompokIPL": "IPL + Sampah" },
-    { "id": "RMH-A6", "blokNo": "A6", "pemilik": "Warga Unit A6", "noHp": "081234567806", "status": "Aktif", "kelompokIPL": "IPL + Sampah" },
-    { "id": "RMH-A7", "blokNo": "A7", "pemilik": "Warga Unit A7", "noHp": "081234567807", "status": "Aktif", "kelompokIPL": "IPL + Sampah" },
-    { "id": "RMH-A8", "blokNo": "A8", "pemilik": "Warga Unit A8", "noHp": "081234567808", "status": "Aktif", "kelompokIPL": "IPL + Sampah" },
-    { "id": "RMH-A9", "blokNo": "A9", "pemilik": "Warga Unit A9", "noHp": "081234567809", "status": "Aktif", "kelompokIPL": "IPL + Sampah" },
-    { "id": "RMH-A10", "blokNo": "A10", "pemilik": "Warga Unit A10", "noHp": "081234567810", "status": "Aktif", "kelompokIPL": "IPL + Sampah" },
-    { "id": "RMH-A11", "blokNo": "A11", "pemilik": "Warga Unit A11", "noHp": "081234567811", "status": "Aktif", "kelompokIPL": "IPL + Sampah" },
-    { "id": "RMH-A12", "blokNo": "A12", "pemilik": "Warga Unit A12", "noHp": "081234567812", "status": "Aktif", "kelompokIPL": "IPL + Sampah" },
-    { "id": "RMH-A13", "blokNo": "A13", "pemilik": "Warga Unit A13", "noHp": "081234567813", "status": "Aktif", "kelompokIPL": "IPL + Sampah" },
-    { "id": "RMH-A14", "blokNo": "A14", "pemilik": "Warga Unit A14", "noHp": "081234567814", "status": "Aktif", "kelompokIPL": "IPL + Sampah" },
-    { "id": "RMH-A15", "blokNo": "A15", "pemilik": "Warga Unit A15", "noHp": "081234567815", "status": "Aktif", "kelompokIPL": "IPL + Sampah" },
-    { "id": "RMH-A16", "blokNo": "A16", "pemilik": "Warga Unit A16", "noHp": "081234567816", "status": "Aktif", "kelompokIPL": "IPL + Sampah" },
-    { "id": "RMH-A17", "blokNo": "A17", "pemilik": "Warga Unit A17", "noHp": "081234567817", "status": "Aktif", "kelompokIPL": "IPL + Sampah" },
-    { "id": "RMH-A18", "blokNo": "A18", "pemilik": "Warga Unit A18", "noHp": "081234567818", "status": "Aktif", "kelompokIPL": "IPL + Sampah" },
-    { "id": "RMH-A19", "blokNo": "A19", "pemilik": "Warga Unit A19", "noHp": "081234567819", "status": "Aktif", "kelompokIPL": "IPL + Sampah" },
-    { "id": "RMH-A20", "blokNo": "A20", "pemilik": "Warga Unit A20", "noHp": "081234567820", "status": "Aktif", "kelompokIPL": "IPL + Sampah" },
-    { "id": "RMH-A21", "blokNo": "A21", "pemilik": "Warga Unit A21", "noHp": "081234567821", "status": "Aktif", "kelompokIPL": "IPL + Sampah" },
-    { "id": "RMH-A22", "blokNo": "A22", "pemilik": "Warga Unit A22", "noHp": "081234567822", "status": "Aktif", "kelompokIPL": "IPL + Sampah" },
-    { "id": "RMH-A23", "blokNo": "A23", "pemilik": "Warga Unit A23", "noHp": "081234567823", "status": "Aktif", "kelompokIPL": "IPL + Sampah" },
-    { "id": "RMH-A24", "blokNo": "A24", "pemilik": "Warga Unit A24", "noHp": "081234567824", "status": "Aktif", "kelompokIPL": "IPL + Sampah" },
-    { "id": "RMH-A25", "blokNo": "A25", "pemilik": "Warga Unit A25", "noHp": "081234567825", "status": "Aktif", "kelompokIPL": "IPL Tanpa Sampah" },
-    { "id": "RMH-A26", "blokNo": "A26", "pemilik": "Warga Unit A26", "noHp": "081234567826", "status": "Aktif", "kelompokIPL": "IPL Tanpa Sampah" },
-    { "id": "RMH-A27", "blokNo": "A27", "pemilik": "Warga Unit A27", "noHp": "081234567827", "status": "Aktif", "kelompokIPL": "IPL Tanpa Sampah" },
-    { "id": "RMH-A28", "blokNo": "A28", "pemilik": "Warga Unit A28", "noHp": "081234567828", "status": "Aktif", "kelompokIPL": "IPL Tanpa Sampah" },
-    { "id": "RMH-A29", "blokNo": "A29", "pemilik": "Warga Unit A29", "noHp": "081234567829", "status": "Aktif", "kelompokIPL": "IPL Tanpa Sampah" },
-    { "id": "RMH-B1", "blokNo": "B1", "pemilik": "Developer Unit 1", "noHp": "081234567830", "status": "Aktif", "kelompokIPL": "IPL Developer" },
-    { "id": "RMH-B2", "blokNo": "B2", "pemilik": "Developer Unit 2", "noHp": "081234567831", "status": "Aktif", "kelompokIPL": "IPL Developer" }
+    { "id": "RMH-C16", "blokNo": "C16", "pemilik": "Ridwan", "noHp": "081234567816", "status": "Aktif", "kelompokIPL": "IPL + Sampah" },
+    { "id": "RMH-C14", "blokNo": "C14", "pemilik": "Jamal", "noHp": "081234567814", "status": "Aktif", "kelompokIPL": "IPL + Sampah" }
   ],
   "tagihan": [],
   "pengeluaran": [],
