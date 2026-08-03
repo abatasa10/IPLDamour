@@ -606,10 +606,10 @@ function updatePerhitunganMonthDropdown() {
 
 // Load App Data from LocalStorage, data.json, or Cloud Google Spreadsheet API
 async function loadAppData() {
-  // Clear old stale cache once to purge old dummy bills and enforce live house names
-  if (!localStorage.getItem("damour_ipl_v4_clean")) {
+  // Clear old stale cache once to purge old cached bills and sync live house names
+  if (!localStorage.getItem("damour_ipl_v5_clean")) {
     localStorage.removeItem("damour_ipl_db");
-    localStorage.setItem("damour_ipl_v4_clean", "true");
+    localStorage.setItem("damour_ipl_v5_clean", "true");
   }
 
   let jsonBackup = null;
@@ -745,11 +745,21 @@ function autoEnsureCurrentMonthBills() {
   const baseTargetDeveloper = (appState.targetIPL && appState.targetIPL.find((t) => t.kelompok === "IPL Developer")?.target) || 166000;
   const defaultSampah = appState.biayaSampahDefault || 25000;
 
-  appState.rumah.forEach((r) => {
-    const tagihanId = `TAG-${currentYear}${currentMonth}-${r.blokNo}`;
-    const exists = appState.tagihan.some((t) => t.id === tagihanId || (t.blokNo === r.blokNo && t.bulan === currentMonth && t.tahun === currentYear));
+  // Filter out any bill for houses that no longer exist in Master Rumah
+  const validHouseBlocks = new Set(appState.rumah.map((r) => normalizeBlok(r.blokNo)));
+  appState.tagihan = appState.tagihan.filter((t) => t && t.blokNo && validHouseBlocks.has(normalizeBlok(t.blokNo)));
 
-    if (!exists) {
+  appState.rumah.forEach((r) => {
+    const cleanBlok = normalizeBlok(r.blokNo);
+    const tagihanId = `TAG-${currentYear}${currentMonth}-${cleanBlok}`;
+    
+    let existingBill = appState.tagihan.find((t) => normalizeBlok(t.blokNo) === cleanBlok && t.bulan === currentMonth && t.tahun === currentYear);
+
+    if (existingBill) {
+      existingBill.blokNo = cleanBlok;
+      existingBill.pemilik = r.pemilik;
+      existingBill.kelompokIPL = r.kelompokIPL;
+    } else {
       const rincianItems = [];
       let totalNominal = 0;
 
@@ -773,13 +783,13 @@ function autoEnsureCurrentMonthBills() {
         });
       }
 
-      appState.tagihan.unshift({
+      appState.tagihan.push({
         id: tagihanId,
         periode: `${currentYear}-${currentMonth}`,
         bulan: currentMonth,
         tahun: currentYear,
         rumahId: r.id,
-        blokNo: r.blokNo,
+        blokNo: cleanBlok,
         pemilik: r.pemilik,
         kelompokIPL: r.kelompokIPL,
         nominal: totalNominal,
@@ -791,6 +801,8 @@ function autoEnsureCurrentMonthBills() {
       });
     }
   });
+
+  appState.tagihan.sort((a, b) => a.blokNo.localeCompare(b.blokNo, undefined, { numeric: true }));
 }
 
 function ensureMasterEventState() {
