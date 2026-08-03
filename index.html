@@ -149,6 +149,14 @@
           <i class="ri-file-chart-line"></i>
           <span>Laporan Kas & Neraca</span>
         </a>
+        <a href="#" class="nav-item role-admin-only" data-view="piutang-warga">
+          <i class="ri-file-user-line"></i>
+          <span>Laporan Piutang Warga</span>
+        </a>
+        <a href="#" class="nav-item role-admin-only" data-view="rekap-realisasi">
+          <i class="ri-pie-chart-2-line"></i>
+          <span>Wajib Setor vs Realisasi</span>
+        </a>
         <a href="#" class="nav-item role-admin-only" data-view="audit-log">
           <i class="ri-history-line"></i>
           <span>Audit Trail / Log Aktivitas</span>
@@ -1053,6 +1061,140 @@
                   </tr>
                 </thead>
                 <tbody id="neraca-table-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- 13. LAPORAN PIUTANG & TUNGGAKAN WARGA VIEW -->
+        <section id="view-piutang-warga" class="view-section">
+          <div class="card">
+            <div class="card-header" style="flex-wrap: wrap; gap: 0.75rem;">
+              <div class="card-title"><i class="ri-file-user-line"></i> Laporan Piutang & Tunggakan Warga</div>
+              <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                <div class="input-search-wrapper" style="max-width: 250px;">
+                  <i class="ri-search-line"></i>
+                  <input type="text" id="filter-piutang-search" class="form-control" placeholder="Cari rumah / pemilik" oninput="renderLaporanPiutangWarga()">
+                </div>
+                <button class="btn btn-outline" onclick="window.print()"><i class="ri-printer-line"></i> Cetak Daftar Piutang</button>
+              </div>
+            </div>
+
+            <div class="kpi-grid" style="margin-bottom: 1.5rem;">
+              <div class="kpi-card">
+                <div class="kpi-info">
+                  <p>Total Piutang Warga</p>
+                  <div class="kpi-value" id="piutang-total-nominal" style="color: var(--danger);">Rp 0</div>
+                  <span class="kpi-subtext">Belum Terbayar</span>
+                </div>
+                <div class="kpi-icon orange"><i class="ri-money-dollar-circle-line"></i></div>
+              </div>
+
+              <div class="kpi-card">
+                <div class="kpi-info">
+                  <p>Jumlah Rumah Menunggak</p>
+                  <div class="kpi-value" id="piutang-total-rumah">0 Unit</div>
+                  <span class="kpi-subtext">Perlu Pengingat WA</span>
+                </div>
+                <div class="kpi-icon blue"><i class="ri-home-warning-line"></i></div>
+              </div>
+            </div>
+
+            <div class="table-responsive">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>No</th>
+                    <th>Rumah</th>
+                    <th>Pemilik</th>
+                    <th>Kelompok IPL</th>
+                    <th>Bulan Menunggak</th>
+                    <th style="text-align: center;">Jumlah Bulan</th>
+                    <th style="text-align: right;">Total Piutang (Rp)</th>
+                    <th>Aksi Pengingat</th>
+                  </tr>
+                </thead>
+                <tbody id="piutang-warga-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- 14. REKAP WAJIB SETOR VS REALISASI PER KOMPONEN VIEW -->
+        <section id="view-rekap-realisasi" class="view-section">
+          <div class="card">
+            <div class="card-header" style="flex-wrap: wrap; gap: 0.75rem;">
+              <div class="card-title"><i class="ri-pie-chart-2-line"></i> Rekap Wajib Setor vs Realisasi Per Komponen</div>
+              <button class="btn btn-outline" onclick="window.print()"><i class="ri-printer-line"></i> Cetak Rekap Realisasi</button>
+            </div>
+
+            <div class="filter-bar">
+              <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <span style="font-size: 0.8rem; color: var(--text-muted);">Bulan</span>
+                <select id="filter-realisasi-bulan" class="form-control" style="width: auto;" onchange="renderWajibSetorVsRealisasi()">
+                  <option value="Semua">Semua Bulan (Setahun)</option>
+                  <option value="Januari">Januari</option>
+                  <option value="Februari">Februari</option>
+                  <option value="Maret">Maret</option>
+                  <option value="April">April</option>
+                  <option value="Mei">Mei</option>
+                  <option value="Juni">Juni</option>
+                  <option value="Juli">Juli</option>
+                  <option value="Agustus">Agustus</option>
+                  <option value="September">September</option>
+                  <option value="Oktober">Oktober</option>
+                  <option value="November">November</option>
+                  <option value="Desember">Desember</option>
+                </select>
+              </div>
+              <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <span style="font-size: 0.8rem; color: var(--text-muted);">Tahun</span>
+                <select id="filter-realisasi-tahun" class="form-control" style="width: auto;" onchange="renderWajibSetorVsRealisasi()">
+                </select>
+              </div>
+            </div>
+
+            <div class="kpi-grid" style="margin-bottom: 1.5rem;">
+              <div class="kpi-card">
+                <div class="kpi-info">
+                  <p>Target Wajib Setor</p>
+                  <div class="kpi-value" id="realisasi-target-total">Rp 0</div>
+                  <span class="kpi-subtext">Anggaran Wajib</span>
+                </div>
+                <div class="kpi-icon blue"><i class="ri-line-chart-line"></i></div>
+              </div>
+
+              <div class="kpi-card">
+                <div class="kpi-info">
+                  <p>Realisasi Terkumpul</p>
+                  <div class="kpi-value" id="realisasi-terkumpul-total" style="color: var(--success);">Rp 0</div>
+                  <span class="kpi-subtext">Uang Masuk Lunas</span>
+                </div>
+                <div class="kpi-icon green"><i class="ri-checkbox-circle-line"></i></div>
+              </div>
+
+              <div class="kpi-card">
+                <div class="kpi-info">
+                  <p>Capaian Realisasi</p>
+                  <div class="kpi-value" id="realisasi-persen-total">0%</div>
+                  <span class="kpi-subtext">Persentase Masuk</span>
+                </div>
+                <div class="kpi-icon orange"><i class="ri-percent-line"></i></div>
+              </div>
+            </div>
+
+            <div class="table-responsive">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>Komponen / Biaya Operasional</th>
+                    <th style="text-align: right;">Wajib Setor Target (Rp)</th>
+                    <th style="text-align: right;">Realisasi Terkumpul (Rp)</th>
+                    <th style="text-align: right;">Selisih Varian (Rp)</th>
+                    <th style="text-align: center;">Capaian (%)</th>
+                  </tr>
+                </thead>
+                <tbody id="realisasi-table-tbody"></tbody>
               </table>
             </div>
           </div>

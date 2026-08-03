@@ -1067,6 +1067,8 @@ function showView(viewId) {
       kas: "Kas (Arus Kas)",
       laporan: "Laporan IPL",
       "laporan-neraca": "Laporan Kas & Neraca Per Periode",
+      "piutang-warga": "Laporan Piutang & Tunggakan Warga",
+      "rekap-realisasi": "Rekap Wajib Setor vs Realisasi Per Komponen",
       "audit-log": "Audit Trail & Log Aktivitas Sistem",
       simulasi: "Simulasi IPL",
       pengaturan: "Pengaturan Sistem"
@@ -1080,6 +1082,8 @@ function showView(viewId) {
   if (viewId === "komponen") renderMasterKomponen();
   if (viewId === "event") renderMasterEvent();
   if (viewId === "laporan-neraca") renderLaporanNeraca();
+  if (viewId === "piutang-warga") renderLaporanPiutangWarga();
+  if (viewId === "rekap-realisasi") renderWajibSetorVsRealisasi();
   if (viewId === "audit-log") renderAuditLogTable();
   if (viewId === "target") renderSettingTarget();
   if (viewId === "perhitungan") renderPerhitunganIPL();
@@ -3220,6 +3224,207 @@ function renderLaporanNeraca() {
       </tr>
     `;
   }
+}
+
+/* ==========================================================================
+   LAPORAN PIUTANG & TUNGGAKAN WARGA PER RUMAH
+   ========================================================================== */
+function renderLaporanPiutangWarga() {
+  if (!appState) return;
+
+  const searchInput = document.getElementById("filter-piutang-search");
+  const searchVal = (searchInput?.value || "").toLowerCase();
+  const summary = getWargaTunggakanSummary();
+
+  const filtered = summary.filter((w) => {
+    return (
+      w.blokNo.toLowerCase().includes(searchVal) ||
+      w.pemilik.toLowerCase().includes(searchVal)
+    );
+  });
+
+  const totalPiutangNominal = filtered.reduce((sum, w) => sum + w.totalTunggakan, 0);
+  const totalRumahMenunggak = filtered.length;
+
+  const nominalEl = document.getElementById("piutang-total-nominal");
+  const rumahEl = document.getElementById("piutang-total-rumah");
+
+  if (nominalEl) nominalEl.textContent = formatRp(totalPiutangNominal);
+  if (rumahEl) rumahEl.textContent = `${totalRumahMenunggak} Unit Rumah`;
+
+  const tbody = document.getElementById("piutang-warga-tbody");
+  if (!tbody) return;
+
+  if (filtered.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: var(--text-muted); padding: 1.5rem;">Tidak ada data piutang / tunggakan warga.</td></tr>`;
+  } else {
+    tbody.innerHTML = filtered
+      .map((w, idx) => {
+        const houseObj = (appState.rumah || []).find((r) => normalizeBlok(r.blokNo) === normalizeBlok(w.blokNo));
+        const kelompokIPL = houseObj ? houseObj.kelompokIPL : "IPL + Sampah";
+        const phone = houseObj ? (houseObj.noHp || "").replace(/[^0-9]/g, "") : "";
+        const bulanStr = w.bulanList.join(", ");
+
+        return `
+          <tr>
+            <td>${idx + 1}</td>
+            <td><strong>${w.blokNo}</strong></td>
+            <td>${w.pemilik}</td>
+            <td><span class="badge badge-secondary">${kelompokIPL}</span></td>
+            <td><span style="font-size: 0.85rem; color: var(--danger); font-weight: 500;">${bulanStr}</span></td>
+            <td style="text-align: center;"><span class="badge badge-warning">${w.jumlahBulan} Bulan</span></td>
+            <td style="text-align: right; font-weight: 700; color: var(--danger);">${formatRp(w.totalTunggakan)}</td>
+            <td>
+              <button class="btn btn-outline btn-sm" style="color: #16a34a; border-color: #86efac;" onclick="sendWhatsAppReminder('${w.blokNo}', '${w.pemilik}', '${phone}', ${w.jumlahBulan}, '${bulanStr}', ${w.totalTunggakan})" title="Kirim Pengingat WA">
+                <i class="ri-whatsapp-line"></i> Remind WA
+              </button>
+            </td>
+          </tr>
+        `;
+      })
+      .join("");
+  }
+}
+
+function sendWhatsAppReminder(blokNo, pemilik, phone, jumlahBulan, bulanStr, totalNominal) {
+  let cleanPhone = phone ? phone.replace(/[^0-9]/g, "") : "";
+  if (cleanPhone.startsWith("0")) cleanPhone = "62" + cleanPhone.substring(1);
+  if (!cleanPhone) cleanPhone = "628123456789";
+
+  const msg = `Yth. Bpk/Ibu ${pemilik} (${blokNo}),\n\n` +
+    `Mengingatkan mengenai tagihan IPL D'Amour yang belum terbayar sebanyak *${jumlahBulan} bulan* (${bulanStr}) ` +
+    `dengan total tunggakan sebesar *${formatRp(totalNominal)}*.\n\n` +
+    `Mohon untuk dapat melakukan pembayaran via aplikasi IPL D'Amour atau konfirmasi ke Pengurus. Terima kasih banyak atas perhatian dan kerjasamanya! 🙏🏼`;
+
+  const targetUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(msg)}`;
+  window.open(targetUrl, "_blank");
+
+  addAuditLog("Remind WA", `Pengirim Pengingat WA tunggakan ke ${pemilik} (${blokNo}) sebesar ${formatRp(totalNominal)}`);
+}
+
+/* ==========================================================================
+   REKAP WAJIB SETOR VS REALISASI PER KOMPONEN
+   ========================================================================== */
+function renderWajibSetorVsRealisasi() {
+  if (!appState) return;
+
+  const now = new Date();
+  const filterBulan = document.getElementById("filter-realisasi-bulan")?.value || "Semua";
+  const filterTahunSelect = document.getElementById("filter-realisasi-tahun");
+  const filterTahun = filterTahunSelect?.value || now.getFullYear().toString();
+
+  if (filterTahunSelect && filterTahunSelect.options.length === 0) {
+    const years = [now.getFullYear().toString(), (now.getFullYear() - 1).toString(), (now.getFullYear() + 1).toString()];
+    filterTahunSelect.innerHTML = years.map((y) => `<option value="${y}">${y}</option>`).join("");
+  }
+
+  const activeKomponen = (appState.komponenIPL || []).filter((k) => k.aktif);
+  const activeEvents = (appState.masterEvent || []).filter((e) => e.aktif);
+
+  const lunasBills = (appState.tagihan || []).filter((t) => {
+    if (t.status !== "Lunas") return false;
+    const matchesBulan = filterBulan === "Semua" || t.bulan === filterBulan || (t.periode && t.periode.includes(filterBulan));
+    const matchesTahun = filterTahun === "Semua" || t.tahun === filterTahun || (t.periode && t.periode.includes(filterTahun));
+    return matchesBulan && matchesTahun;
+  });
+
+  const totalHousesCount = appState.rumah && appState.rumah.length > 0 ? appState.rumah.length : 31;
+  const isAllMonths = filterBulan === "Semua";
+  const monthMultiplier = isAllMonths ? 12 : 1;
+
+  let grandTarget = 0;
+  let grandRealisasi = 0;
+
+  const items = [];
+
+  activeKomponen.forEach((k) => {
+    let itemTarget = (parseFloat(k.nominalTotal) || 0) * monthMultiplier;
+
+    if (k.isAutoKas) {
+      const targetObj = appState.targetIPL ? appState.targetIPL.find((t) => t.kelompok === "IPL + Sampah") : null;
+      const targetVal = targetObj ? targetObj.target : 175000;
+      itemTarget = (targetVal * totalHousesCount) * monthMultiplier;
+    }
+
+    const itemRealisasi = lunasBills.reduce((sum, t) => {
+      const perHouseComp = (parseFloat(k.nominalTotal) || 0) / totalHousesCount;
+      return sum + perHouseComp;
+    }, 0);
+
+    const selisih = itemRealisasi - itemTarget;
+    const persen = itemTarget > 0 ? (itemRealisasi / itemTarget) * 100 : 100;
+
+    grandTarget += itemTarget;
+    grandRealisasi += itemRealisasi;
+
+    items.push({
+      nama: k.nama,
+      target: itemTarget,
+      realisasi: itemRealisasi,
+      selisih: selisih,
+      persen: persen
+    });
+  });
+
+  activeEvents.forEach((e) => {
+    const eventTarget = (parseFloat(e.nominal) || 0) * totalHousesCount;
+    const eventRealisasi = lunasBills.reduce((sum, t) => {
+      return sum + (parseFloat(e.nominal) || 0);
+    }, 0);
+
+    const selisih = eventRealisasi - eventTarget;
+    const persen = eventRealisasi - eventTarget;
+
+    grandTarget += eventTarget;
+    grandRealisasi += eventRealisasi;
+
+    items.push({
+      nama: `Event: ${e.nama}`,
+      target: eventTarget,
+      realisasi: eventRealisasi,
+      selisih: selisih,
+      persen: eventTarget > 0 ? (eventRealisasi / eventTarget) * 100 : 100
+    });
+  });
+
+  const grandPersen = grandTarget > 0 ? (grandRealisasi / grandTarget) * 100 : 100;
+
+  const targetEl = document.getElementById("realisasi-target-total");
+  const terkumpulEl = document.getElementById("realisasi-terkumpul-total");
+  const persenEl = document.getElementById("realisasi-persen-total");
+
+  if (targetEl) targetEl.textContent = formatRp(grandTarget);
+  if (terkumpulEl) terkumpulEl.textContent = formatRp(grandRealisasi);
+  if (persenEl) persenEl.textContent = `${grandPersen.toFixed(1)}%`;
+
+  const tbody = document.getElementById("realisasi-table-tbody");
+  if (!tbody) return;
+
+  tbody.innerHTML = items
+    .map((it) => {
+      const isOk = it.selisih >= 0;
+      const color = isOk ? "var(--success)" : "var(--danger)";
+
+      return `
+        <tr>
+          <td><strong>${it.nama}</strong></td>
+          <td style="text-align: right; font-weight: 600;">${formatRp(it.target)}</td>
+          <td style="text-align: right; font-weight: 600; color: var(--success);">${formatRp(it.realisasi)}</td>
+          <td style="text-align: right; font-weight: 600; color: ${color};">${it.selisih >= 0 ? "+" : ""}${formatRp(it.selisih)}</td>
+          <td style="text-align: center;"><span class="badge ${it.persen >= 90 ? "badge-success" : "badge-warning"}">${it.persen.toFixed(1)}%</span></td>
+        </tr>
+      `;
+    })
+    .join("") +
+    `
+    <tr style="background: #f1f5f9; font-weight: 700; font-size: 1rem; border-top: 2px solid var(--primary);">
+      <td>TOTAL REALISASI SETORAN (${filterBulan.toUpperCase()} ${filterTahun})</td>
+      <td style="text-align: right;">${formatRp(grandTarget)}</td>
+      <td style="text-align: right; color: var(--success);">${formatRp(grandRealisasi)}</td>
+      <td style="text-align: right; color: ${grandRealisasi - grandTarget >= 0 ? "var(--success)" : "var(--danger)"}">${grandRealisasi - grandTarget >= 0 ? "+" : ""}${formatRp(grandRealisasi - grandTarget)}</td>
+      <td style="text-align: center;"><span class="badge badge-info">${grandPersen.toFixed(1)}%</span></td>
+    </tr>
+    `;
 }
 
 function importDataJSON(input) {
