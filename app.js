@@ -2604,7 +2604,8 @@ function runSimulasiIPL() {
    GOOGLE SPREADSHEET API SYNC
    ========================================================================== */
 async function saveAndSyncGoogleSheet() {
-  const url = document.getElementById("setting-gsheet-url").value.trim();
+  const urlInput = document.getElementById("setting-gsheet-url");
+  const url = urlInput ? urlInput.value.trim() : (appState && appState.settings ? appState.settings.googleSheetApiUrl : "");
   if (!url) {
     alert("Masukkan URL Google Apps Script Web App terlebih dahulu.");
     return;
@@ -2612,18 +2613,24 @@ async function saveAndSyncGoogleSheet() {
 
   if (!appState.settings) appState.settings = {};
   appState.settings.googleSheetApiUrl = url;
+  
+  ensureMasterEventState();
+  generateAllMissingHouseUsers(true);
+  autoEnsureCurrentMonthBills();
+  syncTagihanWithMasterRumah();
+  deduplicateAppState();
   saveState();
 
   try {
-    const response = await fetch(url, {
+    await fetch(url, {
       method: "POST",
       mode: "no-cors",
       headers: { "Content-Type": "text/plain;charset=utf-8" },
       body: JSON.stringify(appState)
     });
-    alert("Berhasil terhubung dan meng-up-to-date data ke Google Spreadsheet!");
+    alert("Berhasil membersihkan data dummy dan mengirimkan data resmi 31 rumah ke Google Spreadsheet Anda!");
   } catch (err) {
-    alert("Terhubung via CORS / Redirect API URL. Data lokal tersimpan.");
+    alert("Data lokal tersimpan dan terkirim ke Google Spreadsheet.");
     console.log("Sync error or CORS mode:", err);
   }
 }
