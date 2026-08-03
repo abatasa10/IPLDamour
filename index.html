@@ -1607,8 +1607,13 @@
           <input type="date" id="form-pgl-tanggal" class="form-control">
         </div>
         <div class="form-group">
-          <label>Kategori Pengeluaran</label>
-          <input type="text" id="form-pgl-kategori" class="form-control" placeholder="Contoh: Gaji / Listrik / Sampah">
+          <label>Kategori Pengeluaran (Sesuai Komponen / Event)</label>
+          <select id="form-pgl-kategori" class="form-control" onchange="togglePglKategoriLainnya(this)">
+          </select>
+        </div>
+        <div class="form-group" id="group-pgl-kategori-lainnya" style="display: none;">
+          <label>Detail Kategori Lain-Lain (Keterangan)</label>
+          <input type="text" id="form-pgl-kategori-custom" class="form-control" placeholder="Tuliskan nama kategori pengeluaran lainnya">
         </div>
         <div class="form-group">
           <label>Penerima</label>

@@ -755,6 +755,7 @@ async function loadAppData() {
 
   if (!appState.tagihan) appState.tagihan = [];
 
+  ensureMasterKomponenState();
   ensureMasterEventState();
   generateAllMissingHouseUsers(true);
   syncTagihanWithMasterRumah();
@@ -923,7 +924,30 @@ function ensureMasterEventState() {
         appState.users.push(defUser);
       }
     });
+const DEFAULT_KOMPONEN_IPL = [
+  { id: "komp-1", nama: "Satpam 1", nominalTotal: 1750000, isAutoKas: false, dibayarOleh: "Semua", aktif: true },
+  { id: "komp-2", nama: "Kas (Otomatis)", nominalTotal: 0, isAutoKas: true, dibayarOleh: "Semua", aktif: true },
+  { id: "komp-4", nama: "Listrik + Wifi", nominalTotal: 550000, isAutoKas: false, dibayarOleh: "Semua", aktif: true },
+  { id: "komp-5", nama: "Tambahan Developer", nominalTotal: 32000, isAutoKas: false, dibayarOleh: "IPL Developer", aktif: true },
+  { id: "komp-6", nama: "Satpam 2", nominalTotal: 1500000, isAutoKas: false, dibayarOleh: "Semua", aktif: true },
+  { id: "komp-7", nama: "Satpam (Inval)", nominalTotal: 450000, isAutoKas: false, dibayarOleh: "Semua", aktif: true }
+];
+
+function ensureMasterKomponenState() {
+  if (!appState) appState = {};
+  if (!appState.komponenIPL || !Array.isArray(appState.komponenIPL) || appState.komponenIPL.length === 0) {
+    appState.komponenIPL = JSON.parse(JSON.stringify(DEFAULT_KOMPONEN_IPL));
+  } else {
+    DEFAULT_KOMPONEN_IPL.forEach((defK) => {
+      const exists = appState.komponenIPL.some((k) => k.nama.toLowerCase().trim() === defK.nama.toLowerCase().trim());
+      if (!exists) {
+        appState.komponenIPL.push(defK);
+      }
+    });
   }
+}
+
+  ensureMasterKomponenState();
 
   if (!appState.masterEvent) {
     appState.masterEvent = [
@@ -2427,10 +2451,70 @@ function renderPengeluaranTable() {
   }
 }
 
+function populatePengeluaranKategoriDropdown(selectedVal = "") {
+  ensureMasterKomponenState();
+  ensureMasterEventState();
+
+  const sel = document.getElementById("form-pgl-kategori");
+  if (!sel) return;
+
+  const activeKomponen = (appState.komponenIPL || []).filter((k) => k.aktif);
+  const activeEvents = (appState.masterEvent || []).filter((e) => e.aktif);
+
+  let html = `<option value="">-- Pilih Kategori Pengeluaran --</option>`;
+  
+  html += `<optgroup label="Komponen IPL Perumahan">`;
+  activeKomponen.forEach((k) => {
+    html += `<option value="${k.nama}">${k.nama}</option>`;
+  });
+  html += `</optgroup>`;
+
+  if (activeEvents.length > 0) {
+    html += `<optgroup label="Event / Biaya Tambahan">`;
+    activeEvents.forEach((e) => {
+      html += `<option value="Event: ${e.nama}">Event: ${e.nama}</option>`;
+    });
+    html += `</optgroup>`;
+  }
+
+  html += `<optgroup label="Lainnya">`;
+  html += `<option value="Lain-Lain">Lain-Lain (Tambah Detail Keterangan)</option>`;
+  html += `</optgroup>`;
+
+  sel.innerHTML = html;
+
+  if (selectedVal) {
+    const isStandard = Array.from(sel.options).some((opt) => opt.value === selectedVal);
+    if (isStandard) {
+      sel.value = selectedVal;
+      togglePglKategoriLainnya(sel);
+    } else {
+      sel.value = "Lain-Lain";
+      togglePglKategoriLainnya(sel);
+      const customInp = document.getElementById("form-pgl-kategori-custom");
+      if (customInp) customInp.value = selectedVal;
+    }
+  } else {
+    togglePglKategoriLainnya(sel);
+  }
+}
+
+function togglePglKategoriLainnya(selEl) {
+  const groupCustom = document.getElementById("group-pgl-kategori-lainnya");
+  if (!groupCustom) return;
+
+  if (selEl.value === "Lain-Lain") {
+    groupCustom.style.display = "block";
+  } else {
+    groupCustom.style.display = "none";
+  }
+}
+
 function openAddPengeluaranModal() {
   document.getElementById("form-pgl-id").value = "";
   document.getElementById("form-pgl-tanggal").value = new Date().toISOString().split("T")[0];
-  document.getElementById("form-pgl-kategori").value = "";
+  populatePengeluaranKategoriDropdown("");
+  document.getElementById("form-pgl-kategori-custom").value = "";
   document.getElementById("form-pgl-penerima").value = "";
   document.getElementById("form-pgl-nominal").value = "";
   document.getElementById("modal-pgl-title").textContent = "Tambah Pengeluaran Baru";
@@ -2442,7 +2526,7 @@ function editPengeluaran(id) {
   if (!p) return;
 
   document.getElementById("form-pgl-id").value = p.id;
-  document.getElementById("form-pgl-kategori").value = p.kategori;
+  populatePengeluaranKategoriDropdown(p.kategori);
   document.getElementById("form-pgl-penerima").value = p.penerima || "";
   document.getElementById("form-pgl-nominal").value = p.nominal;
   document.getElementById("modal-pgl-title").textContent = "Edit Data Pengeluaran";
@@ -2452,12 +2536,18 @@ function editPengeluaran(id) {
 function savePengeluaran() {
   const id = document.getElementById("form-pgl-id").value;
   const tglInput = document.getElementById("form-pgl-tanggal").value;
-  const kat = document.getElementById("form-pgl-kategori").value.trim();
+  const selKategori = document.getElementById("form-pgl-kategori").value;
+  const customKategori = document.getElementById("form-pgl-kategori-custom").value.trim();
   const pen = document.getElementById("form-pgl-penerima").value.trim();
   const nom = parseFloat(document.getElementById("form-pgl-nominal").value) || 0;
 
-  if (!kat || nom <= 0) {
-    alert("Kategori dan nominal wajib diisi.");
+  let finalKategori = selKategori;
+  if (selKategori === "Lain-Lain") {
+    finalKategori = customKategori ? `Lain-Lain (${customKategori})` : "Lain-Lain";
+  }
+
+  if (!finalKategori || nom <= 0) {
+    alert("Kategori dan nominal pengeluaran wajib diisi.");
     return;
   }
 
@@ -2466,16 +2556,16 @@ function savePengeluaran() {
   if (id) {
     const idx = appState.pengeluaran.findIndex((p) => p.id === id);
     if (idx !== -1) {
-      appState.pengeluaran[idx] = { ...appState.pengeluaran[idx], tanggal: tglFormatted, kategori: kat, penerima: pen, nominal: nom };
+      appState.pengeluaran[idx] = { ...appState.pengeluaran[idx], tanggal: tglFormatted, kategori: finalKategori, penerima: pen, nominal: nom };
     }
   } else {
     if (!appState.pengeluaran) appState.pengeluaran = [];
     appState.pengeluaran.unshift({
       id: `PGL-${Date.now()}`,
       tanggal: tglFormatted,
-      kategori: kat,
+      kategori: finalKategori,
       penerima: pen,
-      keterangan: kat,
+      keterangan: finalKategori,
       nominal: nom
     });
 
