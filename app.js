@@ -3032,11 +3032,38 @@ function renderAuditLogTable() {
   }
 }
 
+function getCalculatedKasBalance() {
+  if (!appState) return 0;
+
+  const totalMasukIPL = (appState.tagihan || [])
+    .filter((t) => t.status === "Lunas")
+    .reduce((sum, t) => sum + (parseFloat(t.nominal) || 0), 0);
+
+  const totalMasukLain = (appState.pemasukanLain || [])
+    .reduce((sum, p) => sum + (parseFloat(p.nominal) || 0), 0);
+
+  const totalPengeluaran = (appState.pengeluaran || [])
+    .reduce((sum, p) => sum + (parseFloat(p.nominal) || 0), 0);
+
+  const calculatedBalance = totalMasukIPL + totalMasukLain - totalPengeluaran;
+
+  if (!appState.ringkasanKas) appState.ringkasanKas = {};
+  appState.ringkasanKas.kasSaatIni = calculatedBalance;
+  appState.ringkasanKas.masuk = totalMasukIPL + totalMasukLain;
+  appState.ringkasanKas.keluar = totalPengeluaran;
+  appState.ringkasanKas.selisih = calculatedBalance;
+
+  return calculatedBalance;
+}
+
 /* ==========================================================================
-   LAPORAN KAS & NERACA PER PERIODE
+   LAPORAN KAS & NERACA PER PERIODE (REKONSILIASI PERIODE AWAL + MASUK - KELUAR = AKHIR)
    ========================================================================== */
 function renderLaporanNeraca() {
   if (!appState) return;
+
+  // Dynamic recalculation of Cash Balance from transactions
+  getCalculatedKasBalance();
 
   const now = new Date();
   const filterBulan = document.getElementById("filter-neraca-bulan")?.value || "Semua";
@@ -3048,6 +3075,14 @@ function renderLaporanNeraca() {
     filterTahunSelect.innerHTML = years.map((y) => `<option value="${y}">${y}</option>`).join("");
   }
 
+  // 1. Initial Cash Balance (Saldo Awal Entry)
+  let totalMasukAwal = 0;
+  const initialSaldoItem = (appState.pemasukanLain || []).find((p) => p.kategori === "Saldo Awal Kas");
+  if (initialSaldoItem) {
+    totalMasukAwal += (parseFloat(initialSaldoItem.nominal) || 0);
+  }
+
+  // 2. Filter IPL Lunas for the selected period
   const lunasBills = (appState.tagihan || []).filter((t) => {
     if (t.status !== "Lunas") return false;
     const matchesBulan = filterBulan === "Semua" || t.bulan === filterBulan || (t.periode && t.periode.includes(filterBulan));
@@ -3055,54 +3090,69 @@ function renderLaporanNeraca() {
     return matchesBulan && matchesTahun;
   });
 
-  const totalMasukIPL = lunasBills.reduce((sum, t) => sum + t.nominal, 0);
+  const totalMasukIPL = lunasBills.reduce((sum, t) => sum + (parseFloat(t.nominal) || 0), 0);
 
-  const masukLain = (appState.pemasukanLain || []).filter((p) => matchesMonthAndYear(p.tanggal, filterBulan, filterTahun));
-  const totalMasukLain = masukLain.reduce((sum, p) => sum + p.nominal, 0);
+  // 3. Filter Pemasukan Lain (Excluding initial Saldo Awal item)
+  const masukLain = (appState.pemasukanLain || []).filter((p) => p.kategori !== "Saldo Awal Kas" && matchesMonthAndYear(p.tanggal, filterBulan, filterTahun));
+  const totalMasukLain = masukLain.reduce((sum, p) => sum + (parseFloat(p.nominal) || 0), 0);
 
+  // 4. Filter Pengeluaran for selected period
   const pglList = (appState.pengeluaran || []).filter((p) => matchesMonthAndYear(p.tanggal, filterBulan, filterTahun));
-  const totalPengeluaran = pglList.reduce((sum, p) => sum + p.nominal, 0);
+  const totalPengeluaran = pglList.reduce((sum, p) => sum + (parseFloat(p.nominal) || 0), 0);
 
-  const saldoKasSaatIni = appState.ringkasanKas ? appState.ringkasanKas.kasSaatIni : 0;
-  const totalMasukPeriod = totalMasukIPL + totalMasukLain;
-  const saldoAkhirNetto = totalMasukPeriod - totalPengeluaran;
+  // STRICT BALANCE SHEET EQUATION: "AWAL + MASUK - KELUAR = AKHIR"
+  const saldoAwalKas = totalMasukAwal;
+  const totalPemasukanPeriode = totalMasukIPL + totalMasukLain;
+  const saldoAkhirKas = saldoAwalKas + totalPemasukanPeriode - totalPengeluaran;
 
   const saldoAwalEl = document.getElementById("neraca-saldo-awal");
   const masukIplEl = document.getElementById("neraca-masuk-ipl");
   const keluarEl = document.getElementById("neraca-keluar");
   const saldoAkhirEl = document.getElementById("neraca-saldo-akhir");
 
-  if (saldoAwalEl) saldoAwalEl.textContent = formatRp(saldoKasSaatIni);
+  if (saldoAwalEl) saldoAwalEl.textContent = formatRp(saldoAwalKas);
   if (masukIplEl) masukIplEl.textContent = formatRp(totalMasukIPL);
   if (keluarEl) keluarEl.textContent = formatRp(totalPengeluaran);
-  if (saldoAkhirEl) saldoAkhirEl.textContent = formatRp(saldoAkhirNetto >= 0 ? saldoAkhirNetto : 0);
+  if (saldoAkhirEl) saldoAkhirEl.textContent = formatRp(saldoAkhirKas);
 
   const tbody = document.getElementById("neraca-table-tbody");
   if (tbody) {
     tbody.innerHTML = `
-      <tr>
-        <td><strong>Pemasukan Tagihan IPL (Warga Lunas)</strong> (${lunasBills.length} Tagihan)</td>
-        <td style="text-align: right; color: var(--success); font-weight: 600;">+ ${formatRp(totalMasukIPL)}</td>
+      <tr style="background: #f8fafc; font-weight: 600;">
+        <td><strong>1. SALDO AWAL KAS PERIODE</strong></td>
+        <td style="text-align: right; color: var(--success);">${formatRp(saldoAwalKas)}</td>
         <td style="text-align: right;">-</td>
-        <td style="text-align: right; font-weight: 600;">${formatRp(totalMasukIPL)}</td>
+        <td style="text-align: right;">${formatRp(saldoAwalKas)}</td>
       </tr>
       <tr>
-        <td><strong>Pemasukan Lain-Lain / Kas Tambahan</strong> (${masukLain.length} Transaksi)</td>
-        <td style="text-align: right; color: var(--success); font-weight: 600;">+ ${formatRp(totalMasukLain)}</td>
+        <td>&nbsp;&nbsp;• Pemasukan Tagihan IPL Warga (LUNAS) (${lunasBills.length} Tagihan)</td>
+        <td style="text-align: right; color: var(--success);">+ ${formatRp(totalMasukIPL)}</td>
         <td style="text-align: right;">-</td>
-        <td style="text-align: right; font-weight: 600;">${formatRp(totalMasukIPL + totalMasukLain)}</td>
+        <td style="text-align: right;">${formatRp(saldoAwalKas + totalMasukIPL)}</td>
       </tr>
       <tr>
-        <td><strong>Pengeluaran Operasional Perumahan</strong> (${pglList.length} Transaksi)</td>
+        <td>&nbsp;&nbsp;• Pemasukan Lain-Lain / Non-IPL (${masukLain.length} Transaksi)</td>
+        <td style="text-align: right; color: var(--success);">+ ${formatRp(totalMasukLain)}</td>
         <td style="text-align: right;">-</td>
-        <td style="text-align: right; color: var(--danger); font-weight: 600;">- ${formatRp(totalPengeluaran)}</td>
-        <td style="text-align: right; font-weight: 600;">${formatRp(saldoAkhirNetto)}</td>
+        <td style="text-align: right;">${formatRp(saldoAwalKas + totalPemasukanPeriode)}</td>
       </tr>
-      <tr style="background: #f1f5f9; font-size: 1rem; font-weight: 700;">
-        <td>SURPLUS / (DEFISIT) KAS NETTO PERIODE ${filterBulan.toUpperCase()} ${filterTahun}</td>
-        <td style="text-align: right; color: var(--success);">${formatRp(totalMasukPeriod)}</td>
+      <tr style="font-weight: 700; background: #f1f5f9;">
+        <td><strong>2. TOTAL PEMASUKAN PERIODE (${filterBulan.toUpperCase()} ${filterTahun})</strong></td>
+        <td style="text-align: right; color: var(--success);">+ ${formatRp(totalPemasukanPeriode)}</td>
+        <td style="text-align: right;">-</td>
+        <td style="text-align: right;">${formatRp(saldoAwalKas + totalPemasukanPeriode)}</td>
+      </tr>
+      <tr>
+        <td><strong>3. TOTAL PENGELUARAN OPERASIONAL PERIODE</strong> (${pglList.length} Transaksi)</td>
+        <td style="text-align: right;">-</td>
+        <td style="text-align: right; color: var(--danger); font-weight: 700;">- ${formatRp(totalPengeluaran)}</td>
+        <td style="text-align: right; font-weight: 700;">${formatRp(saldoAkhirKas)}</td>
+      </tr>
+      <tr style="background: #e2e8f0; font-size: 1.05rem; font-weight: 700; border-top: 2px solid var(--primary);">
+        <td>SALDO AKHIR KAS (Awal + Pemasukan - Pengeluaran)</td>
+        <td style="text-align: right; color: var(--success);">${formatRp(saldoAwalKas + totalPemasukanPeriode)}</td>
         <td style="text-align: right; color: var(--danger);">${formatRp(totalPengeluaran)}</td>
-        <td style="text-align: right; color: var(--primary);">${formatRp(saldoAkhirNetto)}</td>
+        <td style="text-align: right; color: var(--primary);">${formatRp(saldoAkhirKas)}</td>
       </tr>
     `;
   }
