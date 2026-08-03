@@ -924,6 +924,24 @@ function ensureMasterEventState() {
         appState.users.push(defUser);
       }
     });
+  }
+
+  ensureMasterKomponenState();
+
+  if (!appState.masterEvent) {
+    appState.masterEvent = [
+      { id: "evt-1", nama: "Iuran THR Satpam", nominal: 50000, dibayarOleh: "Semua", aktif: true },
+      { id: "evt-2", nama: "Iuran 17 Agustus", nominal: 20000, dibayarOleh: "Semua", aktif: false }
+    ];
+  }
+  if (!appState.biayaSampahDefault) {
+    appState.biayaSampahDefault = 25000;
+  }
+  if (!appState.pemasukanLain) {
+    appState.pemasukanLain = [];
+  }
+}
+
 const DEFAULT_KOMPONEN_IPL = [
   { id: "komp-1", nama: "Satpam 1", nominalTotal: 1750000, isAutoKas: false, dibayarOleh: "Semua", aktif: true },
   { id: "komp-2", nama: "Kas (Otomatis)", nominalTotal: 0, isAutoKas: true, dibayarOleh: "Semua", aktif: true },
@@ -944,22 +962,6 @@ function ensureMasterKomponenState() {
         appState.komponenIPL.push(defK);
       }
     });
-  }
-}
-
-  ensureMasterKomponenState();
-
-  if (!appState.masterEvent) {
-    appState.masterEvent = [
-      { id: "evt-1", nama: "Iuran THR Satpam", nominal: 50000, dibayarOleh: "Semua", aktif: true },
-      { id: "evt-2", nama: "Iuran 17 Agustus", nominal: 20000, dibayarOleh: "Semua", aktif: false }
-    ];
-  }
-  if (!appState.biayaSampahDefault) {
-    appState.biayaSampahDefault = 25000;
-  }
-  if (!appState.pemasukanLain) {
-    appState.pemasukanLain = [];
   }
 }
 
