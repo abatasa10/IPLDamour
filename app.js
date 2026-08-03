@@ -2253,10 +2253,43 @@ function inputSaldoKasSaatIni() {
   appState.ringkasanKas.masuk = nom + (appState.ringkasanKas.keluar || 0);
   appState.ringkasanKas.selisih = nom;
 
+  // Log to PemasukanLain so it is recorded in Google Spreadsheet sheet!
+  if (!appState.pemasukanLain) appState.pemasukanLain = [];
+  const existingAwal = appState.pemasukanLain.find((p) => p.kategori === "Saldo Awal Kas");
+  const todayFormatted = new Date().toLocaleDateString("id-ID");
+
+  if (existingAwal) {
+    existingAwal.nominal = nom;
+    existingAwal.tanggal = todayFormatted;
+  } else {
+    appState.pemasukanLain.unshift({
+      id: `PEM-${Date.now()}`,
+      tanggal: todayFormatted,
+      kategori: "Saldo Awal Kas",
+      penerima: "Pengurus IPL",
+      keterangan: "Saldo Awal Kas Tersedia",
+      nominal: nom
+    });
+  }
+
   saveState();
   renderDashboard();
   renderKasArusKasTable();
-  alert(`Berhasil memperbarui Kas Saat Ini menjadi ${formatRp(nom)}!`);
+
+  // Trigger live background sync to Google Spreadsheet if connected
+  if (appState.settings && appState.settings.googleSheetApiUrl) {
+    const url = appState.settings.googleSheetApiUrl.trim();
+    if (url && url.startsWith("http") && !url.includes("EXAMPLE")) {
+      fetch(url, {
+        method: "POST",
+        mode: "no-cors",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify(appState)
+      }).catch((e) => console.log("Background sync error:", e));
+    }
+  }
+
+  alert(`Berhasil memperbarui Kas Saat Ini menjadi ${formatRp(nom)} dan tersimpan ke Google Spreadsheet!`);
 }
 
 /* ==========================================================================
