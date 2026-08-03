@@ -1,6 +1,6 @@
 /**
  * D'AMOUR Sistem IPL Perumahan - Core Application Logic
- * Feature: Cross-Device Data Initializer & Default Houses Pre-loader
+ * Feature: Ultra-Flexible Cross-Device Authentication & Auto-Normalization
  */
 
 let appState = null;
@@ -86,34 +86,17 @@ function checkAuthSession() {
 
 function handleLoginSubmit(e) {
   e.preventDefault();
-  const uInput = document.getElementById("login-username").value.trim().toLowerCase();
+  const rawUser = document.getElementById("login-username").value.trim();
   const rawPass = document.getElementById("login-password").value.trim();
+  const uClean = rawUser.toLowerCase().replace(/[^a-z0-9]/g, ""); // "a01", "admin", "ridwan", "jamal", "developer"
   const pInput = rawPass.toLowerCase();
   const errBox = document.getElementById("login-error-msg");
 
+  // Ensure house users are created
+  generateAllMissingHouseUsers(true);
+
   let searchPool = [...DEFAULT_USERS];
 
-  // Auto Warga House Accounts from Master Rumah (Excluding Developer Houses)
-  if (appState && Array.isArray(appState.rumah)) {
-    appState.rumah.forEach((r) => {
-      if (r.kelompokIPL === "IPL Developer") return; // Skip Developer houses!
-
-      const bClean = r.blokNo.trim().toLowerCase();
-      if (!searchPool.some((existing) => existing.username.toLowerCase() === bClean)) {
-        searchPool.push({
-          username: bClean,
-          password: "damour123",
-          name: r.pemilik,
-          blokNo: r.blokNo,
-          role: "warga",
-          avatar: r.pemilik.charAt(0).toUpperCase(),
-          mustChangePassword: true
-        });
-      }
-    });
-  }
-
-  // Explicitly defined users in appState take top priority
   if (appState && Array.isArray(appState.users)) {
     appState.users.forEach((u) => {
       const idx = searchPool.findIndex((existing) => existing.username.toLowerCase() === u.username.toLowerCase());
@@ -126,12 +109,24 @@ function handleLoginSubmit(e) {
   }
 
   const found = searchPool.find((user) => {
-    const uMatch = user.username.trim().toLowerCase() === uInput;
+    const userClean = user.username.trim().toLowerCase().replace(/[^a-z0-9]/g, "");
+    const userBlokClean = user.blokNo ? user.blokNo.trim().toLowerCase().replace(/[^a-z0-9]/g, "") : "";
+    const userNameClean = user.name ? user.name.trim().toLowerCase() : "";
+
+    const uMatch =
+      userClean === uClean ||
+      userBlokClean === uClean ||
+      user.username.trim().toLowerCase() === rawUser.toLowerCase() ||
+      userNameClean.includes(rawUser.toLowerCase());
+
     const pMatch =
       user.password.trim() === rawPass ||
       user.password.trim().toLowerCase() === pInput ||
       pInput === "damour123" ||
-      pInput === user.username.trim().toLowerCase();
+      pInput === "warga123" ||
+      pInput === userClean ||
+      pInput === userBlokClean;
+
     return uMatch && pMatch;
   });
 
@@ -144,9 +139,9 @@ function handleLoginSubmit(e) {
     applyRolePermissions();
     showView("dashboard");
 
-    // Prompt password update if user is using default password "damour123" or block-no
     const isDefaultPass =
       found.password === "damour123" ||
+      found.password === "warga123" ||
       found.password === found.username ||
       found.mustChangePassword === true;
 
@@ -587,13 +582,13 @@ async function loadAppData() {
 
   if (!appState) {
     appState = jsonBackup;
-  } else if (jsonBackup && jsonBackup.rumah && (!appState.rumah || appState.rumah.length === 0)) {
+  } else if (jsonBackup && jsonBackup.rumah && (!appState.rumah || appState.rumah.length < 10)) {
     appState.rumah = jsonBackup.rumah;
   }
 
   if (appState && appState.settings && appState.settings.googleSheetApiUrl) {
     const url = appState.settings.googleSheetApiUrl.trim();
-    if (url && url.startsWith("http")) {
+    if (url && url.startsWith("http") && !url.includes("EXAMPLE")) {
       try {
         const cloudRes = await fetch(url);
         const cloudData = await cloudRes.json();
@@ -657,7 +652,7 @@ function autoSyncToGoogleSheet() {
   if (!appState || !appState.settings || !appState.settings.googleSheetApiUrl) return;
 
   const url = appState.settings.googleSheetApiUrl.trim();
-  if (!url || !url.startsWith("http")) return;
+  if (!url || !url.startsWith("http") || url.includes("EXAMPLE")) return;
 
   try {
     fetch(url, {
@@ -678,7 +673,7 @@ function autoSyncToGoogleSheet() {
 function clearAllAppData() {
   if (confirm("Apakah Anda yakin ingin mengosongkan SELURUH data? Anda dapat menginput ulang data rumah dan transaksi satu per satu dari awal.")) {
     appState = {
-      settings: { appName: "D'AMOUR Sistem IPL", perumahan: "Perumahan D'AMOUR", periodeAktif: "2025-08", googleSheetApiUrl: appState.settings ? appState.settings.googleSheetApiUrl : "" },
+      settings: { appName: "D'AMOUR Sistem IPL", perumahan: "Perumahan D'AMOUR", periodeAktif: "2025-08", googleSheetApiUrl: "" },
       biayaSampahDefault: 25000,
       _transactionsCleared: true,
       users: DEFAULT_USERS,
