@@ -170,36 +170,9 @@
     { "id": "RMH-A28", "blokNo": "A28", "pemilik": "Bu Sri", "noHp": "081234567828", "status": "Aktif", "kelompokIPL": "IPL Tanpa Sampah" },
     { "id": "RMH-A29", "blokNo": "A29", "pemilik": "Pak Taufik", "noHp": "081234567829", "status": "Aktif", "kelompokIPL": "IPL Tanpa Sampah" },
     { "id": "RMH-B01", "blokNo": "B01", "pemilik": "Developer Unit 1", "noHp": "081234567830", "status": "Aktif", "kelompokIPL": "IPL Developer" },
-    { "id": "RMH-B02", "blokNo": "B02", "pemilik": "Developer Unit 2", "noHp": "081234567831", "status": "Aktif", "kelompokIPL": "IPL Developer" },
-    { "id": "RMH-C01", "blokNo": "C01", "pemilik": "Warga Blok C01", "noHp": "081234567832", "status": "Aktif", "kelompokIPL": "IPL + Sampah" },
-    { "id": "RMH-C02", "blokNo": "C02", "pemilik": "Warga Blok C02", "noHp": "081234567833", "status": "Aktif", "kelompokIPL": "IPL + Sampah" },
-    { "id": "RMH-C03", "blokNo": "C03", "pemilik": "Warga Blok C03", "noHp": "081234567834", "status": "Aktif", "kelompokIPL": "IPL + Sampah" },
-    { "id": "RMH-C04", "blokNo": "C04", "pemilik": "Warga Blok C04", "noHp": "081234567835", "status": "Aktif", "kelompokIPL": "IPL + Sampah" },
-    { "id": "RMH-C05", "blokNo": "C05", "pemilik": "Warga Blok C05", "noHp": "081234567836", "status": "Aktif", "kelompokIPL": "IPL + Sampah" },
-    { "id": "RMH-C19", "blokNo": "C19", "pemilik": "Warga Blok C19", "noHp": "081234567850", "status": "Aktif", "kelompokIPL": "IPL + Sampah" }
+    { "id": "RMH-B02", "blokNo": "B02", "pemilik": "Developer Unit 2", "noHp": "081234567831", "status": "Aktif", "kelompokIPL": "IPL Developer" }
   ],
-  "tagihan": [
-    {
-      "id": "TAG-2026Agustus-C19",
-      "periode": "2026-Agustus",
-      "bulan": "Agustus",
-      "tahun": "2026",
-      "rumahId": "RMH-C19",
-      "blokNo": "C19",
-      "pemilik": "Warga Blok C19",
-      "kelompokIPL": "IPL + Sampah",
-      "nominal": 225000,
-      "rincianItems": [
-        { "nama": "IPL Dasar", "nominal": 150000 },
-        { "nama": "Iuran Sampah", "nominal": 25000 },
-        { "nama": "Iuran THR Satpam", "nominal": 50000 }
-      ],
-      "status": "Menunggu",
-      "tglBayar": "-",
-      "metode": "-",
-      "buktiTransfer": ""
-    }
-  ],
+  "tagihan": [],
   "pengeluaran": [],
   "pemasukanLain": [],
   "grafik6Bulan": [],

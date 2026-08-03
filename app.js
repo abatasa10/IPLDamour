@@ -667,7 +667,52 @@ async function loadAppData() {
   generateAllMissingHouseUsers(true);
   autoEnsureCurrentMonthBills();
   cleanUpSampahFromKomponen();
+  deduplicateAppState();
   saveState();
+}
+
+function deduplicateAppState() {
+  if (!appState) return;
+
+  if (appState.rumah && Array.isArray(appState.rumah)) {
+    const seenBlocks = new Set();
+    appState.rumah = appState.rumah.filter((r) => {
+      if (!r || !r.blokNo) return false;
+      const cleanBlok = r.blokNo.trim().toUpperCase();
+      if (seenBlocks.has(cleanBlok)) {
+        return false;
+      }
+      seenBlocks.add(cleanBlok);
+      r.blokNo = cleanBlok;
+      return true;
+    });
+  }
+
+  if (appState.users && Array.isArray(appState.users)) {
+    const seenUsers = new Set();
+    appState.users = appState.users.filter((u) => {
+      if (!u || !u.username) return false;
+      const cleanU = u.username.trim().toLowerCase();
+      if (seenUsers.has(cleanU)) {
+        return false;
+      }
+      seenUsers.add(cleanU);
+      return true;
+    });
+  }
+
+  if (appState.tagihan && Array.isArray(appState.tagihan)) {
+    const seenTagihan = new Set();
+    appState.tagihan = appState.tagihan.filter((t) => {
+      if (!t || !t.blokNo) return false;
+      const key = `${t.blokNo.trim().toUpperCase()}-${t.bulan}-${t.tahun}`;
+      if (seenTagihan.has(key)) {
+        return false;
+      }
+      seenTagihan.add(key);
+      return true;
+    });
+  }
 }
 
 function autoEnsureCurrentMonthBills() {
