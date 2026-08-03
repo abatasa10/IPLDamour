@@ -644,6 +644,68 @@ function updateStorageBadge(status, text) {
   }
 }
 
+function autoUpdateMenunggakStatus() {
+  if (!appState || !appState.tagihan) return;
+
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonthIdx = now.getMonth();
+
+  appState.tagihan.forEach((t) => {
+    if (!t) return;
+    if (t.status === "Lunas" || t.status === "Menunggu Verifikasi") return;
+
+    let billYear = parseInt(t.tahun, 10) || currentYear;
+    let billMonthIdx = MONTH_NAMES.indexOf(t.bulan);
+
+    if (t.periode && t.periode.includes("-")) {
+      const parts = t.periode.split("-");
+      const pYear = parseInt(parts[0], 10);
+      if (!isNaN(pYear)) billYear = pYear;
+      const pMonthIdx = MONTH_NAMES.indexOf(parts[1]);
+      if (pMonthIdx !== -1) billMonthIdx = pMonthIdx;
+    }
+
+    if (billMonthIdx === -1) billMonthIdx = currentMonthIdx;
+
+    const isPastPeriod = billYear < currentYear || (billYear === currentYear && billMonthIdx < currentMonthIdx);
+
+    if (isPastPeriod) {
+      t.status = "Menunggak";
+    } else if (t.status !== "Menunggu Verifikasi") {
+      t.status = "Menunggu Pembayaran";
+    }
+  });
+}
+
+function getWargaTunggakanSummary() {
+  if (!appState || !appState.tagihan) return [];
+
+  autoUpdateMenunggakStatus();
+
+  const rumahMap = {};
+
+  appState.tagihan.forEach((t) => {
+    if (t.status === "Menunggak") {
+      const blokClean = normalizeBlok(t.blokNo);
+      if (!rumahMap[blokClean]) {
+        rumahMap[blokClean] = {
+          blokNo: t.blokNo,
+          pemilik: t.pemilik,
+          jumlahBulan: 0,
+          totalTunggakan: 0,
+          bulanList: []
+        };
+      }
+      rumahMap[blokClean].jumlahBulan += 1;
+      rumahMap[blokClean].totalTunggakan += (parseFloat(t.nominal) || 0);
+      rumahMap[blokClean].bulanList.push(`${t.bulan} ${t.tahun}`);
+    }
+  });
+
+  return Object.values(rumahMap);
+}
+
 // Load App Data with GOOGLE SPREADSHEET as PRIMARY STORAGE
 async function loadAppData() {
   let jsonBackup = null;
@@ -698,6 +760,7 @@ async function loadAppData() {
   syncTagihanWithMasterRumah();
   cleanUpSampahFromKomponen();
   deduplicateAppState();
+  autoUpdateMenunggakStatus();
   
   if (appState) {
     localStorage.setItem("damour_ipl_db", JSON.stringify(appState));
@@ -1921,6 +1984,7 @@ function processGenerateTagihan() {
 
 function renderDaftarTagihan() {
   syncTagihanWithMasterRumah();
+  autoUpdateMenunggakStatus();
   if (!appState || !appState.tagihan) return;
 
   const isAdmin = currentUser && currentUser.role === "admin";
