@@ -1996,20 +1996,42 @@ function openEditTagihanModal(id) {
   document.getElementById("edit-tagihan-id").value = t.id;
   document.getElementById("edit-tagihan-warga").value = `${t.blokNo} - ${t.pemilik} (${t.kelompokIPL})`;
   document.getElementById("edit-tagihan-nominal").value = t.nominal;
+  
+  const catInput = document.getElementById("edit-tagihan-catatan");
+  if (catInput) {
+    catInput.value = t.catatanKhusus || "";
+  }
+  
   openModal("modal-edit-tagihan");
 }
 
 function saveEditTagihanNominal() {
   const id = document.getElementById("edit-tagihan-id").value;
   const nom = parseFloat(document.getElementById("edit-tagihan-nominal").value) || 0;
+  const catInput = document.getElementById("edit-tagihan-catatan");
+  const cat = catInput ? catInput.value.trim() : "";
 
   const t = appState.tagihan.find((item) => item.id === id);
   if (t) {
     t.nominal = nom;
+    t.catatanKhusus = cat;
+
+    if (cat) {
+      if (!t.rincianItems) t.rincianItems = [];
+      const existingNote = t.rincianItems.find((item) => item.isCustomNote);
+      if (existingNote) {
+        existingNote.nama = cat;
+        existingNote.nominal = nom;
+      } else {
+        t.rincianItems.push({ nama: `Penyesuaian: ${cat}`, nominal: nom, isCustomNote: true });
+      }
+    }
+
     saveState();
     closeModal("modal-edit-tagihan");
     renderDaftarTagihan();
     renderDashboard();
+    alert(`Berhasil memperbarui tagihan rumah ${t.blokNo} (${t.pemilik})!`);
   }
 }
 
