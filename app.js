@@ -1,6 +1,6 @@
 /**
  * D'AMOUR Sistem IPL Perumahan - Core Application Logic
- * Feature: Auto Generate Missing House Accounts with Default Password damour123
+ * Feature: Exclude Developer Houses from Per-House Account Generation (1 Single Developer Account)
  */
 
 let appState = null;
@@ -93,9 +93,11 @@ function handleLoginSubmit(e) {
 
   let searchPool = [...DEFAULT_USERS];
 
-  // Auto House Accounts from Master Rumah with default password damour123
+  // Auto Warga House Accounts from Master Rumah (Excluding Developer Houses)
   if (appState && Array.isArray(appState.rumah)) {
     appState.rumah.forEach((r) => {
+      if (r.kelompokIPL === "IPL Developer") return; // Skip Developer houses!
+
       const bClean = r.blokNo.trim().toLowerCase();
       if (!searchPool.some((existing) => existing.username.toLowerCase() === bClean)) {
         searchPool.push({
@@ -303,15 +305,27 @@ function applyRolePermissions() {
 }
 
 /* ==========================================================================
-   USER MANAGEMENT & AUTOMATIC HOUSE ACCOUNT GENERATION
+   USER MANAGEMENT & AUTOMATIC WARGA HOUSE ACCOUNT GENERATION
    ========================================================================== */
 function generateAllMissingHouseUsers(isSilent = false) {
   if (!appState || !appState.rumah) return;
   if (!appState.users) appState.users = [...DEFAULT_USERS];
 
+  // Remove any previously auto-generated individual accounts for Developer houses
+  appState.users = appState.users.filter((u) => {
+    if (u.role === "warga" && u.blokNo && u.blokNo !== "-") {
+      const h = appState.rumah.find((r) => r.blokNo === u.blokNo);
+      if (h && h.kelompokIPL === "IPL Developer") return false;
+    }
+    return true;
+  });
+
   let addedCount = 0;
 
   appState.rumah.forEach((r) => {
+    // EXCLUDE Developer houses! (Developer uses 1 single 'developer' account)
+    if (r.kelompokIPL === "IPL Developer") return;
+
     const bClean = r.blokNo.trim().toLowerCase();
     
     // Check if user already exists for this house block or username
@@ -335,16 +349,14 @@ function generateAllMissingHouseUsers(isSilent = false) {
     }
   });
 
-  if (addedCount > 0) {
-    saveState();
-    renderMasterUsers();
-  }
+  saveState();
+  renderMasterUsers();
 
   if (!isSilent) {
     if (addedCount > 0) {
-      alert(`Berhasil membuat ${addedCount} akun warga baru dengan password default "damour123"! Rumah yang sudah mempunyai akun sebelumnya tetap aman.`);
+      alert(`Berhasil membuat ${addedCount} akun warga baru (Default: damour123). Rumah kelompok IPL Developer tidak dibuatkan per unit (tetap 1 akun Developer).`);
     } else {
-      alert("Seluruh rumah terdaftar sudah mempunyai akun masing-masing!");
+      alert("Seluruh rumah warga terdaftar sudah mempunyai akun masing-masing (IPL Developer menggunakan 1 akun terpusat).");
     }
   }
 }
@@ -359,7 +371,7 @@ function renderMasterUsers() {
       .map((u) => {
         let badge = `<span class="badge badge-warning">Warga biasa</span>`;
         if (u.role === "admin") badge = `<span class="badge badge-success">👑 Admin Pengurus</span>`;
-        if (u.role === "developer") badge = `<span class="badge badge-secondary">🏗️ IPL Developer</span>`;
+        if (u.role === "developer") badge = `<span class="badge badge-secondary">🏗️ IPL Developer (1 Akun)</span>`;
 
         return `
           <tr>
@@ -413,7 +425,7 @@ function populateUserBlokDropdown() {
   if (!sel || !appState || !appState.rumah) return;
 
   let html = `<option value="-">Tanpa Rumah (Umum / Dev)</option>`;
-  html += appState.rumah.map((r) => `<option value="${r.blokNo}">${r.blokNo} - ${r.pemilik}</option>`).join("");
+  html += appState.rumah.map((r) => `<option value="${r.blokNo}">${r.blokNo} - ${r.pemilik} (${r.kelompokIPL})</option>`).join("");
   sel.innerHTML = html;
 }
 
@@ -1103,8 +1115,10 @@ function deleteRumah(id) {
   if (confirm("Apakah Anda yakin ingin menghapus data rumah ini?")) {
     appState.rumah = appState.rumah.filter((r) => r.id !== id);
     saveState();
+    generateAllMissingHouseUsers(true);
     updateHouseGroupCounts();
     renderMasterRumah();
+    renderMasterUsers();
     renderDashboard();
     renderPerhitunganIPL();
     renderSimulasiInputs();
