@@ -1,6 +1,6 @@
 /**
  * D'AMOUR Sistem IPL Perumahan - Core Application Logic
- * Feature: Auto House Login & Hidden Admin Hints
+ * Feature: Automatic Password Change Prompt on First Login & Profile Password Update
  */
 
 let appState = null;
@@ -12,11 +12,11 @@ let donutChartInstance = null;
 let barChartInstance = null;
 
 const DEFAULT_USERS = [
-  { username: "admin", password: "admin123", name: "Pak Budi (Admin Warga)", blokNo: "A01", role: "admin", avatar: "A" },
-  { username: "warga", password: "warga123", name: "Warga D'AMOUR", blokNo: "A02", role: "warga", avatar: "W" },
-  { username: "developer", password: "dev123", name: "Perwakilan Developer", blokNo: "-", role: "developer", avatar: "D" },
-  { username: "ridwan", password: "123qwe", name: "Ridwan (Admin)", blokNo: "A01", role: "admin", avatar: "R" },
-  { username: "jamal", password: "123qwe", name: "Jamal (Admin Warga)", blokNo: "A03", role: "admin", avatar: "J" }
+  { username: "admin", password: "admin123", name: "Pak Budi (Admin Warga)", blokNo: "A01", role: "admin", avatar: "A", mustChangePassword: false },
+  { username: "warga", password: "warga123", name: "Warga D'AMOUR", blokNo: "A02", role: "warga", avatar: "W", mustChangePassword: false },
+  { username: "developer", password: "dev123", name: "Perwakilan Developer", blokNo: "-", role: "developer", avatar: "D", mustChangePassword: false },
+  { username: "ridwan", password: "123qwe", name: "Ridwan (Admin)", blokNo: "A01", role: "admin", avatar: "R", mustChangePassword: false },
+  { username: "jamal", password: "123qwe", name: "Jamal (Admin Warga)", blokNo: "A03", role: "admin", avatar: "J", mustChangePassword: false }
 ];
 
 const MONTH_NAMES = [
@@ -91,7 +91,6 @@ function handleLoginSubmit(e) {
   const pInput = rawPass.toLowerCase();
   const errBox = document.getElementById("login-error-msg");
 
-  // Base pool from defaults
   let searchPool = [...DEFAULT_USERS];
 
   // Auto House Accounts from Master Rumah
@@ -105,13 +104,14 @@ function handleLoginSubmit(e) {
           name: r.pemilik,
           blokNo: r.blokNo,
           role: "warga",
-          avatar: r.pemilik.charAt(0).toUpperCase()
+          avatar: r.pemilik.charAt(0).toUpperCase(),
+          mustChangePassword: true
         });
       }
     });
   }
 
-  // Explicitly defined users in appState take precedence
+  // Explicitly defined users in appState
   if (appState && Array.isArray(appState.users)) {
     appState.users.forEach((u) => {
       const idx = searchPool.findIndex((existing) => existing.username.toLowerCase() === u.username.toLowerCase());
@@ -140,12 +140,93 @@ function handleLoginSubmit(e) {
     updateNavbarProfile();
     applyRolePermissions();
     showView("dashboard");
+
+    // Check if initial/default password requires an update on first login
+    const isDefaultPass =
+      found.password === found.username ||
+      found.password === "warga123" ||
+      found.mustChangePassword === true;
+
+    if (isDefaultPass) {
+      setTimeout(() => {
+        openChangePasswordModal(true);
+      }, 400);
+    }
   } else {
     if (errBox) {
       errBox.innerHTML = `Username atau password salah!<br><span style="font-size:0.75rem; font-weight:400; color:var(--text-muted);">Gunakan No. Blok Rumah Anda (contoh: Username <strong>a01</strong> / Password <strong>a01</strong>).</span>`;
       errBox.style.display = "block";
     }
   }
+}
+
+function openChangePasswordModal(isFirstTime = false) {
+  document.getElementById("form-new-password").value = "";
+  document.getElementById("form-confirm-password").value = "";
+  const errBox = document.getElementById("change-pwd-err");
+  if (errBox) errBox.style.display = "none";
+
+  const subtitle = document.getElementById("change-pwd-subtitle");
+  if (subtitle) {
+    subtitle.textContent = isFirstTime
+      ? "Ini adalah login pertama Anda (atau masih menggunakan password awal). Demi keamanan akun Anda, silakan buat password baru sekarang."
+      : "Silakan masukkan password baru untuk akun Anda.";
+  }
+
+  openModal("modal-change-password");
+}
+
+function saveNewPassword() {
+  const newPass = document.getElementById("form-new-password").value.trim();
+  const confirmPass = document.getElementById("form-confirm-password").value.trim();
+  const errBox = document.getElementById("change-pwd-err");
+
+  if (!newPass) {
+    if (errBox) {
+      errBox.textContent = "Password baru tidak boleh kosong.";
+      errBox.style.display = "block";
+    }
+    return;
+  }
+
+  if (newPass.length < 4) {
+    if (errBox) {
+      errBox.textContent = "Password minimal 4 karakter.";
+      errBox.style.display = "block";
+    }
+    return;
+  }
+
+  if (newPass !== confirmPass) {
+    if (errBox) {
+      errBox.textContent = "Konfirmasi password tidak cocok. Mohon ulangi.";
+      errBox.style.display = "block";
+    }
+    return;
+  }
+
+  if (!currentUser) return;
+
+  currentUser.password = newPass;
+  currentUser.mustChangePassword = false;
+  localStorage.setItem("damour_ipl_user", JSON.stringify(currentUser));
+
+  if (!appState.users) appState.users = [];
+  const idx = appState.users.findIndex((u) => u.username.toLowerCase() === currentUser.username.toLowerCase());
+  if (idx !== -1) {
+    appState.users[idx].password = newPass;
+    appState.users[idx].mustChangePassword = false;
+  } else {
+    appState.users.push({
+      ...currentUser,
+      password: newPass,
+      mustChangePassword: false
+    });
+  }
+
+  saveState();
+  closeModal("modal-change-password");
+  alert("Password Anda berhasil diperbarui! Silakan gunakan password baru ini untuk login berikutnya.");
 }
 
 function quickLoginDemo(roleType) {
@@ -330,7 +411,8 @@ function saveUser() {
       name,
       blokNo,
       role,
-      avatar: name.charAt(0).toUpperCase()
+      avatar: name.charAt(0).toUpperCase(),
+      mustChangePassword: true
     });
   }
 
@@ -1530,7 +1612,6 @@ function renderDaftarTagihan() {
   const filterBulan = document.getElementById("filter-tagihan-bulan")?.value || MONTH_NAMES[now.getMonth()];
   const filterTahun = document.getElementById("filter-tagihan-tahun")?.value || now.getFullYear().toString();
 
-  // If role is Warga and assigned to a house, lock search input to their block
   if (isWarga && userBlok && userBlok !== "-") {
     if (searchInput) {
       searchInput.value = currentUser.blokNo;

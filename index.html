@@ -173,8 +173,12 @@
             </div>
             <i class="ri-arrow-down-s-line" style="color: var(--text-muted);"></i>
 
-            <!-- Dropdown Logout -->
-            <div id="user-dropdown-menu" style="display: none; position: absolute; top: 110%; right: 0; background: white; border: 1px solid var(--border-color); border-radius: 8px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); width: 170px; z-index: 100; padding: 0.5rem 0;">
+            <!-- Dropdown User Menu -->
+            <div id="user-dropdown-menu" style="display: none; position: absolute; top: 110%; right: 0; background: white; border: 1px solid var(--border-color); border-radius: 8px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); width: 180px; z-index: 100; padding: 0.5rem 0;">
+              <button onclick="openChangePasswordModal(false)" style="width: 100%; text-align: left; padding: 0.5rem 1rem; background: none; border: none; font-size: 0.85rem; color: var(--text-main); cursor: pointer; display: flex; align-items: center; gap: 0.5rem;">
+                <i class="ri-key-2-line"></i> Ubah Password
+              </button>
+              <hr style="margin: 0.25rem 0; border: none; border-top: 1px solid var(--border-color);">
               <button onclick="handleLogout()" style="width: 100%; text-align: left; padding: 0.5rem 1rem; background: none; border: none; font-size: 0.85rem; color: var(--danger); cursor: pointer; display: flex; align-items: center; gap: 0.5rem;">
                 <i class="ri-logout-box-r-line"></i> Logout
               </button>
@@ -1014,6 +1018,33 @@
   </div>
 
   <!-- MODALS -->
+
+  <!-- Modal Ubah Password -->
+  <div class="modal-overlay" id="modal-change-password" style="z-index: 10000;">
+    <div class="modal-box" style="max-width: 400px; border-radius: 16px;">
+      <div class="modal-header">
+        <div class="modal-title" id="modal-change-pwd-title"><i class="ri-key-2-line" style="color: var(--primary);"></i> Perbarui Password Anda</div>
+        <button class="close-modal-btn" onclick="closeModal('modal-change-password')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem;" id="change-pwd-subtitle">
+          Demi keamanan akun Anda, silakan perbarui password Anda.
+        </p>
+        <div class="form-group">
+          <label>Password Baru</label>
+          <input type="password" id="form-new-password" class="form-control" placeholder="Masukkan password baru">
+        </div>
+        <div class="form-group">
+          <label>Konfirmasi Password Baru</label>
+          <input type="password" id="form-confirm-password" class="form-control" placeholder="Ulangi password baru">
+        </div>
+        <div id="change-pwd-err" style="color: var(--danger); font-size: 0.8rem; display: none; margin-top: 0.5rem;"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-primary" style="width: 100%;" onclick="saveNewPassword()">Simpan Password Baru</button>
+      </div>
+    </div>
+  </div>
 
   <!-- Modal User Management -->
   <div class="modal-overlay" id="modal-user">
