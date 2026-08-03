@@ -1,6 +1,6 @@
 /**
  * D'AMOUR Sistem IPL Perumahan - Core Application Logic
- * Feature: Full User Management UI & Role Assignment System (Admin Warga vs Warga Biasa vs Developer)
+ * Feature: Enhanced Login Verification with Password Visibility Toggle, Hint Box & Auto-Merge Users
  */
 
 let appState = null;
@@ -84,12 +84,15 @@ function checkAuthSession() {
 
 function handleLoginSubmit(e) {
   e.preventDefault();
-  const u = document.getElementById("login-username").value.trim().toLowerCase();
-  const p = document.getElementById("login-password").value;
+  const uInput = document.getElementById("login-username").value.trim().toLowerCase();
+  const pInput = document.getElementById("login-password").value.trim();
   const errBox = document.getElementById("login-error-msg");
 
-  const usersList = (appState && appState.users) ? appState.users : DEFAULT_USERS;
-  const found = usersList.find((user) => user.username.toLowerCase() === u && user.password === p);
+  const usersList = (appState && appState.users && appState.users.length > 0) ? appState.users : DEFAULT_USERS;
+  
+  const found = usersList.find((user) => 
+    user.username.trim().toLowerCase() === uInput && user.password.trim() === pInput
+  );
 
   if (found) {
     currentUser = found;
@@ -101,7 +104,7 @@ function handleLoginSubmit(e) {
     showView("dashboard");
   } else {
     if (errBox) {
-      errBox.textContent = "Username atau password salah!";
+      errBox.innerHTML = `Username atau password salah!<br><span style="font-size:0.75rem; font-weight:400; color:var(--text-muted);">Gunakan <strong>admin / admin123</strong> untuk Login Admin.</span>`;
       errBox.style.display = "block";
     }
   }
@@ -423,9 +426,17 @@ async function loadAppData() {
 }
 
 function ensureMasterEventState() {
-  if (!appState.users) {
+  if (!appState.users || appState.users.length === 0) {
     appState.users = DEFAULT_USERS;
+  } else {
+    DEFAULT_USERS.forEach((defUser) => {
+      const exists = appState.users.some((u) => u.username.toLowerCase() === defUser.username.toLowerCase());
+      if (!exists) {
+        appState.users.push(defUser);
+      }
+    });
   }
+
   if (!appState.masterEvent) {
     appState.masterEvent = [
       { id: "evt-1", nama: "Iuran THR Satpam", nominal: 50000, dibayarOleh: "Semua", aktif: true },

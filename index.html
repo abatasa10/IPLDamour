@@ -35,7 +35,7 @@
           <label>Username</label>
           <div class="input-search-wrapper">
             <i class="ri-user-line"></i>
-            <input type="text" id="login-username" class="form-control" placeholder="Masukkan username" required style="padding-left: 2.25rem;">
+            <input type="text" id="login-username" class="form-control" placeholder="Masukkan username" required style="padding-left: 2.25rem;" autocomplete="username">
           </div>
         </div>
 
@@ -43,16 +43,32 @@
           <label>Password</label>
           <div class="input-search-wrapper">
             <i class="ri-lock-line"></i>
-            <input type="password" id="login-password" class="form-control" placeholder="Masukkan password" required style="padding-left: 2.25rem;">
+            <input type="password" id="login-password" class="form-control" placeholder="Masukkan password" required style="padding-left: 2.25rem; padding-right: 2.5rem;" autocomplete="current-password">
+            <button type="button" onclick="togglePasswordVisibility()" style="position: absolute; right: 0.75rem; top: 50%; transform: translateY(-50%); color: var(--text-muted); padding: 0.25rem;" title="Lihat Password">
+              <i class="ri-eye-line" id="toggle-pwd-icon"></i>
+            </button>
           </div>
         </div>
 
-        <div id="login-error-msg" style="color: var(--danger); font-size: 0.85rem; margin-bottom: 1rem; display: none; text-align: center; font-weight: 500;"></div>
+        <div id="login-error-msg" style="color: var(--danger); font-size: 0.85rem; margin-bottom: 1rem; display: none; text-align: center; font-weight: 500; background: #fef2f2; padding: 0.5rem; border-radius: 6px; border: 1px solid #fecaca;"></div>
 
         <button type="submit" class="btn btn-primary" style="width: 100%; padding: 0.75rem; font-weight: 600; font-size: 0.95rem;">
           <i class="ri-login-box-line"></i> Masuk Aplikasi
         </button>
       </form>
+
+      <!-- Account Hint Accordion / Callout -->
+      <div style="margin-top: 1.25rem; padding: 0.85rem; background: #f8fafc; border: 1px solid var(--border-color); border-radius: 10px; font-size: 0.8rem;">
+        <div style="display: flex; align-items: center; justify-content: space-between; font-weight: 600; color: var(--primary); cursor: pointer;" onclick="toggleLoginHint()">
+          <span><i class="ri-lightbulb-line"></i> Hint Akun Login (Petunjuk Bantuan)</span>
+          <i class="ri-arrow-down-s-line" id="hint-chevron"></i>
+        </div>
+        <div id="login-hint-body" style="display: none; margin-top: 0.75rem; border-top: 1px dashed var(--border-color); padding-top: 0.5rem; color: var(--text-main);">
+          <div style="margin-bottom: 0.35rem;">👑 <strong>Admin</strong>: <code>admin</code> / Password: <code>admin123</code></div>
+          <div style="margin-bottom: 0.35rem;">🏠 <strong>Warga</strong>: <code>warga</code> / Password: <code>warga123</code></div>
+          <div>🏗️ <strong>Developer</strong>: <code>developer</code> / Password: <code>dev123</code></div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -1282,5 +1298,30 @@
   </div>
 
   <script src="app.js"></script>
+  <script>
+    function togglePasswordVisibility() {
+      const pwdInp = document.getElementById("login-password");
+      const icon = document.getElementById("toggle-pwd-icon");
+      if (pwdInp.type === "password") {
+        pwdInp.type = "text";
+        icon.className = "ri-eye-off-line";
+      } else {
+        pwdInp.type = "password";
+        icon.className = "ri-eye-line";
+      }
+    }
+
+    function toggleLoginHint() {
+      const body = document.getElementById("login-hint-body");
+      const chevron = document.getElementById("hint-chevron");
+      if (body.style.display === "none") {
+        body.style.display = "block";
+        chevron.className = "ri-arrow-up-s-line";
+      } else {
+        body.style.display = "none";
+        chevron.className = "ri-arrow-down-s-line";
+      }
+    }
+  </script>
 </body>
 </html>
