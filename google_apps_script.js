@@ -1,27 +1,18 @@
 /**
  * GOOGLE APPS SCRIPT DATABASE ENDPOINT FOR D'AMOUR SISTEM IPL
  * 
- * SINKRONISASI 100% REAL-TIME DENGAN GOOGLE SPREADSHEET
- * Menyiapkan sheet otomatis untuk:
- * 1. Rumah (Master Unit Warga)
- * 2. Tagihan (Riwayat Tagihan & Pembayaran Warga)
- * 3. Pengeluaran (Riwayat Biaya Operasional, Satpam, dll.)
- * 4. PemasukanLain (Bunga Bank, Donasi, dll.)
- * 5. Komponen (Rincian Komponen Biaya IPL)
- * 6. Event (Master Event & Biaya Tambahan)
- * 7. Users (Data Akun & Hak Akses Warga/Admin)
+ * SINKRONISASI 100% REAL-TIME DENGAN PEMBERSIH DUPLIKAT OTOMATIS
+ * Menjamin Google Spreadsheet TIDAK AKAN PERNAH DUPLIKAT lagi.
  * 
- * CARA PENGGUNAAN MEMASANG KE GOOGLE SPREADSHEET:
+ * CARA PENGGUNAAN:
  * 1. Buka Google Spreadsheet Anda (https://docs.google.com/spreadsheets/d/1c1y4wD7hhBDfmJdtmINf2dka7bduuz0i_l1TNYtll_4/edit)
  * 2. Klik menu Extensi -> Apps Script
- * 3. Hapus semua kode bawaan, lalu paste (tempel) SELURUH KODE DI BAWAH INI.
+ * 3. Hapus semua kode lama, lalu paste (tempel) SELURUH KODE DI BAWAH INI.
  * 4. Klik "Simpan" (Ctrl+S / Cmd+S).
  * 5. Klik "Terapkan" (Deploy) -> "Peluncuran Baru" (New Deployment).
- * 6. Pilih Jenis: "Aplikasi Web" (Web App).
  *    - Jalankan sebagai: "Saya" (Me)
  *    - Yang memiliki akses: "Siapa Saja" (Anyone)
- * 7. Klik "Terapkan", lalu Salin URL Web App yang dihasilkan.
- * 8. Tempelkan URL tersebut di menu "Pengaturan Sistem" aplikasi IPL D'AMOUR.
+ * 6. Klik "Terapkan", lalu Salin URL Web App yang dihasilkan.
  */
 
 function doGet(e) {
@@ -39,13 +30,13 @@ function doGet(e) {
     
     result = {
       status: "success",
-      rumah: getSheetData(rumahSheet),
-      tagihan: getSheetData(tagihanSheet),
-      pengeluaran: getSheetData(pengeluaranSheet),
-      pemasukanLain: getSheetData(pemasukanLainSheet),
-      komponenIPL: getSheetData(komponenSheet),
-      masterEvent: getSheetData(eventSheet),
-      users: getSheetData(usersSheet)
+      rumah: getSheetData(rumahSheet, "blokNo"),
+      tagihan: getSheetData(tagihanSheet, "id"),
+      pengeluaran: getSheetData(pengeluaranSheet, "id"),
+      pemasukanLain: getSheetData(pemasukanLainSheet, "id"),
+      komponenIPL: getSheetData(komponenSheet, "id"),
+      masterEvent: getSheetData(eventSheet, "id"),
+      users: getSheetData(usersSheet, "username")
     };
   } catch (err) {
     result = { status: "error", message: err.toString() };
@@ -62,28 +53,28 @@ function doPost(e) {
     var ss = SpreadsheetApp.getActiveSpreadsheet();
     
     if (contents.rumah) {
-      updateSheetData(ss.getSheetByName("Rumah") || createRumahSheet(ss), contents.rumah);
+      updateSheetData(ss.getSheetByName("Rumah") || createRumahSheet(ss), contents.rumah, "blokNo");
     }
     if (contents.tagihan) {
-      updateSheetData(ss.getSheetByName("Tagihan") || createTagihanSheet(ss), contents.tagihan);
+      updateSheetData(ss.getSheetByName("Tagihan") || createTagihanSheet(ss), contents.tagihan, "id");
     }
     if (contents.pengeluaran) {
-      updateSheetData(ss.getSheetByName("Pengeluaran") || createPengeluaranSheet(ss), contents.pengeluaran);
+      updateSheetData(ss.getSheetByName("Pengeluaran") || createPengeluaranSheet(ss), contents.pengeluaran, "id");
     }
     if (contents.pemasukanLain) {
-      updateSheetData(ss.getSheetByName("PemasukanLain") || createPemasukanLainSheet(ss), contents.pemasukanLain);
+      updateSheetData(ss.getSheetByName("PemasukanLain") || createPemasukanLainSheet(ss), contents.pemasukanLain, "id");
     }
     if (contents.komponenIPL) {
-      updateSheetData(ss.getSheetByName("Komponen") || createKomponenSheet(ss), contents.komponenIPL);
+      updateSheetData(ss.getSheetByName("Komponen") || createKomponenSheet(ss), contents.komponenIPL, "id");
     }
     if (contents.masterEvent) {
-      updateSheetData(ss.getSheetByName("Event") || createEventSheet(ss), contents.masterEvent);
+      updateSheetData(ss.getSheetByName("Event") || createEventSheet(ss), contents.masterEvent, "id");
     }
     if (contents.users) {
-      updateSheetData(ss.getSheetByName("Users") || createUsersSheet(ss), contents.users);
+      updateSheetData(ss.getSheetByName("Users") || createUsersSheet(ss), contents.users, "username");
     }
     
-    result = { status: "success", message: "Seluruh data pembiayaan & transaksi berhasil disimpan ke Google Spreadsheet!" };
+    result = { status: "success", message: "Data Google Spreadsheet berhasil dibersihkan & disinkronkan tanpa duplikat!" };
   } catch (err) {
     result = { status: "error", message: err.toString() };
   }
@@ -92,37 +83,77 @@ function doPost(e) {
     .setMimeType(ContentService.MimeType.JSON);
 }
 
-function getSheetData(sheet) {
+function normalizeBlokGS(b) {
+  if (!b) return "";
+  return String(b).trim().toUpperCase().replace(/^([A-Z]+)0+(\d+)$/, "$1$2");
+}
+
+function getSheetData(sheet, keyField) {
   var data = sheet.getDataRange().getValues();
   if (data.length <= 1) return [];
   var headers = data[0];
   var rows = [];
+  var seenKeys = {};
+
   for (var i = 1; i < data.length; i++) {
     var obj = {};
     for (var j = 0; j < headers.length; j++) {
       obj[headers[j]] = data[i][j];
     }
-    rows.push(obj);
+    
+    var rawKey = keyField ? obj[keyField] : (obj.id || obj.username || obj.blokNo);
+    var key = keyField === "blokNo" ? normalizeBlokGS(rawKey) : String(rawKey).trim().toLowerCase();
+
+    if (keyField === "blokNo" && obj.blokNo) {
+      obj.blokNo = normalizeBlokGS(obj.blokNo);
+    }
+
+    if (key && !seenKeys[key]) {
+      seenKeys[key] = true;
+      rows.push(obj);
+    }
   }
   return rows;
 }
 
-function updateSheetData(sheet, dataArray) {
-  if (!dataArray || dataArray.length === 0) return;
-  sheet.clear();
-  var headers = Object.keys(dataArray[0]);
-  sheet.appendRow(headers);
+function updateSheetData(sheet, dataArray, keyField) {
+  if (!dataArray || !Array.isArray(dataArray) || dataArray.length === 0) return;
+  
+  var seenKeys = {};
+  var cleanArray = [];
   
   dataArray.forEach(function(item) {
-    var row = headers.map(function(key) {
+    if (!item) return;
+    var rawKey = keyField ? item[keyField] : (item.id || item.username || item.blokNo);
+    var key = keyField === "blokNo" ? normalizeBlokGS(rawKey) : String(rawKey).trim().toLowerCase();
+    
+    if (keyField === "blokNo" && item.blokNo) {
+      item.blokNo = normalizeBlokGS(item.blokNo);
+    }
+    
+    if (key && !seenKeys[key]) {
+      seenKeys[key] = true;
+      cleanArray.push(item);
+    }
+  });
+
+  sheet.clear();
+  if (cleanArray.length === 0) return;
+
+  var headers = Object.keys(cleanArray[0]);
+  sheet.appendRow(headers);
+
+  var rowsToAppend = cleanArray.map(function(item) {
+    return headers.map(function(key) {
       var val = item[key];
       if (typeof val === "object" && val !== null) {
         return JSON.stringify(val);
       }
       return val;
     });
-    sheet.appendRow(row);
   });
+
+  sheet.getRange(2, 1, rowsToAppend.length, headers.length).setValues(rowsToAppend);
 }
 
 function createRumahSheet(ss) {
