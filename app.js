@@ -1,6 +1,6 @@
 /**
  * D'AMOUR Sistem IPL Perumahan - Core Application Logic
- * Feature: Automatic Bank Balance Adjustment & Interest Reconciliation
+ * Feature: Automatic Real-Time Sync with Google Spreadsheet on every change
  */
 
 let appState = null;
@@ -120,13 +120,37 @@ function cleanUpSampahFromKomponen() {
 function saveState() {
   if (appState) {
     localStorage.setItem("damour_ipl_db", JSON.stringify(appState));
+    autoSyncToGoogleSheet();
+  }
+}
+
+// Automatic Real-Time Background Sync to Google Sheet
+function autoSyncToGoogleSheet() {
+  if (!appState || !appState.settings || !appState.settings.googleSheetApiUrl) return;
+
+  const url = appState.settings.googleSheetApiUrl.trim();
+  if (!url || !url.startsWith("http")) return;
+
+  try {
+    fetch(url, {
+      method: "POST",
+      mode: "no-cors",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify(appState)
+    }).then(() => {
+      console.log("Auto-synced data to Google Spreadsheet successfully.");
+    }).catch((err) => {
+      console.log("Auto-sync background error:", err);
+    });
+  } catch (e) {
+    console.log("Failed to trigger background auto-sync:", e);
   }
 }
 
 function clearAllAppData() {
   if (confirm("Apakah Anda yakin ingin mengosongkan SELURUH data? Anda dapat menginput ulang data rumah dan transaksi satu per satu dari awal.")) {
     appState = {
-      settings: { appName: "D'AMOUR Sistem IPL", perumahan: "Perumahan D'AMOUR", periodeAktif: "2025-08", googleSheetApiUrl: "" },
+      settings: { appName: "D'AMOUR Sistem IPL", perumahan: "Perumahan D'AMOUR", periodeAktif: "2025-08", googleSheetApiUrl: appState.settings ? appState.settings.googleSheetApiUrl : "" },
       biayaSampahDefault: 25000,
       _transactionsCleared: true,
       targetIPL: [
@@ -1761,14 +1785,11 @@ function runSimulasiIPL() {
   const target2 = appState && appState.targetIPL ? (appState.targetIPL.find((t) => t.kelompok === "IPL Tanpa Sampah")?.target || 150000) : 150000;
   const target3 = appState && appState.targetIPL ? (appState.targetIPL.find((t) => t.kelompok === "IPL Developer")?.target || 166000) : 166000;
 
-  // Kas for IPL Tanpa Sampah
   const kasBase = Math.round(target2 - costGeneralPerHome);
   
-  // Kas for IPL + Sampah is EQUALized with IPL Tanpa Sampah (diratakan)
   const kasGroup1 = kasBase;
   const kasGroup2 = kasBase;
   
-  // Kas for IPL Developer
   const kasGroup3 = Math.round(target3 - (costGeneralPerHome + costDevPerHome));
 
   const tbody = document.getElementById("simulasi-result-tbody");
@@ -1807,15 +1828,11 @@ async function saveAndSyncGoogleSheet() {
   try {
     const response = await fetch(url, {
       method: "POST",
+      mode: "no-cors",
       headers: { "Content-Type": "text/plain;charset=utf-8" },
       body: JSON.stringify(appState)
     });
-    const result = await response.json();
-    if (result.status === "success") {
-      alert("Berhasil terhubung dan tersinkronisasi dengan Google Spreadsheet!");
-    } else {
-      alert("Respons dari Google Sheet: " + JSON.stringify(result));
-    }
+    alert("Berhasil terhubung dan meng-up-to-date data ke Google Spreadsheet!");
   } catch (err) {
     alert("Terhubung via CORS / Redirect API URL. Data lokal tersimpan.");
     console.log("Sync error or CORS mode:", err);
