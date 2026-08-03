@@ -1,6 +1,6 @@
 /**
  * D'AMOUR Sistem IPL Perumahan - Core Application Logic
- * Feature: Ultra-Flexible Cross-Device Authentication & Auto-Normalization
+ * Feature: Dynamic House Block Auto-Initializer for Any Block Number
  */
 
 let appState = null;
@@ -88,7 +88,7 @@ function handleLoginSubmit(e) {
   e.preventDefault();
   const rawUser = document.getElementById("login-username").value.trim();
   const rawPass = document.getElementById("login-password").value.trim();
-  const uClean = rawUser.toLowerCase().replace(/[^a-z0-9]/g, ""); // "a01", "admin", "ridwan", "jamal", "developer"
+  const uClean = rawUser.toLowerCase().replace(/[^a-z0-9]/g, ""); // "a01", "c19", "admin", "ridwan", "jamal", "developer"
   const pInput = rawPass.toLowerCase();
   const errBox = document.getElementById("login-error-msg");
 
@@ -108,7 +108,7 @@ function handleLoginSubmit(e) {
     });
   }
 
-  const found = searchPool.find((user) => {
+  let found = searchPool.find((user) => {
     const userClean = user.username.trim().toLowerCase().replace(/[^a-z0-9]/g, "");
     const userBlokClean = user.blokNo ? user.blokNo.trim().toLowerCase().replace(/[^a-z0-9]/g, "") : "";
     const userNameClean = user.name ? user.name.trim().toLowerCase() : "";
@@ -129,6 +129,50 @@ function handleLoginSubmit(e) {
 
     return uMatch && pMatch;
   });
+
+  // Dynamic Auto-Creation Fallback: If house block is not in searchPool yet (e.g. C19, C01, D05, etc.) and password matches default damour123 / block number
+  if (!found && uClean.length >= 2) {
+    const isDefaultPassMatch = pInput === "damour123" || pInput === "warga123" || pInput === uClean;
+    const isHouseBlockFormat = /^[a-z0-9]{2,6}$/i.test(uClean);
+
+    if (isHouseBlockFormat && isDefaultPassMatch) {
+      const formattedBlok = rawUser.toUpperCase();
+
+      if (!appState) appState = {};
+      if (!appState.rumah) appState.rumah = [];
+
+      let existingHouse = appState.rumah.find((r) => r.blokNo.trim().toLowerCase() === uClean);
+      if (!existingHouse) {
+        existingHouse = {
+          id: `RMH-${formattedBlok}`,
+          blokNo: formattedBlok,
+          pemilik: `Warga Blok ${formattedBlok}`,
+          noHp: "0812xxxxxxxx",
+          status: "Aktif",
+          kelompokIPL: "IPL + Sampah"
+        };
+        appState.rumah.push(existingHouse);
+      }
+
+      if (!appState.users) appState.users = [];
+      let existingUser = appState.users.find((u) => u.username.trim().toLowerCase() === uClean);
+      if (!existingUser) {
+        existingUser = {
+          username: uClean,
+          password: rawPass || "damour123",
+          name: existingHouse.pemilik,
+          blokNo: formattedBlok,
+          role: "warga",
+          avatar: "W",
+          mustChangePassword: true
+        };
+        appState.users.push(existingUser);
+      }
+
+      saveState();
+      found = existingUser;
+    }
+  }
 
   if (found) {
     currentUser = found;
@@ -152,7 +196,7 @@ function handleLoginSubmit(e) {
     }
   } else {
     if (errBox) {
-      errBox.innerHTML = `Username atau password salah!<br><span style="font-size:0.75rem; font-weight:400; color:var(--text-muted);">Gunakan Username: <strong>No. Blok</strong> (misal: <strong>a01</strong>) / Password Default: <strong>damour123</strong>.</span>`;
+      errBox.innerHTML = `Username atau password salah!<br><span style="font-size:0.75rem; font-weight:400; color:var(--text-muted);">Gunakan Username: <strong>No. Blok</strong> (misal: <strong>a01</strong> atau <strong>c19</strong>) / Password Default: <strong>damour123</strong>.</span>`;
       errBox.style.display = "block";
     }
   }
@@ -582,8 +626,15 @@ async function loadAppData() {
 
   if (!appState) {
     appState = jsonBackup;
-  } else if (jsonBackup && jsonBackup.rumah && (!appState.rumah || appState.rumah.length < 10)) {
-    appState.rumah = jsonBackup.rumah;
+  } else if (jsonBackup && jsonBackup.rumah) {
+    // Sync houses from data.json if missing in appState
+    if (!appState.rumah) appState.rumah = [];
+    jsonBackup.rumah.forEach((rJson) => {
+      const exists = appState.rumah.some((r) => r.blokNo.trim().toLowerCase() === rJson.blokNo.trim().toLowerCase());
+      if (!exists) {
+        appState.rumah.push(rJson);
+      }
+    });
   }
 
   if (appState && appState.settings && appState.settings.googleSheetApiUrl) {
