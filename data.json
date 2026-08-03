@@ -30,6 +30,22 @@
       "blokNo": "-",
       "role": "developer",
       "avatar": "D"
+    },
+    {
+      "username": "ridwan",
+      "password": "123qwe",
+      "name": "Ridwan (Admin)",
+      "blokNo": "A01",
+      "role": "admin",
+      "avatar": "R"
+    },
+    {
+      "username": "jamal",
+      "password": "123qwe",
+      "name": "Jamal (Admin Warga)",
+      "blokNo": "A03",
+      "role": "admin",
+      "avatar": "J"
     }
   ],
   "targetIPL": [

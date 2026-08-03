@@ -1,6 +1,6 @@
 /**
  * D'AMOUR Sistem IPL Perumahan - Core Application Logic
- * Feature: Cross-Device Bulletproof Login with Auto-Fallback to DEFAULT_USERS
+ * Feature: Automatic Cross-Device Synchronization for ridwan & jamal and Cloud Google Sheet Sync
  */
 
 let appState = null;
@@ -14,7 +14,9 @@ let barChartInstance = null;
 const DEFAULT_USERS = [
   { username: "admin", password: "admin123", name: "Pak Budi (Admin Warga)", blokNo: "A01", role: "admin", avatar: "A" },
   { username: "warga", password: "warga123", name: "Warga D'AMOUR", blokNo: "A02", role: "warga", avatar: "W" },
-  { username: "developer", password: "dev123", name: "Perwakilan Developer", blokNo: "-", role: "developer", avatar: "D" }
+  { username: "developer", password: "dev123", name: "Perwakilan Developer", blokNo: "-", role: "developer", avatar: "D" },
+  { username: "ridwan", password: "123qwe", name: "Ridwan (Admin)", blokNo: "A01", role: "admin", avatar: "R" },
+  { username: "jamal", password: "123qwe", name: "Jamal (Admin Warga)", blokNo: "A03", role: "admin", avatar: "J" }
 ];
 
 const MONTH_NAMES = [
@@ -116,7 +118,7 @@ function handleLoginSubmit(e) {
     showView("dashboard");
   } else {
     if (errBox) {
-      errBox.innerHTML = `Username atau password salah!<br><span style="font-size:0.75rem; font-weight:400; color:var(--text-muted);">Contoh Admin: <strong>admin</strong> / Password: <strong>admin123</strong></span>`;
+      errBox.innerHTML = `Username atau password salah!<br><span style="font-size:0.75rem; font-weight:400; color:var(--text-muted);">Contoh Admin: <strong>ridwan</strong> / Password: <strong>123qwe</strong></span>`;
       errBox.style.display = "block";
     }
   }
@@ -394,47 +396,48 @@ function updatePerhitunganMonthDropdown() {
   ).join("");
 }
 
-// Load App Data from LocalStorage or data.json
+// Load App Data from LocalStorage, data.json, or Cloud Google Spreadsheet API
 async function loadAppData() {
   const saved = localStorage.getItem("damour_ipl_db");
   if (saved) {
     try {
       appState = JSON.parse(saved);
       console.log("Data loaded from LocalStorage.");
-      ensureMasterEventState();
-      cleanUpSampahFromKomponen();
-      
-      if (!appState._transactionsCleared) {
-        appState.tagihan = [];
-        appState.pengeluaran = [];
-        appState.pemasukanLain = [];
-        appState.grafik6Bulan = [];
-        appState.ringkasanKas = { kasSaatIni: 0, masuk: 0, keluar: 0, selisih: 0 };
-        appState._transactionsCleared = true;
-        saveState();
-      }
-
-      if (appState.settings && appState.settings.googleSheetApiUrl) {
-        const urlInput = document.getElementById("setting-gsheet-url");
-        if (urlInput) urlInput.value = appState.settings.googleSheetApiUrl;
-      }
-      return;
     } catch (e) {
       console.error("Failed to parse LocalStorage data, loading default data.json", e);
     }
   }
 
-  try {
-    const res = await fetch("data.json");
-    appState = await res.json();
-    appState._transactionsCleared = true;
-    ensureMasterEventState();
-    cleanUpSampahFromKomponen();
-    saveState();
-    console.log("Data loaded from data.json.");
-  } catch (err) {
-    console.error("Error loading data.json:", err);
+  if (!appState) {
+    try {
+      const res = await fetch("data.json");
+      appState = await res.json();
+      console.log("Data loaded from data.json.");
+    } catch (err) {
+      console.error("Error loading data.json:", err);
+    }
   }
+
+  // Fetch live cloud data from Google Sheet Web App API if URL exists in settings
+  if (appState && appState.settings && appState.settings.googleSheetApiUrl) {
+    const url = appState.settings.googleSheetApiUrl.trim();
+    if (url && url.startsWith("http")) {
+      try {
+        const cloudRes = await fetch(url);
+        const cloudData = await cloudRes.json();
+        if (cloudData && cloudData.users) {
+          appState = cloudData;
+          console.log("Synced live appState from Google Spreadsheet Web App.");
+        }
+      } catch (e) {
+        console.log("Cloud sync fetch failed, using local database cache.", e);
+      }
+    }
+  }
+
+  ensureMasterEventState();
+  cleanUpSampahFromKomponen();
+  saveState();
 }
 
 function ensureMasterEventState() {
