@@ -6,12 +6,7 @@
  * 2. Klik menu Extensi -> Apps Script
  * 3. Hapus semua isi kode default, lalu salin dan tempel (paste) SELURUH KODE DI BAWAH INI.
  * 4. Klik "Simpan" (Ctrl+S / Cmd+S).
- * 5. Klik tombol "Terapkan" (Deploy) -> "Terapkan sebagai Aplikasi Web" (New deployment).
- *    - Pilih Jenis: Aplikasi Web (Web App)
- *    - Jalankan sebagai: Saya (Me)
- *    - Siapa yang memiliki akses: Siapa saja (Anyone)
- * 6. Klik "Terapkan" (Deploy) lalu berikan izin akses (Authorize access).
- * 7. Salin URL Aplikasi Web (Web App URL) yang dihasilkan, lalu tempel di menu Pengaturan Aplikasi Web D'AMOUR IPL.
+ * 5. Klik tombol "Terapkan" (Deploy) -> "Kelola Peluncuran" (Manage Deployments) -> Edit -> Versi Baru (New Version) -> Terapkan.
  */
 
 function doGet(e) {
@@ -19,18 +14,19 @@ function doGet(e) {
   var result = {};
   
   try {
-    // Read sheets or create JSON payload
     var rumahSheet = ss.getSheetByName("Rumah") || createRumahSheet(ss);
     var tagihanSheet = ss.getSheetByName("Tagihan") || createTagihanSheet(ss);
     var pengeluaranSheet = ss.getSheetByName("Pengeluaran") || createPengeluaranSheet(ss);
     var komponenSheet = ss.getSheetByName("Komponen") || createKomponenSheet(ss);
+    var usersSheet = ss.getSheetByName("Users") || createUsersSheet(ss);
     
     result = {
       status: "success",
       rumah: getSheetData(rumahSheet),
       tagihan: getSheetData(tagihanSheet),
       pengeluaran: getSheetData(pengeluaranSheet),
-      komponenIPL: getSheetData(komponenSheet)
+      komponenIPL: getSheetData(komponenSheet),
+      users: getSheetData(usersSheet)
     };
   } catch (err) {
     result = { status: "error", message: err.toString() };
@@ -58,8 +54,11 @@ function doPost(e) {
     if (contents.komponenIPL) {
       updateSheetData(ss.getSheetByName("Komponen") || createKomponenSheet(ss), contents.komponenIPL);
     }
+    if (contents.users) {
+      updateSheetData(ss.getSheetByName("Users") || createUsersSheet(ss), contents.users);
+    }
     
-    result = { status: "success", message: "Data berhasil disimpan ke Google Spreadsheet" };
+    result = { status: "success", message: "Data & User berhasil disimpan ke Google Spreadsheet" };
   } catch (err) {
     result = { status: "error", message: err.toString() };
   }
@@ -116,5 +115,11 @@ function createPengeluaranSheet(ss) {
 function createKomponenSheet(ss) {
   var sheet = ss.insertSheet("Komponen");
   sheet.appendRow(["id", "nama", "nominalTotal", "isAutoKas", "dibayarOleh", "aktif"]);
+  return sheet;
+}
+
+function createUsersSheet(ss) {
+  var sheet = ss.insertSheet("Users");
+  sheet.appendRow(["username", "password", "name", "blokNo", "role", "avatar"]);
   return sheet;
 }
