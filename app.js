@@ -2238,6 +2238,27 @@ function deletePengeluaran(id) {
   }
 }
 
+function inputSaldoKasSaatIni() {
+  const currentKas = appState.ringkasanKas ? appState.ringkasanKas.kasSaatIni : 0;
+  const val = prompt("Masukkan nominal Kas yang tersedia saat ini (Rp):", currentKas);
+  if (val === null) return;
+  
+  const nom = parseFloat(val.replace(/[^0-9.-]+/g, "")) || 0;
+  
+  if (!appState.ringkasanKas) {
+    appState.ringkasanKas = { kasSaatIni: 0, masuk: 0, keluar: 0, selisih: 0 };
+  }
+  
+  appState.ringkasanKas.kasSaatIni = nom;
+  appState.ringkasanKas.masuk = nom + (appState.ringkasanKas.keluar || 0);
+  appState.ringkasanKas.selisih = nom;
+
+  saveState();
+  renderDashboard();
+  renderKasArusKasTable();
+  alert(`Berhasil memperbarui Kas Saat Ini menjadi ${formatRp(nom)}!`);
+}
+
 /* ==========================================================================
    BANK RECONCILIATION & ADJUSTMENT LOGIC
    ========================================================================== */
