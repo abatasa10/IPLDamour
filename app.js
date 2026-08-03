@@ -1,6 +1,6 @@
 /**
  * D'AMOUR Sistem IPL Perumahan - Core Application Logic
- * Feature: User Management & Role-Based Access Control (Admin vs Warga)
+ * Feature: User Management & Role-Based Access Control (Admin Warga, Warga Biasa, & IPL Developer)
  */
 
 let appState = null;
@@ -12,8 +12,9 @@ let donutChartInstance = null;
 let barChartInstance = null;
 
 const DEFAULT_USERS = [
-  { username: "admin", password: "admin123", name: "Admin Pengurus", role: "admin", avatar: "A" },
-  { username: "warga", password: "warga123", name: "Warga D'AMOUR", role: "warga", avatar: "W" }
+  { username: "admin", password: "admin123", name: "Pak Budi (Admin Warga)", role: "admin", avatar: "A" },
+  { username: "warga", password: "warga123", name: "Warga D'AMOUR", role: "warga", avatar: "W" },
+  { username: "developer", password: "dev123", name: "Perwakilan Developer", role: "developer", avatar: "D" }
 ];
 
 const MONTH_NAMES = [
@@ -77,7 +78,6 @@ function checkAuthSession() {
     }
   }
 
-  // Not logged in -> Show login modal
   if (loginOverlay) loginOverlay.classList.add("active");
 }
 
@@ -145,15 +145,22 @@ function updateNavbarProfile() {
   if (avatarEl) avatarEl.textContent = currentUser.avatar || currentUser.name.charAt(0);
   if (nameEl) nameEl.textContent = currentUser.name;
   if (roleEl) {
-    roleEl.textContent = currentUser.role === "admin" ? "Admin" : "Warga";
-    roleEl.className = currentUser.role === "admin" ? "badge badge-success" : "badge badge-warning";
+    if (currentUser.role === "admin") {
+      roleEl.textContent = "Admin Warga";
+      roleEl.className = "badge badge-success";
+    } else if (currentUser.role === "developer") {
+      roleEl.textContent = "IPL Developer";
+      roleEl.className = "badge badge-secondary";
+    } else {
+      roleEl.textContent = "Warga";
+      roleEl.className = "badge badge-warning";
+    }
   }
 }
 
 function applyRolePermissions() {
   const isAdmin = currentUser && currentUser.role === "admin";
 
-  // Hide or show elements with class role-admin-only
   document.querySelectorAll(".role-admin-only").forEach((el) => {
     if (isAdmin) {
       el.style.display = "";
@@ -162,7 +169,6 @@ function applyRolePermissions() {
     }
   });
 
-  // Re-render views to strip inline action buttons if not admin
   renderMasterRumah();
   renderMasterKomponen();
   renderMasterEvent();
@@ -1328,6 +1334,12 @@ function renderDaftarTagihan() {
     const matchesSearch = t.blokNo.toLowerCase().includes(searchVal) || t.pemilik.toLowerCase().includes(searchVal);
     const matchesBulan = filterBulan === "Semua" || t.bulan === filterBulan || t.periode.includes(filterBulan);
     const matchesTahun = filterTahun === "Semua" || t.tahun === filterTahun || t.periode.includes(filterTahun);
+
+    // If logged in as developer role, filter Developer tagihan easily
+    if (currentUser && currentUser.role === "developer") {
+      return t.kelompokIPL === "IPL Developer" && matchesSearch && matchesBulan && matchesTahun;
+    }
+
     return matchesSearch && matchesBulan && matchesTahun;
   });
 
