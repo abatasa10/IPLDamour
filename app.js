@@ -607,10 +607,10 @@ function updatePerhitunganMonthDropdown() {
 
 // Load App Data from LocalStorage, data.json, or Cloud Google Spreadsheet API
 async function loadAppData() {
-  // Clear test bills once for re-testing
-  if (!localStorage.getItem("damour_ipl_v12_clear_test_bills")) {
+  // Clear non-IPL cash flow entries (pemasukanLain)
+  if (!localStorage.getItem("damour_ipl_v13_clear_pemasukan_lain")) {
     localStorage.removeItem("damour_ipl_db");
-    localStorage.setItem("damour_ipl_v12_clear_test_bills", "true");
+    localStorage.setItem("damour_ipl_v13_clear_pemasukan_lain", "true");
   }
 
   let jsonBackup = null;
@@ -2352,6 +2352,29 @@ function inputSaldoKasSaatIni() {
   }
 
   alert(`Berhasil memperbarui Kas Saat Ini menjadi ${formatRp(nom)} dan tersimpan ke Google Spreadsheet!`);
+}
+
+function clearAllPemasukanLain() {
+  if (!confirm("Apakah Anda yakin ingin mengosongkan/menghapus seluruh catatan Pemasukan Lain-Lain?")) return;
+
+  appState.pemasukanLain = [];
+  saveState();
+  renderDashboard();
+  renderKasArusKasTable();
+
+  if (appState.settings && appState.settings.googleSheetApiUrl) {
+    const url = appState.settings.googleSheetApiUrl.trim();
+    if (url && url.startsWith("http") && !url.includes("EXAMPLE")) {
+      fetch(url, {
+        method: "POST",
+        mode: "no-cors",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify(appState)
+      }).catch((e) => console.log("Background sync error:", e));
+    }
+  }
+
+  alert("Seluruh catatan Pemasukan Lain-Lain berhasil dikosongkan!");
 }
 
 /* ==========================================================================
