@@ -1941,13 +1941,13 @@ function renderDaftarTagihan() {
                 <button class="btn btn-outline btn-sm" onclick="viewDetailTagihan('${t.id}')" title="Lihat Detail"><i class="ri-eye-line"></i></button>
                 ${isAdmin ? `<button class="btn btn-outline btn-sm" onclick="openEditTagihanModal('${t.id}')" title="Edit Nominal Tagihan"><i class="ri-edit-line"></i></button>` : ""}
                 ${
-                  t.status !== "Lunas" && isAdmin
-                    ? `<button class="btn btn-success btn-sm" onclick="verifikasiLunasTagihan('${t.id}')" title="Verifikasi LUNAS & Masuk Kas"><i class="ri-check-double-line"></i> Verifikasi</button>`
+                  t.status !== "Lunas"
+                    ? `<button class="btn btn-primary btn-sm" onclick="openFormPembayaran('${t.id}')" title="Bayar / Upload Bukti"><i class="ri-checkbox-circle-line"></i> Bayar</button>`
                     : ""
                 }
                 ${
-                  t.status !== "Lunas" && !isAdmin
-                    ? `<button class="btn btn-primary btn-sm" onclick="openFormPembayaran('${t.id}')" title="Bayar"><i class="ri-checkbox-circle-line"></i> Upload Bukti</button>`
+                  t.status !== "Lunas" && isAdmin
+                    ? `<button class="btn btn-success btn-sm" onclick="verifikasiLunasTagihan('${t.id}')" title="Verifikasi LUNAS & Masuk Kas"><i class="ri-check-double-line"></i> Verifikasi</button>`
                     : ""
                 }
               </td>
