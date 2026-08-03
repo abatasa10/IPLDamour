@@ -607,10 +607,10 @@ function updatePerhitunganMonthDropdown() {
 
 // Load App Data from LocalStorage, data.json, or Cloud Google Spreadsheet API
 async function loadAppData() {
-  // Clear old stale cache and empty all bills completely
-  if (!localStorage.getItem("damour_ipl_v9_empty_all_tagihan")) {
+  // Clear old stale cache once to start tagihan persistence
+  if (!localStorage.getItem("damour_ipl_v10_persist_tagihan")) {
     localStorage.removeItem("damour_ipl_db");
-    localStorage.setItem("damour_ipl_v9_empty_all_tagihan", "true");
+    localStorage.setItem("damour_ipl_v10_persist_tagihan", "true");
   }
 
   let jsonBackup = null;
@@ -635,7 +635,7 @@ async function loadAppData() {
     appState = jsonBackup;
   }
 
-  appState.tagihan = []; // Empty all bills as requested by user
+  if (!appState.tagihan) appState.tagihan = [];
 
   if (appState && appState.settings && appState.settings.googleSheetApiUrl) {
     const url = appState.settings.googleSheetApiUrl.trim();
@@ -645,7 +645,7 @@ async function loadAppData() {
         const cloudData = await cloudRes.json();
         if (cloudData && (cloudData.users || cloudData.rumah)) {
           appState = cloudData;
-          appState.tagihan = []; // Ensure tagihan is empty
+          if (!appState.tagihan) appState.tagihan = [];
           console.log("Synced live appState from Google Spreadsheet Web App.");
         }
       } catch (e) {
