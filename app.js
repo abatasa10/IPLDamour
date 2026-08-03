@@ -1849,7 +1849,7 @@ function processGenerateTagihan() {
         kelompokIPL: r.kelompokIPL,
         nominal: totalNominal,
         rincianItems: rincianItems,
-        status: "Menunggu",
+        status: "Menunggu Pembayaran",
         tglBayar: "-",
         metode: "-",
         buktiTransfer: ""
@@ -1878,6 +1878,7 @@ function renderDaftarTagihan() {
   const searchVal = (searchInput?.value || "").toLowerCase();
   const filterBulan = document.getElementById("filter-tagihan-bulan")?.value || MONTH_NAMES[now.getMonth()];
   const filterTahun = document.getElementById("filter-tagihan-tahun")?.value || now.getFullYear().toString();
+  const filterStatus = document.getElementById("filter-tagihan-status")?.value || "Semua";
 
   if (isWarga && userBlok && userBlok !== "-") {
     if (searchInput) {
@@ -1897,16 +1898,20 @@ function renderDaftarTagihan() {
     const matchesBulan = filterBulan === "Semua" || t.bulan === filterBulan || t.periode.includes(filterBulan);
     const matchesTahun = filterTahun === "Semua" || t.tahun === filterTahun || t.periode.includes(filterTahun);
 
+    let displayStatus = t.status;
+    if (displayStatus === "Menunggu") displayStatus = "Menunggu Pembayaran";
+    const matchesStatus = filterStatus === "Semua" || displayStatus === filterStatus;
+
     if (currentUser && currentUser.role === "developer") {
-      return t.kelompokIPL === "IPL Developer" && matchesSearch && matchesBulan && matchesTahun;
+      return t.kelompokIPL === "IPL Developer" && matchesSearch && matchesBulan && matchesTahun && matchesStatus;
     }
 
     if (isWarga && userBlok && userBlok !== "-") {
       const isMyBill = t.blokNo.toLowerCase().trim() === userBlok;
-      return isMyBill && matchesBulan && matchesTahun;
+      return isMyBill && matchesBulan && matchesTahun && matchesStatus;
     }
 
-    return matchesSearch && matchesBulan && matchesTahun;
+    return matchesSearch && matchesBulan && matchesTahun && matchesStatus;
   });
 
   const totalPages = Math.ceil(filtered.length / itemsPerPage) || 1;
