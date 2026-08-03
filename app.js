@@ -626,11 +626,21 @@ function updateStorageBadge(status, text) {
   const badgeText = document.getElementById("gs-storage-text");
   if (!badge || !badgeText) return;
 
+  badge.style.cursor = "pointer";
+  badge.title = "Klik untuk Buka Pengaturan & Database Google Sheet";
+  badge.onclick = () => {
+    if (currentUser && currentUser.role === "admin") {
+      showView("pengaturan");
+    } else {
+      alert("Penyimpanan: Aplikasi menggunakan Cache Lokal Browser.\n\nUntuk mengaktifkan sinkronisasi real-time ke Google Sheet, minta Admin Pengurus untuk memasukkan Web App API URL di menu Pengaturan.");
+    }
+  };
+
   if (status === "connected") {
     badge.style.background = "#dcfce7";
     badge.style.color = "#15803d";
     badge.style.borderColor = "#86efac";
-    badgeText.textContent = text || "Storage: Google Sheet (Aktif)";
+    badgeText.textContent = text || "Storage Utama: Google Sheet (Online)";
   } else if (status === "syncing") {
     badge.style.background = "#e0f2fe";
     badge.style.color = "#0369a1";
@@ -640,7 +650,7 @@ function updateStorageBadge(status, text) {
     badge.style.background = "#fef9c3";
     badge.style.color = "#a16207";
     badge.style.borderColor = "#fde047";
-    badgeText.textContent = text || "Storage: Cache Lokal (Offline)";
+    badgeText.textContent = text || "Cache Lokal (Google Sheet Offline)";
   }
 }
 
