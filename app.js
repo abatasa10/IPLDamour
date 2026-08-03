@@ -3107,11 +3107,6 @@ function renderLaporanNeraca() {
     `;
   }
 }
-  downloadAnchor.setAttribute("download", `damour_ipl_backup_${Date.now()}.json`);
-  document.body.appendChild(downloadAnchor);
-  downloadAnchor.click();
-  downloadAnchor.remove();
-}
 
 function importDataJSON(input) {
   const file = input.files[0];
