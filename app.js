@@ -3429,6 +3429,10 @@ function sendWhatsAppReminder(blokNo, pemilik, phone, jumlahBulan, bulanStr, tot
   addAuditLog("Remind WA", `Pengirim Pengingat WA tunggakan ke ${pemilik} (${blokNo}) sebesar ${formatRp(totalNominal)}`);
 }
 
+function generateReportPDF() {
+  window.print();
+}
+
 /* ==========================================================================
    REKAP WAJIB SETOR VS REALISASI PER KOMPONEN
    ========================================================================== */
@@ -3465,14 +3469,9 @@ function renderWajibSetorVsRealisasi() {
   const items = [];
 
   activeKomponen.forEach((k) => {
-    let itemTarget = (parseFloat(k.nominalTotal) || 0) * monthMultiplier;
+    if (k.isAutoKas) return; // Skip Kas (Otomatis) sisa residual component from fixed component budget match
 
-    if (k.isAutoKas) {
-      const targetObj = appState.targetIPL ? appState.targetIPL.find((t) => t.kelompok === "IPL + Sampah") : null;
-      const targetVal = targetObj ? targetObj.target : 175000;
-      itemTarget = (targetVal * totalHousesCount) * monthMultiplier;
-    }
-
+    const itemTarget = (parseFloat(k.nominalTotal) || 0) * monthMultiplier;
     const itemRealisasi = lunasBills.reduce((sum, t) => {
       const perHouseComp = (parseFloat(k.nominalTotal) || 0) / totalHousesCount;
       return sum + perHouseComp;
@@ -3500,7 +3499,6 @@ function renderWajibSetorVsRealisasi() {
     }, 0);
 
     const selisih = eventRealisasi - eventTarget;
-    const persen = eventRealisasi - eventTarget;
 
     grandTarget += eventTarget;
     grandRealisasi += eventRealisasi;
