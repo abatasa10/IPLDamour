@@ -790,6 +790,7 @@ async function loadAppData() {
   ensureMasterTargetIPLState();
   generateAllMissingHouseUsers(true);
   autoEnsureCurrentMonthBills();
+  setLunasPrepaidB4Nurrudin();
   syncTagihanWithMasterRumah();
   cleanUpSampahFromKomponen();
   deduplicateAppState();
@@ -3387,7 +3388,7 @@ function getCalculatedKasBalance() {
   if (!appState) return 0;
 
   const totalMasukIPL = (appState.tagihan || [])
-    .filter((t) => t.status === "Lunas")
+    .filter((t) => t.status === "Lunas" && t.metode !== "Sudah Bayar Sblm Sistem")
     .reduce((sum, t) => sum + (parseFloat(t.nominal) || 0), 0);
 
   const totalMasukLain = (appState.pemasukanLain || [])
@@ -3405,6 +3406,42 @@ function getCalculatedKasBalance() {
   appState.ringkasanKas.selisih = calculatedBalance;
 
   return calculatedBalance;
+}
+
+function setLunasPrepaidB4Nurrudin() {
+  if (!appState) return;
+  if (!appState.tagihan) appState.tagihan = [];
+
+  const now = new Date();
+  const currentYear = now.getFullYear().toString();
+
+  MONTH_NAMES.forEach((m) => {
+    let bill = appState.tagihan.find(
+      (t) => normalizeBlok(t.blokNo) === "B4" && t.bulan === m && t.tahun === currentYear
+    );
+
+    if (!bill) {
+      appState.tagihan.push({
+        id: `TAG-${currentYear}${m}-B4`,
+        periode: `${currentYear}-${m}`,
+        bulan: m,
+        tahun: currentYear,
+        rumahId: "RMH-B4",
+        blokNo: "B4",
+        pemilik: "Nurrudin",
+        kelompokIPL: "IPL + Sampah",
+        nominal: 175000,
+        status: "Lunas",
+        tglBayar: "Sudah Lunas Sblm Sistem",
+        metode: "Sudah Bayar Sblm Sistem",
+        buktiTransfer: ""
+      });
+    } else {
+      bill.status = "Lunas";
+      bill.tglBayar = "Sudah Lunas Sblm Sistem";
+      bill.metode = "Sudah Bayar Sblm Sistem";
+    }
+  });
 }
 
 /* ==========================================================================
