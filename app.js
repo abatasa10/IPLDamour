@@ -994,51 +994,42 @@ const DEFAULT_KOMPONEN_IPL = [
 ];
 
 const DEFAULT_31_RUMAH = [
-  { id: "RMH-A01", blokNo: "A01", pemilik: "Warga A01", noHp: "081234567801", status: "Aktif", kelompokIPL: "IPL + Sampah" },
-  { id: "RMH-A02", blokNo: "A02", pemilik: "Warga A02", noHp: "081234567802", status: "Aktif", kelompokIPL: "IPL + Sampah" },
-  { id: "RMH-A03", blokNo: "A03", pemilik: "Warga A03", noHp: "081234567803", status: "Aktif", kelompokIPL: "IPL + Sampah" },
-  { id: "RMH-A04", blokNo: "A04", pemilik: "Warga A04", noHp: "081234567804", status: "Aktif", kelompokIPL: "IPL + Sampah" },
-  { id: "RMH-A05", blokNo: "A05", pemilik: "Warga A05", noHp: "081234567805", status: "Aktif", kelompokIPL: "IPL + Sampah" },
-  { id: "RMH-A06", blokNo: "A06", pemilik: "Warga A06", noHp: "081234567806", status: "Aktif", kelompokIPL: "IPL + Sampah" },
-  { id: "RMH-A07", blokNo: "A07", pemilik: "Warga A07", noHp: "081234567807", status: "Aktif", kelompokIPL: "IPL + Sampah" },
-  { id: "RMH-A08", blokNo: "A08", pemilik: "Warga A08", noHp: "081234567808", status: "Aktif", kelompokIPL: "IPL + Sampah" },
-  { id: "RMH-B01", blokNo: "B01", pemilik: "Warga B01", noHp: "081234567809", status: "Aktif", kelompokIPL: "IPL + Sampah" },
-  { id: "RMH-B02", blokNo: "B02", pemilik: "Warga B02", noHp: "081234567810", status: "Aktif", kelompokIPL: "IPL + Sampah" },
-  { id: "RMH-B03", blokNo: "B03", pemilik: "Warga B03", noHp: "081234567811", status: "Aktif", kelompokIPL: "IPL + Sampah" },
-  { id: "RMH-B04", blokNo: "B04", pemilik: "Warga B04", noHp: "081234567812", status: "Aktif", kelompokIPL: "IPL + Sampah" },
-  { id: "RMH-B05", blokNo: "B05", pemilik: "Warga B05", noHp: "081234567813", status: "Aktif", kelompokIPL: "IPL + Sampah" },
-  { id: "RMH-C01", blokNo: "C01", pemilik: "Warga C01", noHp: "081234567815", status: "Aktif", kelompokIPL: "IPL + Sampah" },
-  { id: "RMH-C02", blokNo: "C02", pemilik: "Warga C02", noHp: "081234567817", status: "Aktif", kelompokIPL: "IPL + Sampah" },
-  { id: "RMH-C03", blokNo: "C03", pemilik: "Warga C03", noHp: "081234567818", status: "Aktif", kelompokIPL: "IPL + Sampah" },
-  { id: "RMH-C04", blokNo: "C04", pemilik: "Warga C04", noHp: "081234567819", status: "Aktif", kelompokIPL: "IPL + Sampah" },
-  { id: "RMH-C05", blokNo: "C05", pemilik: "Warga C05", noHp: "081234567820", status: "Aktif", kelompokIPL: "IPL + Sampah" },
-  { id: "RMH-C06", blokNo: "C06", pemilik: "Warga C06", noHp: "081234567821", status: "Aktif", kelompokIPL: "IPL + Sampah" },
-  { id: "RMH-C07", blokNo: "C07", pemilik: "Warga C07", noHp: "081234567822", status: "Aktif", kelompokIPL: "IPL + Sampah" },
-  { id: "RMH-C08", blokNo: "C08", pemilik: "Warga C08", noHp: "081234567823", status: "Aktif", kelompokIPL: "IPL + Sampah" },
-  { id: "RMH-C09", blokNo: "C09", pemilik: "Warga C09", noHp: "081234567824", status: "Aktif", kelompokIPL: "IPL + Sampah" },
-  { id: "RMH-C10", blokNo: "C10", pemilik: "Warga C10", noHp: "081234567825", status: "Aktif", kelompokIPL: "IPL + Sampah" },
-  { id: "RMH-C11", blokNo: "C11", pemilik: "Warga C11", noHp: "081234567826", status: "Aktif", kelompokIPL: "IPL + Sampah" },
-  { id: "RMH-C12", blokNo: "C12", pemilik: "Warga C12", noHp: "081234567827", status: "Aktif", kelompokIPL: "IPL + Sampah" },
+  { id: "RMH-C1", blokNo: "C1", pemilik: "Fendi", noHp: "081234567801", status: "Aktif", kelompokIPL: "IPL + Sampah" },
+  { id: "RMH-C2", blokNo: "C2", pemilik: "Ben", noHp: "081234567802", status: "Aktif", kelompokIPL: "IPL + Sampah" },
+  { id: "RMH-C3", blokNo: "C3", pemilik: "Putra", noHp: "081234567803", status: "Aktif", kelompokIPL: "IPL + Sampah" },
+  { id: "RMH-C4", blokNo: "C4", pemilik: "Fadly", noHp: "081234567804", status: "Aktif", kelompokIPL: "IPL + Sampah" },
+  { id: "RMH-C5", blokNo: "C5", pemilik: "Boy", noHp: "081234567805", status: "Aktif", kelompokIPL: "IPL + Sampah" },
+  { id: "RMH-C6", blokNo: "C6", pemilik: "Dika", noHp: "081234567806", status: "Aktif", kelompokIPL: "IPL Tanpa Sampah" },
+  { id: "RMH-C7", blokNo: "C7", pemilik: "Diki", noHp: "081234567807", status: "Aktif", kelompokIPL: "IPL + Sampah" },
+  { id: "RMH-C8", blokNo: "C8", pemilik: "Delon", noHp: "081234567808", status: "Aktif", kelompokIPL: "IPL + Sampah" },
+  { id: "RMH-C9", blokNo: "C9", pemilik: "Ika", noHp: "081234567809", status: "Aktif", kelompokIPL: "IPL + Sampah" },
+  { id: "RMH-C10", blokNo: "C10", pemilik: "Ferdy", noHp: "081234567810", status: "Aktif", kelompokIPL: "IPL + Sampah" },
+  { id: "RMH-C11", blokNo: "C11", pemilik: "Yudi", noHp: "081234567811", status: "Aktif", kelompokIPL: "IPL Tanpa Sampah" },
+  { id: "RMH-C12", blokNo: "C12", pemilik: "Riki", noHp: "081234567812", status: "Aktif", kelompokIPL: "IPL + Sampah" },
+  { id: "RMH-C13", blokNo: "C13", pemilik: "Lukmana", noHp: "081234567813", status: "Aktif", kelompokIPL: "IPL + Sampah" },
   { id: "RMH-C14", blokNo: "C14", pemilik: "Jamal", noHp: "081234567814", status: "Aktif", kelompokIPL: "IPL + Sampah" },
-  { id: "RMH-C15", blokNo: "C15", pemilik: "Warga C15", noHp: "081234567828", status: "Aktif", kelompokIPL: "IPL + Sampah" },
+  { id: "RMH-C15", blokNo: "C15", pemilik: "Iva", noHp: "081234567815", status: "Aktif", kelompokIPL: "IPL + Sampah" },
   { id: "RMH-C16", blokNo: "C16", pemilik: "Ridwan", noHp: "081234567816", status: "Aktif", kelompokIPL: "IPL + Sampah" },
-  { id: "RMH-C17", blokNo: "C17", pemilik: "Warga C17", noHp: "081234567829", status: "Aktif", kelompokIPL: "IPL Developer" },
-  { id: "RMH-C18", blokNo: "C18", pemilik: "Warga C18", noHp: "081234567830", status: "Aktif", kelompokIPL: "IPL Developer" },
-  { id: "RMH-C19", blokNo: "C19", pemilik: "Warga C19", noHp: "081234567831", status: "Aktif", kelompokIPL: "IPL Developer" }
+  { id: "RMH-C17", blokNo: "C17", pemilik: "Kristova", noHp: "081234567817", status: "Aktif", kelompokIPL: "IPL + Sampah" },
+  { id: "RMH-C18", blokNo: "C18", pemilik: "Panji", noHp: "081234567818", status: "Aktif", kelompokIPL: "IPL Tanpa Sampah" },
+  { id: "RMH-C19", blokNo: "C19", pemilik: "Helmi", noHp: "081234567819", status: "Aktif", kelompokIPL: "IPL + Sampah" },
+  { id: "RMH-C20", blokNo: "C20", pemilik: "Fandy", noHp: "081234567820", status: "Aktif", kelompokIPL: "IPL + Sampah" },
+  { id: "RMH-B1", blokNo: "B1", pemilik: "B1 (-)", noHp: "081234567821", status: "Aktif", kelompokIPL: "IPL Tanpa Sampah" },
+  { id: "RMH-B2", blokNo: "B2", pemilik: "Developer", noHp: "081234567822", status: "Aktif", kelompokIPL: "IPL Developer" },
+  { id: "RMH-B3", blokNo: "B3", pemilik: "Developer", noHp: "081234567823", status: "Aktif", kelompokIPL: "IPL Developer" },
+  { id: "RMH-B4", blokNo: "B4", pemilik: "Nurrudin", noHp: "081234567824", status: "Aktif", kelompokIPL: "IPL + Sampah" },
+  { id: "RMH-B5", blokNo: "B5", pemilik: "Developer", noHp: "081234567825", status: "Aktif", kelompokIPL: "IPL Developer" },
+  { id: "RMH-B6", blokNo: "B6", pemilik: "Developer", noHp: "081234567826", status: "Aktif", kelompokIPL: "IPL Developer" },
+  { id: "RMH-B7", blokNo: "B7", pemilik: "Developer", noHp: "081234567827", status: "Aktif", kelompokIPL: "IPL Developer" },
+  { id: "RMH-B8", blokNo: "B8", pemilik: "Martins", noHp: "081234567828", status: "Aktif", kelompokIPL: "IPL Tanpa Sampah" },
+  { id: "RMH-A1", blokNo: "A1", pemilik: "Developer", noHp: "081234567829", status: "Aktif", kelompokIPL: "IPL Developer" },
+  { id: "RMH-A2", blokNo: "A2", pemilik: "Developer", noHp: "081234567830", status: "Aktif", kelompokIPL: "IPL Developer" },
+  { id: "RMH-A3", blokNo: "A3", pemilik: "Developer", noHp: "081234567831", status: "Aktif", kelompokIPL: "IPL Developer" }
 ];
 
 function ensureMasterRumahState() {
   if (!appState) appState = {};
-  if (!appState.rumah || !Array.isArray(appState.rumah) || appState.rumah.length < 5) {
-    appState.rumah = JSON.parse(JSON.stringify(DEFAULT_31_RUMAH));
-  } else {
-    DEFAULT_31_RUMAH.forEach((defR) => {
-      const exists = appState.rumah.some((r) => normalizeBlok(r.blokNo) === normalizeBlok(defR.blokNo));
-      if (!exists) {
-        appState.rumah.push(defR);
-      }
-    });
-  }
+  appState.rumah = JSON.parse(JSON.stringify(DEFAULT_31_RUMAH));
 }
 
 function ensureMasterKomponenState() {
