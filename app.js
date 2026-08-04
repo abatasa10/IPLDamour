@@ -2809,13 +2809,24 @@ function savePengeluaran() {
 }
 
 function deletePengeluaran(id) {
-  if (confirm("Apakah Anda yakin ingin menghapus catatan pengeluaran ini?")) {
-    appState.pengeluaran = appState.pengeluaran.filter((p) => p.id !== id);
-    saveState();
-    renderPengeluaranTable();
-    renderDashboard();
-    renderKasArusKasTable();
-  }
+  if (!confirm("Apakah Anda yakin ingin menghapus catatan pengeluaran ini?")) return;
+
+  if (!appState || !appState.pengeluaran) return;
+
+  const targetItem = appState.pengeluaran.find((p) => String(p.id) === String(id));
+  const detailKeterangan = targetItem ? `${targetItem.kategori} (${formatRp(targetItem.nominal)})` : id;
+
+  appState.pengeluaran = appState.pengeluaran.filter((p) => String(p.id) !== String(id));
+  
+  getCalculatedKasBalance();
+  saveState();
+  addAuditLog("Hapus Pengeluaran", `Menghapus pengeluaran: ${detailKeterangan}`);
+
+  renderPengeluaranTable();
+  renderDashboard();
+  renderKasArusKasTable();
+  
+  alert("Catatan pengeluaran berhasil dihapus!");
 }
 
 function inputSaldoKasSaatIni() {
