@@ -787,6 +787,7 @@ async function loadAppData() {
   ensureMasterRumahState();
   ensureMasterKomponenState();
   ensureMasterEventState();
+  ensureMasterTargetIPLState();
   generateAllMissingHouseUsers(true);
   autoEnsureCurrentMonthBills();
   syncTagihanWithMasterRumah();
@@ -1095,6 +1096,26 @@ function ensureMasterKomponenState() {
       const exists = appState.komponenIPL.some((k) => k.nama.toLowerCase().trim() === defK.nama.toLowerCase().trim());
       if (!exists) {
         appState.komponenIPL.push(defK);
+      }
+    });
+  }
+}
+
+const DEFAULT_TARGET_IPL = [
+  { id: "tgt-1", kelompok: "IPL + Sampah", target: 175000, keterangan: "IPL standar + Iuran sampah warga" },
+  { id: "tgt-2", kelompok: "IPL Tanpa Sampah", target: 150000, keterangan: "IPL standar tanpa kebersihan sampah" },
+  { id: "tgt-3", kelompok: "IPL Developer", target: 166000, keterangan: "Khusus unit rumah milik developer" }
+];
+
+function ensureMasterTargetIPLState() {
+  if (!appState) appState = {};
+  if (!appState.targetIPL || !Array.isArray(appState.targetIPL) || appState.targetIPL.length === 0) {
+    appState.targetIPL = JSON.parse(JSON.stringify(DEFAULT_TARGET_IPL));
+  } else {
+    DEFAULT_TARGET_IPL.forEach((defT) => {
+      const exists = appState.targetIPL.some((t) => t.kelompok === defT.kelompok);
+      if (!exists) {
+        appState.targetIPL.push(defT);
       }
     });
   }
@@ -2092,8 +2113,8 @@ function processGenerateTagihan() {
     });
   });
 
-  const baseTargetTanpaSampah = appState.targetIPL.find((t) => t.kelompok === "IPL Tanpa Sampah")?.target || 150000;
-  const baseTargetDeveloper = appState.targetIPL.find((t) => t.kelompok === "IPL Developer")?.target || 166000;
+  const baseTargetTanpaSampah = (appState.targetIPL && appState.targetIPL.find((t) => t.kelompok === "IPL Tanpa Sampah")?.target) || 150000;
+  const baseTargetDeveloper = (appState.targetIPL && appState.targetIPL.find((t) => t.kelompok === "IPL Developer")?.target) || 166000;
 
   const matchingHouses = appState.rumah.filter((r) => selectedGroups.includes(r.kelompokIPL));
 
