@@ -1525,13 +1525,26 @@ function setupEventListeners() {
       const view = btn.getAttribute("data-view");
       showView(view);
       document.querySelector(".sidebar").classList.remove("open");
+      const backdrop = document.getElementById("sidebar-backdrop");
+      if (backdrop) backdrop.style.display = "none";
     });
   });
 
   const toggleBtn = document.getElementById("toggle-sidebar");
+  const backdrop = document.getElementById("sidebar-backdrop");
+
   if (toggleBtn) {
     toggleBtn.addEventListener("click", () => {
-      document.querySelector(".sidebar").classList.toggle("open");
+      const sidebar = document.querySelector(".sidebar");
+      const isOpen = sidebar.classList.toggle("open");
+      if (backdrop) backdrop.style.display = isOpen ? "block" : "none";
+    });
+  }
+
+  if (backdrop) {
+    backdrop.addEventListener("click", () => {
+      document.querySelector(".sidebar").classList.remove("open");
+      backdrop.style.display = "none";
     });
   }
 
