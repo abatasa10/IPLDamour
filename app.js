@@ -1030,7 +1030,14 @@ const DEFAULT_31_RUMAH = [
 function ensureMasterRumahState() {
   if (!appState) appState = {};
 
-  if (!appState.rumah || !Array.isArray(appState.rumah) || appState.rumah.length === 0) {
+  const validBloks = new Set(DEFAULT_31_RUMAH.map((d) => normalizeBlok(d.blokNo)));
+
+  // Purge any house not in the official 31-house list (including A4 and A8)
+  if (appState.rumah && Array.isArray(appState.rumah)) {
+    appState.rumah = appState.rumah.filter((r) => r && r.blokNo && validBloks.has(normalizeBlok(r.blokNo)));
+  }
+
+  if (!appState.rumah || appState.rumah.length === 0) {
     appState.rumah = JSON.parse(JSON.stringify(DEFAULT_31_RUMAH));
   } else {
     DEFAULT_31_RUMAH.forEach((defR) => {
@@ -1046,6 +1053,12 @@ function ensureMasterRumahState() {
   }
 
   if (appState.users && Array.isArray(appState.users)) {
+    appState.users = appState.users.filter((u) => {
+      if (u.role === "admin" || u.role === "developer") return true;
+      if (!u.blokNo || u.blokNo === "-") return true;
+      return validBloks.has(normalizeBlok(u.blokNo));
+    });
+
     appState.users.forEach((u) => {
       if (u.blokNo && u.blokNo !== "-") {
         const cleanUBlok = normalizeBlok(u.blokNo);
@@ -1058,6 +1071,8 @@ function ensureMasterRumahState() {
   }
 
   if (appState.tagihan && Array.isArray(appState.tagihan)) {
+    appState.tagihan = appState.tagihan.filter((t) => t && t.blokNo && validBloks.has(normalizeBlok(t.blokNo)));
+
     appState.tagihan.forEach((t) => {
       if (t.blokNo) {
         const cleanTBlok = normalizeBlok(t.blokNo);
