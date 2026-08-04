@@ -869,7 +869,9 @@ async function loadAppData() {
         if (Array.isArray(cloudData.users) && cloudData.users.length > 0) appState.users = cloudData.users;
         if (Array.isArray(cloudData.targetIPL) && cloudData.targetIPL.length > 0) appState.targetIPL = cloudData.targetIPL;
         if (Array.isArray(cloudData.auditLog)) appState.auditLog = cloudData.auditLog;
-        if (cloudData.ringkasanKas && typeof cloudData.ringkasanKas === "object") appState.ringkasanKas = cloudData.ringkasanKas;
+        if (cloudData.ringkasanKas && typeof cloudData.ringkasanKas === "object") {
+          appState.ringkasanKas = { ...appState.ringkasanKas, ...cloudData.ringkasanKas };
+        }
 
         if (!appState.settings) appState.settings = {};
         appState.settings.googleSheetApiUrl = activeUrl;
@@ -3625,6 +3627,14 @@ function getCalculatedKasBalance() {
   const calculatedBalance = totalMasukIPL + totalMasukLain - totalPengeluaran;
 
   if (!appState.ringkasanKas) appState.ringkasanKas = {};
+
+  if (calculatedBalance === 0 && appState.ringkasanKas.kasSaatIni > 0) {
+    const currentPreserved = appState.ringkasanKas.kasSaatIni - totalPengeluaran;
+    appState.ringkasanKas.keluar = totalPengeluaran;
+    appState.ringkasanKas.selisih = currentPreserved;
+    return currentPreserved;
+  }
+
   appState.ringkasanKas.kasSaatIni = calculatedBalance;
   appState.ringkasanKas.masuk = totalMasukIPL + totalMasukLain;
   appState.ringkasanKas.keluar = totalPengeluaran;
