@@ -631,12 +631,27 @@ function updateStorageBadge(status, text) {
   if (!badge || !badgeText) return;
 
   badge.style.cursor = "pointer";
-  badge.title = "Klik untuk Buka Pengaturan & Database Google Sheet";
+  badge.title = "Klik untuk Buka Pengaturan / Sambungkan Google Sheet API";
   badge.onclick = () => {
+    const currentUrl = getGoogleSheetUrl();
+    if (!currentUrl) {
+      const inputUrl = prompt("Perangkat / Browser ini belum terhubung ke Google Sheet API online.\n\nSilakan masukkan/tempel URL Google Apps Script Web App API Anda:");
+      if (inputUrl && inputUrl.trim().startsWith("http")) {
+        const cleanUrl = inputUrl.trim();
+        localStorage.setItem("damour_ipl_gs_url", cleanUrl);
+        if (!appState) appState = {};
+        if (!appState.settings) appState.settings = {};
+        appState.settings.googleSheetApiUrl = cleanUrl;
+        saveState();
+        manualSyncGoogleSheet();
+      }
+      return;
+    }
+
     if (currentUser && currentUser.role === "admin") {
       showView("pengaturan");
     } else {
-      alert("Penyimpanan: Aplikasi menggunakan Cache Lokal Browser.\n\nUntuk mengaktifkan sinkronisasi real-time ke Google Sheet, minta Admin Pengurus untuk memasukkan Web App API URL di menu Pengaturan.");
+      alert(`Penyimpanan Utama: Google Sheet Online.\nURL: ${currentUrl}\n\nData tersinkron otomatis secara real-time.`);
     }
   };
 
