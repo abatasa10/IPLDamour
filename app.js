@@ -1029,7 +1029,16 @@ const DEFAULT_31_RUMAH = [
 
 function ensureMasterRumahState() {
   if (!appState) appState = {};
-  appState.rumah = JSON.parse(JSON.stringify(DEFAULT_31_RUMAH));
+  if (!appState.rumah || !Array.isArray(appState.rumah) || appState.rumah.length < 5) {
+    appState.rumah = JSON.parse(JSON.stringify(DEFAULT_31_RUMAH));
+  } else {
+    DEFAULT_31_RUMAH.forEach((defR) => {
+      const exists = appState.rumah.some((r) => normalizeBlok(r.blokNo) === normalizeBlok(defR.blokNo));
+      if (!exists) {
+        appState.rumah.push(defR);
+      }
+    });
+  }
 }
 
 function ensureMasterKomponenState() {
