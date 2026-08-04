@@ -754,7 +754,19 @@ async function loadAppData() {
 
         // Merge cloud data safely instead of blind total overwrite
         if (Array.isArray(cloudData.rumah) && cloudData.rumah.length > 0) appState.rumah = cloudData.rumah;
-        if (Array.isArray(cloudData.tagihan)) appState.tagihan = cloudData.tagihan;
+        if (Array.isArray(cloudData.tagihan)) {
+          cloudData.tagihan.forEach((cloudT) => {
+            if (cloudT && appState && Array.isArray(appState.tagihan)) {
+              const localT = appState.tagihan.find((t) => t.id === cloudT.id);
+              if (localT && localT.buktiTransfer && localT.buktiTransfer.startsWith("data:image")) {
+                if (!cloudT.buktiTransfer || cloudT.buktiTransfer === "bukti: foto" || cloudT.buktiTransfer.length < 100) {
+                  cloudT.buktiTransfer = localT.buktiTransfer;
+                }
+              }
+            }
+          });
+          appState.tagihan = cloudData.tagihan;
+        }
         if (Array.isArray(cloudData.pengeluaran)) appState.pengeluaran = cloudData.pengeluaran;
         if (Array.isArray(cloudData.pemasukanLain)) appState.pemasukanLain = cloudData.pemasukanLain;
         if (Array.isArray(cloudData.komponenIPL) && cloudData.komponenIPL.length > 0) appState.komponenIPL = cloudData.komponenIPL;
@@ -1174,6 +1186,29 @@ function saveState() {
   }
 }
 
+function getCleanPayloadForGoogleSheet(state) {
+  if (!state || typeof state !== "object") return {};
+  
+  try {
+    const stateCopy = JSON.parse(JSON.stringify(state));
+
+    if (stateCopy.tagihan && Array.isArray(stateCopy.tagihan)) {
+      stateCopy.tagihan.forEach((t) => {
+        if (t) {
+          if (t.buktiTransfer && (t.buktiTransfer.startsWith("data:image") || t.buktiTransfer.length > 100)) {
+            t.buktiTransfer = "bukti: foto";
+          }
+        }
+      });
+    }
+
+    return stateCopy;
+  } catch (e) {
+    console.error("Gagal bersihkan payload Google Sheet:", e);
+    return state;
+  }
+}
+
 // Automatic Real-Time Background Sync to Google Sheet (PRIMARY STORAGE)
 function autoSyncToGoogleSheet() {
   if (!appState) return;
@@ -1186,12 +1221,14 @@ function autoSyncToGoogleSheet() {
 
   updateStorageBadge("syncing", "Menyimpan ke Google Sheet...");
 
+  const payload = getCleanPayloadForGoogleSheet(appState);
+
   try {
     fetch(activeUrl, {
       method: "POST",
       mode: "no-cors",
       headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify(appState)
+      body: JSON.stringify(payload)
     }).then(() => {
       console.log("PRIMARY STORAGE: Synced data to Google Spreadsheet successfully.");
       updateStorageBadge("connected", "Storage Utama: Google Sheet");
