@@ -623,6 +623,8 @@ function getGoogleSheetUrl() {
   return "";
 }
 
+let lastSyncTimeString = "";
+
 function updateStorageBadge(status, text) {
   const badge = document.getElementById("gs-storage-badge");
   const badgeText = document.getElementById("gs-storage-text");
@@ -638,11 +640,15 @@ function updateStorageBadge(status, text) {
     }
   };
 
+  const now = new Date();
+  const timeStr = now.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
+
   if (status === "connected") {
+    lastSyncTimeString = timeStr;
     badge.style.background = "#dcfce7";
     badge.style.color = "#15803d";
     badge.style.borderColor = "#86efac";
-    badgeText.textContent = text || "Storage Utama: Google Sheet (Online)";
+    badgeText.textContent = text || `Terakhir sinkron: ${timeStr}`;
   } else if (status === "syncing") {
     badge.style.background = "#e0f2fe";
     badge.style.color = "#0369a1";
@@ -652,7 +658,83 @@ function updateStorageBadge(status, text) {
     badge.style.background = "#fef9c3";
     badge.style.color = "#a16207";
     badge.style.borderColor = "#fde047";
-    badgeText.textContent = text || "Cache Lokal (Google Sheet Offline)";
+    badgeText.textContent = text || (lastSyncTimeString ? `Sinkron Gagal (Terakhir: ${lastSyncTimeString})` : "Cache Lokal (Set URL di Settings)");
+  }
+}
+
+async function manualSyncGoogleSheet() {
+  const activeUrl = getGoogleSheetUrl();
+  if (!activeUrl) {
+    alert("URL Google Apps Script API belum di-set. Silakan atur di menu Pengaturan terlebih dahulu.");
+    showView("pengaturan");
+    return;
+  }
+
+  updateStorageBadge("syncing", "Menyimpulkan & Menyinkronkan (GET -> Merge -> POST)...");
+
+  try {
+    // 1. GET live cloud data
+    const res = await fetch(activeUrl);
+    const cloudData = await res.json();
+
+    if (cloudData && typeof cloudData === "object") {
+      if (!appState) appState = {};
+
+      // 2. MERGE cloud data safely with local state
+      if (Array.isArray(cloudData.rumah) && cloudData.rumah.length > 0) appState.rumah = cloudData.rumah;
+      if (Array.isArray(cloudData.tagihan)) {
+        cloudData.tagihan.forEach((cloudT) => {
+          if (cloudT && appState && Array.isArray(appState.tagihan)) {
+            const localT = appState.tagihan.find((t) => t.id === cloudT.id);
+            if (localT && localT.buktiTransfer && localT.buktiTransfer.startsWith("data:image")) {
+              if (!cloudT.buktiTransfer || cloudT.buktiTransfer === "bukti: foto" || cloudT.buktiTransfer.length < 100) {
+                cloudT.buktiTransfer = localT.buktiTransfer;
+              }
+            }
+          }
+        });
+        appState.tagihan = cloudData.tagihan;
+      }
+      if (Array.isArray(cloudData.pengeluaran)) appState.pengeluaran = cloudData.pengeluaran;
+      if (Array.isArray(cloudData.pemasukanLain)) appState.pemasukanLain = cloudData.pemasukanLain;
+      if (Array.isArray(cloudData.komponenIPL) && cloudData.komponenIPL.length > 0) appState.komponenIPL = cloudData.komponenIPL;
+      if (Array.isArray(cloudData.masterEvent) && cloudData.masterEvent.length > 0) appState.masterEvent = cloudData.masterEvent;
+      if (Array.isArray(cloudData.users) && cloudData.users.length > 0) appState.users = cloudData.users;
+      if (Array.isArray(cloudData.targetIPL) && cloudData.targetIPL.length > 0) appState.targetIPL = cloudData.targetIPL;
+      if (Array.isArray(cloudData.auditLog)) appState.auditLog = cloudData.auditLog;
+      if (cloudData.ringkasanKas && typeof cloudData.ringkasanKas === "object") appState.ringkasanKas = cloudData.ringkasanKas;
+    }
+
+    parseNestedJsonFields();
+    ensureMasterRumahState();
+    ensureMasterKomponenState();
+    ensureMasterEventState();
+    ensureMasterTargetIPLState();
+    getCalculatedKasBalance();
+    saveState();
+
+    // 3. POST clean merged state back to Google Sheet
+    const payload = getCleanPayloadForGoogleSheet(appState);
+    await fetch(activeUrl, {
+      method: "POST",
+      mode: "no-cors",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify(payload)
+    });
+
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
+    updateStorageBadge("connected", `Terakhir sinkron: ${timeStr}`);
+    
+    // Refresh current UI
+    const currentView = localStorage.getItem("damour_last_view") || "dashboard";
+    showView(currentView);
+
+    alert(`Sinkronisasi Manual Berhasil!\nData Google Spreadsheet telah diperbarui (Terakhir sinkron: ${timeStr})`);
+  } catch (err) {
+    console.error("Gagal sinkron manual:", err);
+    updateStorageBadge("offline", "Sinkron Manual Gagal");
+    alert("Sinkronisasi Manual Gagal. Periksa koneksi internet atau pastikan URL Apps Script di-set ke 'Anyone' (Siapa Saja).");
   }
 }
 
