@@ -122,7 +122,8 @@ function getSheetData(sheet, keyField) {
 }
 
 function updateSheetData(sheet, dataArray, keyField) {
-  if (!dataArray || !Array.isArray(dataArray) || dataArray.length === 0) return;
+  if (!sheet) return;
+  if (!dataArray || !Array.isArray(dataArray)) dataArray = [];
   
   var seenKeys = {};
   var cleanArray = [];
