@@ -613,6 +613,8 @@ function updatePerhitunganMonthDropdown() {
   ).join("");
 }
 
+const DEFAULT_GOOGLE_SHEET_URL = "https://script.google.com/macros/s/AKfycbyqvCo-t2FlFd49Kh2Cr3QeXj9YXvETX-33Z7Xiqs3KUcptd_xE1wT_Pfb_QTSkDdQ6yQ/exec";
+
 function getGoogleSheetUrl() {
   if (appState && appState.settings && appState.settings.googleSheetApiUrl) {
     const url = appState.settings.googleSheetApiUrl.trim();
@@ -620,7 +622,7 @@ function getGoogleSheetUrl() {
   }
   const savedUrl = localStorage.getItem("damour_ipl_gs_url");
   if (savedUrl && savedUrl.startsWith("http") && !savedUrl.includes("EXAMPLE")) return savedUrl;
-  return "";
+  return DEFAULT_GOOGLE_SHEET_URL;
 }
 
 let lastSyncTimeString = "";

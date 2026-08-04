@@ -3,7 +3,7 @@
     "appName": "D'AMOUR Sistem IPL",
     "perumahan": "Perumahan D'AMOUR",
     "periodeAktif": "2026-08",
-    "googleSheetApiUrl": ""
+    "googleSheetApiUrl": "https://script.google.com/macros/s/AKfycbyqvCo-t2FlFd49Kh2Cr3QeXj9YXvETX-33Z7Xiqs3KUcptd_xE1wT_Pfb_QTSkDdQ6yQ/exec"
   },
   "biayaSampahDefault": 25000,
   "users": [
