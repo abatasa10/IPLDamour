@@ -1109,7 +1109,7 @@ function ensureMasterEventState() {
 
   if (!appState.masterEvent) {
     appState.masterEvent = [
-      { id: "evt-1", nama: "Iuran THR Satpam", nominal: 50000, dibayarOleh: "Semua", aktif: true },
+      { id: "evt-1", nama: "Iuran THR Satpam", nominal: 50000, dibayarOleh: "Semua", aktif: false },
       { id: "evt-2", nama: "Iuran 17 Agustus", nominal: 20000, dibayarOleh: "Semua", aktif: false }
     ];
   }
@@ -3690,12 +3690,21 @@ function setLunasPrepaidB4Nurrudin() {
       pemilik: "Nurrudin",
       kelompokIPL: "IPL + Sampah",
       nominal: 175000,
+      rincianItems: [
+        { nama: "IPL Dasar", nominal: 150000 },
+        { nama: "Iuran Sampah", nominal: 25000 }
+      ],
       status: "Lunas",
       tglBayar: "Sudah Lunas Sblm Sistem",
       metode: "Sudah Bayar Sblm Sistem",
       buktiTransfer: ""
     });
   } else {
+    bill.nominal = 175000;
+    bill.rincianItems = [
+      { nama: "IPL Dasar", nominal: 150000 },
+      { nama: "Iuran Sampah", nominal: 25000 }
+    ];
     bill.status = "Lunas";
     bill.tglBayar = "Sudah Lunas Sblm Sistem";
     bill.metode = "Sudah Bayar Sblm Sistem";

@@ -88,7 +88,7 @@
       "nama": "Iuran THR Satpam",
       "nominal": 50000,
       "dibayarOleh": "Semua",
-      "aktif": true
+      "aktif": false
     },
     {
       "id": "evt-2",
