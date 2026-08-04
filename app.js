@@ -770,19 +770,11 @@ async function loadAppData() {
     }
   }
 
+  if (!appState) appState = {};
+  if (!appState.rumah) appState.rumah = [];
   if (!appState.tagihan) appState.tagihan = [];
-
-  // Complete Reset: Set ALL bills to "Menunggu Pembayaran" and clear test pengeluaran & pemasukanLain
-  if (appState && appState.tagihan) {
-    appState.tagihan.forEach((t) => {
-      t.status = "Menunggu Pembayaran";
-      t.tglBayar = "-";
-      t.buktiTransfer = "";
-      t.metode = "-";
-    });
-  }
-  appState.pengeluaran = [];
-  appState.pemasukanLain = [];
+  if (!appState.pengeluaran) appState.pengeluaran = [];
+  if (!appState.pemasukanLain) appState.pemasukanLain = [];
 
   ensureMasterRumahState();
   ensureMasterKomponenState();
