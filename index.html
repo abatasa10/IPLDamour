@@ -1292,13 +1292,14 @@
               <hr style="margin: 1.5rem 0; border: none; border-top: 1px solid var(--border-color);">
 
               <div class="form-group">
-                <label>Backup & Restore Data (JSON)</label>
-                <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem;">
+                <label>Backup & Restore Data (JSON & Cadangan Otomatis)</label>
+                <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem; flex-wrap: wrap;">
                   <button class="btn btn-outline" onclick="exportDataJSON()"><i class="ri-download-line"></i> Download Backup JSON</button>
                   <label class="btn btn-outline" style="cursor: pointer;">
                     <i class="ri-upload-line"></i> Restore JSON
                     <input type="file" accept=".json" onchange="importDataJSON(this)" style="display: none;">
                   </label>
+                  <button class="btn btn-outline" style="color: #0284c7; border-color: #0284c7;" onclick="restoreFromLocalBackup()"><i class="ri-shield-check-line"></i> Pulihkan Cadangan Lokal (Lapisan 2)</button>
                 </div>
               </div>
 
@@ -1642,7 +1643,7 @@
     </div>
   </div>
 
-  <script src="app.js?v=20260804_14"></script>
+  <script src="app.js?v=20260804_15"></script>
   <script>
     function togglePasswordVisibility() {
       const pwdInp = document.getElementById("login-password");

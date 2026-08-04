@@ -810,13 +810,26 @@ async function loadAppData() {
     console.error("Error loading data.json:", err);
   }
 
-  // 1. Check local cache as fallback
+  // 1. Check primary local cache
   const saved = localStorage.getItem("damour_ipl_db");
   if (saved) {
     try {
       appState = JSON.parse(saved);
     } catch (e) {
-      console.error("Failed to parse LocalStorage data", e);
+      console.error("Primary LocalStorage cache corrupted:", e);
+    }
+  }
+
+  // 1b. Secondary Layer Fallback: If primary cache failed/empty, try damour_ipl_db_backup!
+  if (!appState || !appState.rumah || appState.rumah.length === 0) {
+    const backupSaved = localStorage.getItem("damour_ipl_db_backup");
+    if (backupSaved) {
+      try {
+        appState = JSON.parse(backupSaved);
+        console.warn("RECOVERY: Main LocalStorage cache empty/corrupted. Successfully restored from secondary backup (damour_ipl_db_backup)!");
+      } catch (e) {
+        console.error("Secondary LocalStorage backup also corrupted:", e);
+      }
     }
   }
 
@@ -1263,8 +1276,39 @@ function cleanUpSampahFromKomponen() {
 
 function saveState() {
   if (appState) {
-    localStorage.setItem("damour_ipl_db", JSON.stringify(appState));
+    const jsonStr = JSON.stringify(appState);
+    // 1. Primary Local Cache
+    localStorage.setItem("damour_ipl_db", jsonStr);
+
+    // 2. Secondary Local Backup Layer
+    localStorage.setItem("damour_ipl_db_backup", jsonStr);
+    localStorage.setItem("damour_ipl_db_backup_time", new Date().toISOString());
+
     autoSyncToGoogleSheet();
+  }
+}
+
+function restoreFromLocalBackup() {
+  const backupSaved = localStorage.getItem("damour_ipl_db_backup");
+  const backupTime = localStorage.getItem("damour_ipl_db_backup_time");
+
+  if (!backupSaved) {
+    alert("Belum ada cadangan lokal (damour_ipl_db_backup) yang tersimpan di browser ini.");
+    return;
+  }
+
+  const timeFormatted = backupTime ? new Date(backupTime).toLocaleString("id-ID") : "Sebelumnya";
+
+  if (confirm(`Apakah Anda yakin ingin memulihkan seluruh data dari Cadangan Lokal Lapisan Kedua (Waktu Cadangan: ${timeFormatted})?`)) {
+    try {
+      appState = JSON.parse(backupSaved);
+      localStorage.setItem("damour_ipl_db", backupSaved);
+      saveState();
+      alert(`Data berhasil dipulihkan dari Cadangan Lokal (Waktu: ${timeFormatted})!`);
+      location.reload();
+    } catch (e) {
+      alert("Gagal memulihkan cadangan lokal: format data tidak valid.");
+    }
   }
 }
 
