@@ -1029,13 +1029,43 @@ const DEFAULT_31_RUMAH = [
 
 function ensureMasterRumahState() {
   if (!appState) appState = {};
-  if (!appState.rumah || !Array.isArray(appState.rumah) || appState.rumah.length < 5) {
+
+  if (!appState.rumah || !Array.isArray(appState.rumah) || appState.rumah.length === 0) {
     appState.rumah = JSON.parse(JSON.stringify(DEFAULT_31_RUMAH));
   } else {
     DEFAULT_31_RUMAH.forEach((defR) => {
-      const exists = appState.rumah.some((r) => normalizeBlok(r.blokNo) === normalizeBlok(defR.blokNo));
-      if (!exists) {
+      const cleanDef = normalizeBlok(defR.blokNo);
+      let target = appState.rumah.find((r) => normalizeBlok(r.blokNo) === cleanDef);
+      if (target) {
+        target.pemilik = defR.pemilik;
+        target.kelompokIPL = defR.kelompokIPL;
+      } else {
         appState.rumah.push(defR);
+      }
+    });
+  }
+
+  if (appState.users && Array.isArray(appState.users)) {
+    appState.users.forEach((u) => {
+      if (u.blokNo && u.blokNo !== "-") {
+        const cleanUBlok = normalizeBlok(u.blokNo);
+        const matchHouse = appState.rumah.find((r) => normalizeBlok(r.blokNo) === cleanUBlok);
+        if (matchHouse) {
+          u.name = matchHouse.pemilik;
+        }
+      }
+    });
+  }
+
+  if (appState.tagihan && Array.isArray(appState.tagihan)) {
+    appState.tagihan.forEach((t) => {
+      if (t.blokNo) {
+        const cleanTBlok = normalizeBlok(t.blokNo);
+        const matchHouse = appState.rumah.find((r) => normalizeBlok(r.blokNo) === cleanTBlok);
+        if (matchHouse) {
+          t.pemilik = matchHouse.pemilik;
+          t.kelompokIPL = matchHouse.kelompokIPL;
+        }
       }
     });
   }
