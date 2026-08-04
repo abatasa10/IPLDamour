@@ -749,13 +749,26 @@ async function loadAppData() {
     try {
       const cloudRes = await fetch(activeUrl);
       const cloudData = await cloudRes.json();
-      if (cloudData && (cloudData.users || cloudData.rumah || cloudData.tagihan)) {
-        appState = cloudData;
+      if (cloudData && typeof cloudData === "object") {
+        if (!appState) appState = {};
+
+        // Merge cloud data safely instead of blind total overwrite
+        if (Array.isArray(cloudData.rumah) && cloudData.rumah.length > 0) appState.rumah = cloudData.rumah;
+        if (Array.isArray(cloudData.tagihan)) appState.tagihan = cloudData.tagihan;
+        if (Array.isArray(cloudData.pengeluaran)) appState.pengeluaran = cloudData.pengeluaran;
+        if (Array.isArray(cloudData.pemasukanLain)) appState.pemasukanLain = cloudData.pemasukanLain;
+        if (Array.isArray(cloudData.komponenIPL) && cloudData.komponenIPL.length > 0) appState.komponenIPL = cloudData.komponenIPL;
+        if (Array.isArray(cloudData.masterEvent) && cloudData.masterEvent.length > 0) appState.masterEvent = cloudData.masterEvent;
+        if (Array.isArray(cloudData.users) && cloudData.users.length > 0) appState.users = cloudData.users;
+        if (Array.isArray(cloudData.targetIPL) && cloudData.targetIPL.length > 0) appState.targetIPL = cloudData.targetIPL;
+        if (Array.isArray(cloudData.auditLog)) appState.auditLog = cloudData.auditLog;
+        if (cloudData.ringkasanKas && typeof cloudData.ringkasanKas === "object") appState.ringkasanKas = cloudData.ringkasanKas;
+
         if (!appState.settings) appState.settings = {};
         appState.settings.googleSheetApiUrl = activeUrl;
         localStorage.setItem("damour_ipl_gs_url", activeUrl);
         updateStorageBadge("connected", "Storage Utama: Google Sheet");
-        console.log("PRIMARY DATA LOADED FROM GOOGLE SPREADSHEET WEB APP.");
+        console.log("PRIMARY DATA MERGED FROM GOOGLE SPREADSHEET WEB APP.");
       }
     } catch (e) {
       console.log("Cloud primary fetch failed, falling back to local cache.", e);
@@ -764,6 +777,8 @@ async function loadAppData() {
   } else {
     updateStorageBadge("offline", "Storage: Cache Lokal (Set URL di Settings)");
   }
+
+  parseNestedJsonFields();
 
   // SAFEGUARD: If rumah data is missing/empty, restore 31 houses from jsonBackup!
   if (!appState || !appState.rumah || !Array.isArray(appState.rumah) || appState.rumah.length === 0) {
@@ -1111,6 +1126,36 @@ function ensureMasterTargetIPLState() {
       const exists = appState.targetIPL.some((t) => t.kelompok === defT.kelompok);
       if (!exists) {
         appState.targetIPL.push(defT);
+      }
+    });
+  }
+}
+
+function parseNestedJsonFields() {
+  if (!appState) return;
+
+  if (appState.tagihan && Array.isArray(appState.tagihan)) {
+    appState.tagihan.forEach((t) => {
+      if (t) {
+        if (typeof t.rincianItems === "string" && t.rincianItems.trim().startsWith("[")) {
+          try {
+            t.rincianItems = JSON.parse(t.rincianItems);
+          } catch (e) {
+            console.error("Gagal parse rincianItems JSON:", e);
+            t.rincianItems = [];
+          }
+        }
+        if (!Array.isArray(t.rincianItems)) {
+          t.rincianItems = [];
+        }
+
+        if (typeof t.rincian === "string" && t.rincian.trim().startsWith("[")) {
+          try {
+            t.rincian = JSON.parse(t.rincian);
+          } catch (e) {
+            t.rincian = [];
+          }
+        }
       }
     });
   }
@@ -2369,7 +2414,10 @@ function viewDetailTagihan(id) {
   const tbody = document.getElementById("detail-rincian-tbody");
 
   if (tbody) {
-    if (t.rincianItems && t.rincianItems.length > 0) {
+    if (typeof t.rincianItems === "string") {
+      try { t.rincianItems = JSON.parse(t.rincianItems); } catch (e) { t.rincianItems = []; }
+    }
+    if (Array.isArray(t.rincianItems) && t.rincianItems.length > 0) {
       tbody.innerHTML = t.rincianItems
         .map(
           (item) => `
