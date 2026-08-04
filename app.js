@@ -680,6 +680,11 @@ function updateStorageBadge(status, text) {
 }
 
 async function manualSyncGoogleSheet() {
+  if (!currentUser || currentUser.role !== "admin") {
+    alert("Akses Ditolak: Hanya Admin / Pengurus yang dapat melakukan sinkronisasi & penulisan ke Google Spreadsheet pusat.");
+    return;
+  }
+
   const activeUrl = getGoogleSheetUrl();
   if (!activeUrl) {
     alert("URL Google Apps Script API belum di-set. Silakan atur di menu Pengaturan terlebih dahulu.");
@@ -1357,6 +1362,12 @@ function getCleanPayloadForGoogleSheet(state) {
 // Automatic Real-Time Background Sync to Google Sheet (PRIMARY STORAGE)
 function autoSyncToGoogleSheet() {
   if (!appState) return;
+
+  // STRICT ROLE GUARD: ONLY ADMIN CAN WRITE/POST TO GOOGLE SPREADSHEET PUSAT!
+  if (!currentUser || currentUser.role !== "admin") {
+    console.log("SYNC SKIPPED: Non-admin user (warga/developer) read-only mode for Google Sheet.");
+    return;
+  }
 
   const activeUrl = getGoogleSheetUrl();
   if (!activeUrl) {
