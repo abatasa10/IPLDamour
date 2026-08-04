@@ -1335,19 +1335,24 @@ function renderDashboard() {
   }
 
   const totalRumah = appState.rumah ? appState.rumah.length : 0;
-  const lunasCount = appState.tagihan ? appState.tagihan.filter((t) => t.status === "Lunas").length : 0;
-  const menungguCount = appState.tagihan ? appState.tagihan.filter((t) => t.status === "Menunggu").length : 0;
-  const menunggakCount = appState.tagihan ? appState.tagihan.filter((t) => t.status === "Menunggak").length : 0;
+  
+  const currentMonthBills = (appState.tagihan || []).filter(
+    (t) => t.bulan === currentMonthName && (t.tahun === currentYear.toString() || (t.periode && t.periode.includes(currentYear.toString())))
+  );
+
+  const lunasCount = currentMonthBills.filter((t) => t.status === "Lunas").length;
+  const menungguCount = currentMonthBills.filter((t) => t.status === "Menunggu" || t.status === "Menunggu Pembayaran" || t.status === "Menunggu Verifikasi").length;
+  const menunggakCount = currentMonthBills.filter((t) => t.status === "Menunggak").length;
 
   document.getElementById("kpi-total-rumah").textContent = `${totalRumah} Unit`;
   document.getElementById("kpi-menunggak").textContent = `${menungguCount + menunggakCount} Unit`;
   document.getElementById("kpi-lunas").textContent = `${lunasCount} Unit`;
   document.getElementById("kpi-kas").textContent = formatRp(appState.ringkasanKas ? appState.ringkasanKas.kasSaatIni : 0);
 
-  const totalTagihan = appState.tagihan ? appState.tagihan.reduce((acc, t) => acc + t.nominal, 0) : 0;
-  const totalPembayaran = appState.tagihan
-    ? appState.tagihan.filter((t) => t.status === "Lunas").reduce((acc, t) => acc + t.nominal, 0)
-    : 0;
+  const totalTagihan = currentMonthBills.reduce((acc, t) => acc + (parseFloat(t.nominal) || 0), 0);
+  const totalPembayaran = currentMonthBills
+    .filter((t) => t.status === "Lunas" && t.metode !== "Sudah Bayar Sblm Sistem")
+    .reduce((acc, t) => acc + (parseFloat(t.nominal) || 0), 0);
   const sisaTagihan = totalTagihan - totalPembayaran;
 
   document.getElementById("dash-total-tagihan").textContent = formatRp(totalTagihan);
@@ -3414,34 +3419,40 @@ function setLunasPrepaidB4Nurrudin() {
 
   const now = new Date();
   const currentYear = now.getFullYear().toString();
+  const currentMonth = MONTH_NAMES[now.getMonth()];
 
-  MONTH_NAMES.forEach((m) => {
-    let bill = appState.tagihan.find(
-      (t) => normalizeBlok(t.blokNo) === "B4" && t.bulan === m && t.tahun === currentYear
-    );
-
-    if (!bill) {
-      appState.tagihan.push({
-        id: `TAG-${currentYear}${m}-B4`,
-        periode: `${currentYear}-${m}`,
-        bulan: m,
-        tahun: currentYear,
-        rumahId: "RMH-B4",
-        blokNo: "B4",
-        pemilik: "Nurrudin",
-        kelompokIPL: "IPL + Sampah",
-        nominal: 175000,
-        status: "Lunas",
-        tglBayar: "Sudah Lunas Sblm Sistem",
-        metode: "Sudah Bayar Sblm Sistem",
-        buktiTransfer: ""
-      });
-    } else {
-      bill.status = "Lunas";
-      bill.tglBayar = "Sudah Lunas Sblm Sistem";
-      bill.metode = "Sudah Bayar Sblm Sistem";
+  appState.tagihan = appState.tagihan.filter((t) => {
+    if (normalizeBlok(t.blokNo) === "B4") {
+      return t.bulan === currentMonth && t.tahun === currentYear;
     }
+    return true;
   });
+
+  let bill = appState.tagihan.find(
+    (t) => normalizeBlok(t.blokNo) === "B4" && t.bulan === currentMonth && t.tahun === currentYear
+  );
+
+  if (!bill) {
+    appState.tagihan.push({
+      id: `TAG-${currentYear}${currentMonth}-B4`,
+      periode: `${currentYear}-${currentMonth}`,
+      bulan: currentMonth,
+      tahun: currentYear,
+      rumahId: "RMH-B4",
+      blokNo: "B4",
+      pemilik: "Nurrudin",
+      kelompokIPL: "IPL + Sampah",
+      nominal: 175000,
+      status: "Lunas",
+      tglBayar: "Sudah Lunas Sblm Sistem",
+      metode: "Sudah Bayar Sblm Sistem",
+      buktiTransfer: ""
+    });
+  } else {
+    bill.status = "Lunas";
+    bill.tglBayar = "Sudah Lunas Sblm Sistem";
+    bill.metode = "Sudah Bayar Sblm Sistem";
+  }
 }
 
 /* ==========================================================================
