@@ -188,7 +188,8 @@ async function handleLoginSubmit(e) {
     if (errBox) errBox.style.display = "none";
     updateNavbarProfile();
     applyRolePermissions();
-    showView("dashboard");
+    const savedView = localStorage.getItem("damour_last_view") || "dashboard";
+    showView(savedView);
     addAuditLog("Login System", `User ${found.name} (${found.username}) berhasil login`);
 
     const isDefaultPass =
@@ -288,7 +289,8 @@ function quickLoginDemo(roleType) {
     document.getElementById("login-overlay").classList.remove("active");
     updateNavbarProfile();
     applyRolePermissions();
-    showView("dashboard");
+    const savedView = localStorage.getItem("damour_last_view") || "dashboard";
+    showView(savedView);
   }
 }
 
@@ -1205,6 +1207,8 @@ function showView(viewId) {
     alert("Akses Ditolak: Halaman ini hanya dapat diakses oleh Admin / Pengurus.");
     return;
   }
+
+  localStorage.setItem("damour_last_view", viewId);
 
   document.querySelectorAll(".view-section").forEach((sec) => {
     sec.classList.remove("active");
