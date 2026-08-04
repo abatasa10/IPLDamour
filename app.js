@@ -2989,7 +2989,9 @@ function renderKasArusKasTable() {
   let currentBalance = 0;
   const ledgerRows = [];
 
-  const lunasBills = appState.tagihan ? appState.tagihan.filter((t) => t.status === "Lunas") : [];
+  const lunasBills = appState.tagihan
+    ? appState.tagihan.filter((t) => t.status === "Lunas" && t.metode !== "Sudah Bayar Sblm Sistem" && (!t.tglBayar || !t.tglBayar.includes("Sudah Lunas")))
+    : [];
 
   if (lunasBills.length > 0) {
     lunasBills.forEach((t) => {
@@ -3385,7 +3387,7 @@ function getCalculatedKasBalance() {
   if (!appState) return 0;
 
   const totalMasukIPL = (appState.tagihan || [])
-    .filter((t) => t.status === "Lunas" && t.metode !== "Sudah Bayar Sblm Sistem")
+    .filter((t) => t.status === "Lunas" && t.metode !== "Sudah Bayar Sblm Sistem" && (!t.tglBayar || !t.tglBayar.includes("Sudah Lunas")))
     .reduce((sum, t) => sum + (parseFloat(t.nominal) || 0), 0);
 
   const totalMasukLain = (appState.pemasukanLain || [])
