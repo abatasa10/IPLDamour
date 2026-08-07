@@ -183,12 +183,21 @@
   ],
   "tagihan": [],
   "pengeluaran": [],
-  "pemasukanLain": [],
+  "pemasukanLain": [
+    {
+      "id": "PEM-1001",
+      "tanggal": "01/08/2026",
+      "kategori": "Saldo Awal Kas",
+      "penerima": "Pengurus IPL",
+      "keterangan": "Saldo Awal Kas Tersedia",
+      "nominal": 15000000
+    }
+  ],
   "grafik6Bulan": [],
   "ringkasanKas": {
-    "kasSaatIni": 0,
-    "masuk": 0,
+    "kasSaatIni": 15000000,
+    "masuk": 15000000,
     "keluar": 0,
-    "selisih": 0
+    "selisih": 15000000
   }
 }
