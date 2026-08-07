@@ -28,6 +28,7 @@ function doGet(e) {
     var eventSheet = ss.getSheetByName("Event") || createEventSheet(ss);
     var usersSheet = ss.getSheetByName("Users") || createUsersSheet(ss);
     var ringkasanSheet = ss.getSheetByName("RingkasanKas") || createRingkasanKasSheet(ss);
+    var targetSheet = ss.getSheetByName("TargetIPL") || createTargetIPLSheet(ss);
     
     result = {
       status: "success",
@@ -39,7 +40,8 @@ function doGet(e) {
       masterEvent: getSheetData(eventSheet, "id"),
       users: getSheetData(usersSheet, "username"),
       auditLog: getSheetData(auditSheet, "id"),
-      ringkasanKas: getRingkasanKasData(ringkasanSheet)
+      ringkasanKas: getRingkasanKasData(ringkasanSheet),
+      targetIPL: getSheetData(targetSheet, "id")
     };
   } catch (err) {
     result = { status: "error", message: err.toString() };
@@ -81,6 +83,9 @@ function doPost(e) {
     }
     if (contents.ringkasanKas) {
       updateRingkasanKasSheet(ss.getSheetByName("RingkasanKas") || createRingkasanKasSheet(ss), contents.ringkasanKas);
+    }
+    if (contents.targetIPL) {
+      updateSheetData(ss.getSheetByName("TargetIPL") || createTargetIPLSheet(ss), contents.targetIPL, "id");
     }
     
     result = { status: "success", message: "Data Google Spreadsheet berhasil dibersihkan & disinkronkan tanpa duplikat!" };
@@ -243,4 +248,10 @@ function getRingkasanKasData(sheet) {
     keluar: Number(row[2]) || 0,
     selisih: Number(row[3]) || 0
   };
+}
+
+function createTargetIPLSheet(ss) {
+  var sheet = ss.insertSheet("TargetIPL");
+  sheet.appendRow(["id", "kelompok", "target", "keterangan"]);
+  return sheet;
 }
