@@ -3255,29 +3255,19 @@ function renderKasArusKasTable() {
   const tbody = document.getElementById("kas-arus-tbody");
   if (!tbody) return;
 
-  let currentBalance = 0;
   const ledgerRows = [];
+  const kasSaatIniVal = (appState.ringkasanKas && appState.ringkasanKas.kasSaatIni) ? appState.ringkasanKas.kasSaatIni : 0;
+  const hasSaldoAwalInPemasukan = (appState.pemasukanLain || []).some((p) => p.kategori === "Saldo Awal Kas");
 
-  const lunasBills = appState.tagihan
-    ? appState.tagihan.filter((t) => t.status === "Lunas" && t.metode !== "Sudah Bayar Sblm Sistem" && (!t.tglBayar || !t.tglBayar.includes("Sudah Lunas")))
-    : [];
+  let currentBalance = 0;
 
-  if (lunasBills.length > 0) {
-    lunasBills.forEach((t) => {
-      currentBalance += t.nominal;
-      ledgerRows.push({
-        tanggal: t.tglBayar || new Date().toLocaleDateString("id-ID"),
-        referensi: `Pembayaran IPL Blok ${t.blokNo} (${t.pemilik}) - ${t.bulan || ""} ${t.tahun || ""}`,
-        masuk: t.nominal,
-        keluar: null,
-        saldo: currentBalance
-      });
-    });
-  } else {
+  // Add initial Saldo Awal row if kasSaatIniVal exists and not already in pemasukanLain
+  if (!hasSaldoAwalInPemasukan && kasSaatIniVal > 0) {
+    currentBalance = kasSaatIniVal;
     ledgerRows.push({
       tanggal: new Date().toLocaleDateString("id-ID"),
-      referensi: "Tagihan IPL Warga (Belum Ada Pembayaran Lunas)",
-      masuk: 0,
+      referensi: "Saldo Awal Kas Tersedia",
+      masuk: kasSaatIniVal,
       keluar: null,
       saldo: currentBalance
     });
@@ -3290,6 +3280,23 @@ function renderKasArusKasTable() {
         tanggal: m.tanggal,
         referensi: `${m.kategori} - ${m.keterangan || "Penyesuaian"}`,
         masuk: m.nominal,
+        keluar: null,
+        saldo: currentBalance
+      });
+    });
+  }
+
+  const lunasBills = appState.tagihan
+    ? appState.tagihan.filter((t) => t.status === "Lunas" && t.metode !== "Sudah Bayar Sblm Sistem" && (!t.tglBayar || !t.tglBayar.includes("Sudah Lunas")))
+    : [];
+
+  if (lunasBills.length > 0) {
+    lunasBills.forEach((t) => {
+      currentBalance += t.nominal;
+      ledgerRows.push({
+        tanggal: t.tglBayar || new Date().toLocaleDateString("id-ID"),
+        referensi: `Pembayaran IPL Blok ${t.blokNo} (${t.pemilik}) - ${t.bulan || ""} ${t.tahun || ""}`,
+        masuk: t.nominal,
         keluar: null,
         saldo: currentBalance
       });
