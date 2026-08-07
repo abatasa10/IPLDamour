@@ -922,16 +922,8 @@ async function loadAppData() {
   if (!appState.rumah) appState.rumah = [];
   if (!appState.tagihan) appState.tagihan = [];
   if (!appState.pengeluaran) appState.pengeluaran = [];
-  if (!appState.pemasukanLain || appState.pemasukanLain.length === 0) {
-    if (jsonBackup && Array.isArray(jsonBackup.pemasukanLain) && jsonBackup.pemasukanLain.length > 0) {
-      appState.pemasukanLain = jsonBackup.pemasukanLain;
-    }
-  }
-  if (!appState.ringkasanKas || !appState.ringkasanKas.kasSaatIni) {
-    if (jsonBackup && jsonBackup.ringkasanKas && jsonBackup.ringkasanKas.kasSaatIni > 0) {
-      appState.ringkasanKas = JSON.parse(JSON.stringify(jsonBackup.ringkasanKas));
-    }
-  }
+  if (!appState.pemasukanLain) appState.pemasukanLain = [];
+  if (!appState.ringkasanKas) appState.ringkasanKas = { kasSaatIni: 0, masuk: 0, keluar: 0, selisih: 0 };
 
   ensureMasterRumahState();
   ensureMasterKomponenState();
@@ -3138,7 +3130,7 @@ function inputSaldoKasSaatIni() {
         method: "POST",
         mode: "no-cors",
         headers: { "Content-Type": "text/plain;charset=utf-8" },
-        body: JSON.stringify(appState)
+        body: JSON.stringify(getCleanPayloadForGoogleSheet(appState))
       }).catch((e) => console.log("Background sync error:", e));
     }
   }
