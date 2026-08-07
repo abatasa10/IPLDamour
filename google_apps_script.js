@@ -27,7 +27,7 @@ function doGet(e) {
     var komponenSheet = ss.getSheetByName("Komponen") || createKomponenSheet(ss);
     var eventSheet = ss.getSheetByName("Event") || createEventSheet(ss);
     var usersSheet = ss.getSheetByName("Users") || createUsersSheet(ss);
-    var auditSheet = ss.getSheetByName("AuditLog") || createAuditLogSheet(ss);
+    var ringkasanSheet = ss.getSheetByName("RingkasanKas") || createRingkasanKasSheet(ss);
     
     result = {
       status: "success",
@@ -38,7 +38,8 @@ function doGet(e) {
       komponenIPL: getSheetData(komponenSheet, "id"),
       masterEvent: getSheetData(eventSheet, "id"),
       users: getSheetData(usersSheet, "username"),
-      auditLog: getSheetData(auditSheet, "id")
+      auditLog: getSheetData(auditSheet, "id"),
+      ringkasanKas: getRingkasanKasData(ringkasanSheet)
     };
   } catch (err) {
     result = { status: "error", message: err.toString() };
@@ -77,6 +78,9 @@ function doPost(e) {
     }
     if (contents.auditLog) {
       updateSheetData(ss.getSheetByName("AuditLog") || createAuditLogSheet(ss), contents.auditLog, "id");
+    }
+    if (contents.ringkasanKas) {
+      updateRingkasanKasSheet(ss.getSheetByName("RingkasanKas") || createRingkasanKasSheet(ss), contents.ringkasanKas);
     }
     
     result = { status: "success", message: "Data Google Spreadsheet berhasil dibersihkan & disinkronkan tanpa duplikat!" };
@@ -208,4 +212,35 @@ function createAuditLogSheet(ss) {
   var sheet = ss.insertSheet("AuditLog");
   sheet.appendRow(["id", "timestamp", "actor", "action", "detail"]);
   return sheet;
+}
+
+function createRingkasanKasSheet(ss) {
+  var sheet = ss.insertSheet("RingkasanKas");
+  sheet.appendRow(["kasSaatIni", "masuk", "keluar", "selisih", "lastUpdated"]);
+  return sheet;
+}
+
+function updateRingkasanKasSheet(sheet, kasData) {
+  if (!kasData || typeof kasData !== "object") return;
+  sheet.clear();
+  sheet.appendRow(["kasSaatIni", "masuk", "keluar", "selisih", "lastUpdated"]);
+  sheet.appendRow([
+    kasData.kasSaatIni || 0,
+    kasData.masuk || 0,
+    kasData.keluar || 0,
+    kasData.selisih || 0,
+    new Date().toLocaleString("id-ID")
+  ]);
+}
+
+function getRingkasanKasData(sheet) {
+  var data = sheet.getDataRange().getValues();
+  if (data.length <= 1) return null;
+  var row = data[1];
+  return {
+    kasSaatIni: Number(row[0]) || 0,
+    masuk: Number(row[1]) || 0,
+    keluar: Number(row[2]) || 0,
+    selisih: Number(row[3]) || 0
+  };
 }
