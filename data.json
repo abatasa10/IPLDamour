@@ -190,14 +190,14 @@
       "kategori": "Saldo Awal Kas",
       "penerima": "Pengurus IPL",
       "keterangan": "Saldo Awal Kas Tersedia",
-      "nominal": 15000000
+      "nominal": 15223595
     }
   ],
   "grafik6Bulan": [],
   "ringkasanKas": {
-    "kasSaatIni": 15000000,
-    "masuk": 15000000,
+    "kasSaatIni": 15223595,
+    "masuk": 15223595,
     "keluar": 0,
-    "selisih": 15000000
+    "selisih": 15223595
   }
 }
