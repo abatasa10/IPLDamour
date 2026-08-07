@@ -918,6 +918,16 @@ async function loadAppData() {
     }
   }
 
+  // AUTO SEED: If Admin is logged in and Google Sheet is empty, push full initial dataset to Spreadsheet!
+  if (currentUser && currentUser.role === "admin" && activeUrl) {
+    if (!appState.rumah || appState.rumah.length === 0 || !appState.tagihan || appState.tagihan.length === 0) {
+      console.log("INITIAL SPREADSHEET SEED: Spreadsheet empty, seeding full dataset now...");
+      setTimeout(() => {
+        autoSyncToGoogleSheet();
+      }, 1500);
+    }
+  }
+
   if (!appState) appState = {};
   if (!appState.rumah) appState.rumah = [];
   if (!appState.tagihan) appState.tagihan = [];
