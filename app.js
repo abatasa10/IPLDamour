@@ -307,7 +307,110 @@ function toggleUserDropdown() {
   if (menu) {
     menu.style.display = menu.style.display === "none" || !menu.style.display ? "block" : "none";
   }
+  const notifMenu = document.getElementById("notif-dropdown-menu");
+  if (notifMenu) notifMenu.style.display = "none";
 }
+
+function toggleNotifDropdown(e) {
+  if (e) e.stopPropagation();
+  const notifMenu = document.getElementById("notif-dropdown-menu");
+  if (notifMenu) {
+    notifMenu.style.display = notifMenu.style.display === "none" || !notifMenu.style.display ? "block" : "none";
+  }
+  const userMenu = document.getElementById("user-dropdown-menu");
+  if (userMenu) userMenu.style.display = "none";
+}
+
+function filterVerifikasiTagihan() {
+  showView("daftar-tagihan");
+  const statusFilter = document.getElementById("filter-tagihan-status");
+  if (statusFilter) {
+    statusFilter.value = "Menunggu Verifikasi";
+    renderDaftarTagihan();
+  }
+}
+
+function updateAdminNotifications() {
+  if (!appState || !appState.tagihan) return;
+
+  const isAdmin = currentUser && currentUser.role === "admin";
+  const pendingVerifications = appState.tagihan.filter((t) => t.status === "Menunggu Verifikasi");
+  const count = pendingVerifications.length;
+
+  // 1. Sidebar Badge on "Daftar Tagihan"
+  const navBadge = document.getElementById("nav-tagihan-badge");
+  if (navBadge) {
+    if (isAdmin && count > 0) {
+      navBadge.textContent = count;
+      navBadge.style.display = "inline-block";
+    } else {
+      navBadge.style.display = "none";
+    }
+  }
+
+  // 2. Navbar Notification Bell Badge & Dropdown
+  const bellBadge = document.getElementById("notif-badge-count");
+  const notifDropdownCount = document.getElementById("notif-dropdown-count");
+  const notifListContainer = document.getElementById("notif-list-container");
+
+  if (bellBadge) {
+    if (isAdmin && count > 0) {
+      bellBadge.textContent = count;
+      bellBadge.style.display = "inline-block";
+    } else {
+      bellBadge.style.display = "none";
+    }
+  }
+
+  if (notifDropdownCount) {
+    notifDropdownCount.textContent = `${count} Baru`;
+  }
+
+  if (notifListContainer) {
+    if (count === 0) {
+      notifListContainer.innerHTML = `
+        <div style="text-align: center; color: var(--text-muted); padding: 1.25rem 0.5rem; font-size: 0.8rem;">
+          <i class="ri-checkbox-circle-line" style="font-size: 1.5rem; color: var(--success); display: block; margin-bottom: 0.25rem;"></i>
+          Semua pembayaran telah diverifikasi
+        </div>`;
+    } else {
+      notifListContainer.innerHTML = pendingVerifications.map((t) => `
+        <div style="background: #f8fafc; border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 0.6rem 0.75rem; display: flex; justify-content: space-between; align-items: center; gap: 0.5rem;">
+          <div>
+            <div style="font-weight: 700; font-size: 0.85rem; color: var(--text-main);">${t.blokNo} - ${t.pemilik}</div>
+            <div style="font-size: 0.75rem; color: var(--text-muted);">${t.bulan || ""} ${t.tahun || ""} • ${formatRp(t.nominal)}</div>
+          </div>
+          <button class="btn btn-success btn-sm" style="font-size: 0.7rem; padding: 0.25rem 0.6rem; flex-shrink: 0;" onclick="verifikasiLunasTagihan('${t.id}')">
+            <i class="ri-check-double-line"></i> Verifikasi
+          </button>
+        </div>
+      `).join("");
+    }
+  }
+
+  // 3. Dashboard Priority Banner
+  const dashBanner = document.getElementById("dashboard-verifikasi-banner");
+  const bannerTitle = document.getElementById("verifikasi-banner-title");
+  const bannerDesc = document.getElementById("verifikasi-banner-desc");
+
+  if (dashBanner) {
+    if (isAdmin && count > 0) {
+      dashBanner.style.display = "flex";
+      if (bannerTitle) bannerTitle.textContent = `Ada ${count} Pembayaran Warga Menunggu Verifikasi!`;
+      if (bannerDesc) bannerDesc.textContent = `Warga telah mengunggah bukti bayar. Klik tombol di samping untuk langsung memeriksa & verifikasi agar masuk Kas.`;
+    } else {
+      dashBanner.style.display = "none";
+    }
+  }
+}
+
+// Close dropdowns on outside click
+window.addEventListener("click", () => {
+  const notifMenu = document.getElementById("notif-dropdown-menu");
+  if (notifMenu) notifMenu.style.display = "none";
+  const userMenu = document.getElementById("user-dropdown-menu");
+  if (userMenu) userMenu.style.display = "none";
+});
 
 function updateNavbarProfile() {
   if (!currentUser) return;
@@ -330,6 +433,8 @@ function updateNavbarProfile() {
       roleEl.className = "badge badge-warning";
     }
   }
+
+  updateAdminNotifications();
 }
 
 function applyRolePermissions() {
@@ -1694,6 +1799,7 @@ function renderDashboard() {
   }
 
   renderCharts(lunasCount, menungguCount, menunggakCount, totalRumah);
+  updateAdminNotifications();
 }
 
 function renderCharts(lunas, menunggu, menunggak, total) {
@@ -2498,6 +2604,14 @@ function renderDaftarTagihan() {
     return matchesSearch && matchesBulan && matchesTahun && matchesStatus;
   });
 
+  // Prioritize "Menunggu Verifikasi" bills at the top for Admin
+  filtered.sort((a, b) => {
+    const aVerif = a.status === "Menunggu Verifikasi" ? 1 : 0;
+    const bVerif = b.status === "Menunggu Verifikasi" ? 1 : 0;
+    if (aVerif !== bVerif) return bVerif - aVerif;
+    return 0;
+  });
+
   const totalPages = Math.ceil(filtered.length / itemsPerPage) || 1;
   if (currentTagihanPage > totalPages) currentTagihanPage = totalPages;
 
@@ -2568,6 +2682,8 @@ function renderDaftarTagihan() {
     pagesHtml += `<button class="page-btn" onclick="changeTagihanPage(${currentTagihanPage + 1})" ${currentTagihanPage === totalPages ? "disabled" : ""}><i class="ri-arrow-right-s-line"></i></button>`;
     pageNav.innerHTML = pagesHtml;
   }
+
+  updateAdminNotifications();
 }
 
 function changeTagihanPage(page) {

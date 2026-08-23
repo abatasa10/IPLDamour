@@ -104,9 +104,10 @@
           <i class="ri-file-add-line"></i>
           <span>Generate Tagihan</span>
         </a>
-        <a href="#" class="nav-item" data-view="daftar-tagihan">
+        <a href="#" class="nav-item" data-view="daftar-tagihan" style="display: flex; align-items: center;">
           <i class="ri-bill-line"></i>
           <span>Daftar Tagihan</span>
+          <span id="nav-tagihan-badge" class="badge badge-warning" style="display: none; margin-left: auto; font-size: 0.65rem; padding: 0.15rem 0.45rem; border-radius: 10px;">0</span>
         </a>
         <a href="#" class="nav-item" data-view="perhitungan">
           <i class="ri-calculator-line"></i>
@@ -189,7 +190,25 @@
           </button>
         </div>
 
-        <div class="nav-right">
+        <div class="nav-right" style="display: flex; align-items: center; gap: 0.75rem;">
+          <!-- Notification Bell for Admin -->
+          <div id="admin-notif-wrapper" class="role-admin-only" style="position: relative;">
+            <button class="btn btn-outline btn-sm" id="btn-notif-bell" onclick="toggleNotifDropdown(event)" style="border-radius: 50%; width: 36px; height: 36px; padding: 0; display: flex; align-items: center; justify-content: center; position: relative;" title="Notifikasi Pembayaran">
+              <i class="ri-notification-3-line" style="font-size: 1.15rem; color: var(--text-main);"></i>
+              <span id="notif-badge-count" style="display: none; position: absolute; top: -3px; right: -3px; background: #ef4444; color: white; border-radius: 10px; font-size: 0.65rem; font-weight: 700; padding: 0.05rem 0.35rem; min-width: 16px; text-align: center; border: 2px solid white;">0</span>
+            </button>
+            
+            <!-- Notification Dropdown -->
+            <div id="notif-dropdown-menu" style="display: none; position: absolute; top: 120%; right: 0; background: white; border: 1px solid var(--border-color); border-radius: var(--radius-md); box-shadow: var(--shadow-lg); width: 310px; z-index: 105; padding: 0.75rem;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--border-color);">
+                <div style="font-weight: 700; font-size: 0.85rem; color: var(--text-main);"><i class="ri-notification-badge-line"></i> Perlu Verifikasi</div>
+                <span id="notif-dropdown-count" class="badge badge-info" style="font-size: 0.7rem;">0 Baru</span>
+              </div>
+              <div id="notif-list-container" style="max-height: 250px; overflow-y: auto; display: flex; flex-direction: column; gap: 0.5rem;">
+              </div>
+            </div>
+          </div>
+
           <div class="user-profile" style="position: relative; cursor: pointer;" onclick="toggleUserDropdown()">
             <div class="avatar" id="nav-user-avatar">A</div>
             <div style="display: flex; flex-direction: column;">
@@ -217,6 +236,22 @@
         
         <!-- 1. DASHBOARD VIEW -->
         <section id="view-dashboard" class="view-section active">
+          <!-- Priority Verification Alert Banner -->
+          <div id="dashboard-verifikasi-banner" class="role-admin-only" style="display: none; margin-bottom: 1.25rem; background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%); border: 1px solid #93c5fd; border-radius: var(--radius-md); padding: 1rem 1.25rem; align-items: center; justify-content: space-between; gap: 1rem; box-shadow: 0 2px 4px rgba(59, 130, 246, 0.08);">
+            <div style="display: flex; align-items: center; gap: 0.75rem;">
+              <div style="width: 40px; height: 40px; border-radius: 50%; background: #2563eb; color: white; display: flex; align-items: center; justify-content: center; font-size: 1.25rem; flex-shrink: 0;">
+                <i class="ri-notification-3-line"></i>
+              </div>
+              <div>
+                <div style="font-weight: 700; color: #1e3a8a; font-size: 0.95rem;" id="verifikasi-banner-title">Ada Pembayaran Warga Menunggu Verifikasi!</div>
+                <div style="font-size: 0.8rem; color: #1e40af;" id="verifikasi-banner-desc">Warga telah mengunggah bukti transfer. Klik tombol di samping untuk langsung memeriksa & verifikasi.</div>
+              </div>
+            </div>
+            <button class="btn btn-primary btn-sm" onclick="filterVerifikasiTagihan()" style="white-space: nowrap; flex-shrink: 0;">
+              <i class="ri-check-double-line"></i> Verifikasi Sekarang
+            </button>
+          </div>
+
           <div class="kpi-grid">
             <div class="kpi-card">
               <div class="kpi-info">
@@ -1644,7 +1679,7 @@
     </div>
   </div>
 
-  <script src="app.js?v=20260823_02"></script>
+  <script src="app.js?v=20260823_03"></script>
   <script>
     function togglePasswordVisibility() {
       const pwdInp = document.getElementById("login-password");
