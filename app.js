@@ -1356,8 +1356,10 @@ function getCleanPayloadForGoogleSheet(state) {
     if (stateCopy.tagihan && Array.isArray(stateCopy.tagihan)) {
       stateCopy.tagihan.forEach((t) => {
         if (t) {
-          if (t.buktiTransfer && (t.buktiTransfer.startsWith("data:image") || t.buktiTransfer.length > 100)) {
-            t.buktiTransfer = "bukti: foto";
+          // Google Sheets cell character limit is 50,000 characters.
+          // If image is larger than 45,000 chars, truncate placeholder to avoid Google Sheet API error
+          if (t.buktiTransfer && t.buktiTransfer.length > 45000) {
+            t.buktiTransfer = "bukti: foto (ukuran terlalu besar)";
           }
         }
       });
@@ -1371,14 +1373,9 @@ function getCleanPayloadForGoogleSheet(state) {
 }
 
 // Automatic Real-Time Background Sync to Google Sheet (PRIMARY STORAGE)
-function autoSyncToGoogleSheet() {
+let autoSyncDebounceTimer = null;
+function autoSyncToGoogleSheet(immediate = false) {
   if (!appState) return;
-
-  // STRICT ROLE GUARD: ONLY ADMIN CAN WRITE/POST TO GOOGLE SPREADSHEET PUSAT!
-  if (!currentUser || currentUser.role !== "admin") {
-    console.log("SYNC SKIPPED: Non-admin user (warga/developer) read-only mode for Google Sheet.");
-    return;
-  }
 
   const activeUrl = getGoogleSheetUrl();
   if (!activeUrl) {
@@ -1386,26 +1383,40 @@ function autoSyncToGoogleSheet() {
     return;
   }
 
-  updateStorageBadge("syncing", "Menyimpan ke Google Sheet...");
+  if (autoSyncDebounceTimer) {
+    clearTimeout(autoSyncDebounceTimer);
+    autoSyncDebounceTimer = null;
+  }
 
-  const payload = getCleanPayloadForGoogleSheet(appState);
+  const executeSync = () => {
+    updateStorageBadge("syncing", "Menyimpan ke Google Sheet...");
+    const payload = getCleanPayloadForGoogleSheet(appState);
 
-  try {
-    fetch(activeUrl, {
-      method: "POST",
-      mode: "no-cors",
-      headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify(payload)
-    }).then(() => {
-      console.log("PRIMARY STORAGE: Synced data to Google Spreadsheet successfully.");
-      updateStorageBadge("connected", "Storage Utama: Google Sheet");
-    }).catch((err) => {
-      console.log("Primary storage sync error:", err);
+    try {
+      fetch(activeUrl, {
+        method: "POST",
+        mode: "no-cors",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify(payload)
+      }).then(() => {
+        const now = new Date();
+        const timeStr = now.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
+        console.log("PRIMARY STORAGE: Synced data to Google Spreadsheet successfully at " + timeStr);
+        updateStorageBadge("connected", `Google Sheet (Real-Time: ${timeStr})`);
+      }).catch((err) => {
+        console.log("Primary storage sync error:", err);
+        updateStorageBadge("offline", "Cache Lokal (GSheet Error)");
+      });
+    } catch (e) {
+      console.log("Failed to trigger background primary sync:", e);
       updateStorageBadge("offline", "Cache Lokal (GSheet Error)");
-    });
-  } catch (e) {
-    console.log("Failed to trigger background primary sync:", e);
-    updateStorageBadge("offline", "Cache Lokal (GSheet Error)");
+    }
+  };
+
+  if (immediate) {
+    executeSync();
+  } else {
+    autoSyncDebounceTimer = setTimeout(executeSync, 500);
   }
 }
 
@@ -2529,8 +2540,10 @@ function renderDaftarTagihan() {
                 <button class="btn btn-outline btn-sm" onclick="viewDetailTagihan('${t.id}')" title="Lihat Detail"><i class="ri-eye-line"></i></button>
                 ${isAdmin ? `<button class="btn btn-outline btn-sm" onclick="openEditTagihanModal('${t.id}')" title="Edit Nominal Tagihan"><i class="ri-edit-line"></i></button>` : ""}
                 ${
-                  t.status !== "Lunas" && isMyHouse
-                    ? `<button class="btn btn-primary btn-sm" onclick="openFormPembayaran('${t.id}')" title="Bayar / Upload Bukti"><i class="ri-checkbox-circle-line"></i> Bayar</button>`
+                  displayStatus !== "Lunas" && isMyHouse
+                    ? displayStatus === "Menunggu Verifikasi"
+                      ? `<button class="btn btn-outline btn-sm" onclick="openFormPembayaran('${t.id}')" title="Ubah Bukti Transfer"><i class="ri-image-edit-line"></i> Ubah Bukti</button>`
+                      : `<button class="btn btn-primary btn-sm" onclick="openFormPembayaran('${t.id}')" title="Bayar / Upload Bukti"><i class="ri-checkbox-circle-line"></i> Bayar</button>`
                     : ""
                 }
                 ${
@@ -2705,21 +2718,30 @@ function openFormPembayaran(id) {
   document.getElementById("bayar-form-total").textContent = formatRp(t.nominal);
   document.getElementById("bayar-form-nominal").value = t.nominal;
 
+  let displayStatus = t.status || "Menunggu Pembayaran";
+  if (displayStatus === "Menunggu") displayStatus = "Menunggu Pembayaran";
+
   let badgeClass = "badge-secondary";
-  if (t.status === "Lunas") badgeClass = "badge-success";
-  if (t.status === "Menunggu") badgeClass = "badge-warning";
-  if (t.status === "Menunggak") badgeClass = "badge-danger";
+  if (displayStatus === "Lunas") badgeClass = "badge-success";
+  if (displayStatus === "Menunggu Pembayaran") badgeClass = "badge-warning";
+  if (displayStatus === "Menunggu Verifikasi") badgeClass = "badge-info";
+  if (displayStatus === "Menunggak") badgeClass = "badge-danger";
 
   document.getElementById("bayar-form-status").className = `badge ${badgeClass}`;
-  document.getElementById("bayar-form-status").textContent = t.status;
+  document.getElementById("bayar-form-status").textContent = displayStatus;
 
-  document.getElementById("preview-bukti-wrapper").style.display = "none";
-  document.getElementById("img-preview-bukti").src = "";
+  if (t.buktiTransfer && t.buktiTransfer.startsWith("data:image")) {
+    document.getElementById("preview-bukti-wrapper").style.display = "block";
+    document.getElementById("img-preview-bukti").src = t.buktiTransfer;
+  } else {
+    document.getElementById("preview-bukti-wrapper").style.display = "none";
+    document.getElementById("img-preview-bukti").src = "";
+  }
 
   showView("form-pembayaran");
 }
 
-function compressImageBase64(file, maxWidth = 800, maxHeight = 800, quality = 0.65) {
+function compressImageBase64(file, maxWidth = 500, maxHeight = 500, quality = 0.55) {
   return new Promise((resolve) => {
     if (!file || !file.type || !file.type.startsWith("image/")) {
       resolve("");
@@ -2754,7 +2776,15 @@ function compressImageBase64(file, maxWidth = 800, maxHeight = 800, quality = 0.
         ctx.fillRect(0, 0, width, height);
         ctx.drawImage(img, 0, 0, width, height);
 
-        const compressedDataUrl = canvas.toDataURL("image/jpeg", quality);
+        let q = quality;
+        let compressedDataUrl = canvas.toDataURL("image/jpeg", q);
+        
+        // Ensure compressed image is strictly under 45,000 characters to fit inside a single Google Sheet cell safely
+        while (compressedDataUrl.length > 42000 && q > 0.2) {
+          q -= 0.1;
+          compressedDataUrl = canvas.toDataURL("image/jpeg", q);
+        }
+
         resolve(compressedDataUrl);
       };
       img.src = e.target.result;
@@ -2766,7 +2796,7 @@ function compressImageBase64(file, maxWidth = 800, maxHeight = 800, quality = 0.
 async function previewBuktiTransfer(input) {
   if (input.files && input.files[0]) {
     const file = input.files[0];
-    const compressedBase64 = await compressImageBase64(file, 800, 800, 0.65);
+    const compressedBase64 = await compressImageBase64(file, 500, 500, 0.55);
     document.getElementById("img-preview-bukti").src = compressedBase64;
     document.getElementById("preview-bukti-wrapper").style.display = "block";
   }
@@ -2781,7 +2811,7 @@ async function simpanFormPembayaran() {
 
   if (fileInput && fileInput.files && fileInput.files[0]) {
     try {
-      previewImg = await compressImageBase64(fileInput.files[0], 800, 800, 0.65);
+      previewImg = await compressImageBase64(fileInput.files[0], 500, 500, 0.55);
     } catch (e) {
       console.error("Image compression error:", e);
     }
@@ -2797,8 +2827,9 @@ async function simpanFormPembayaran() {
 
     t.status = "Menunggu Verifikasi";
     saveState();
+    autoSyncToGoogleSheet(true);
     addAuditLog("Upload Pembayaran", `Warga rumah ${t.blokNo} (${t.pemilik}) mengunggah bukti transfer sebesar ${formatRp(t.nominal)}`);
-    alert("Bukti pembayaran berhasil dikompresi & dikirim! Silakan verifikasi untuk memasukkan nominal ke dalam Kas.");
+    alert("Bukti pembayaran berhasil dikompresi & dikirim! Status telah diubah menjadi 'Menunggu Verifikasi'. Silakan tunggu verifikasi admin.");
 
     showView("daftar-tagihan");
     renderDashboard();
