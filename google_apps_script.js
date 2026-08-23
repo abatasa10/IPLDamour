@@ -2,17 +2,15 @@
  * GOOGLE APPS SCRIPT DATABASE ENDPOINT FOR D'AMOUR SISTEM IPL
  * 
  * SINKRONISASI 100% REAL-TIME DENGAN PEMBERSIH DUPLIKAT OTOMATIS
- * Menjamin Google Spreadsheet TIDAK AKAN PERNAH DUPLIKAT lagi.
  * 
  * CARA PENGGUNAAN:
  * 1. Buka Google Spreadsheet Anda (https://docs.google.com/spreadsheets/d/1c1y4wD7hhBDfmJdtmINf2dka7bduuz0i_l1TNYtll_4/edit)
- * 2. Klik menu Extensi -> Apps Script
- * 3. Hapus semua kode lama, lalu paste (tempel) SELURUH KODE DI BAWAH INI.
+ * 2. Klik menu Ekstensi -> Apps Script
+ * 3. Hapus semua kode lama di editor Apps Script, lalu paste (tempel) SELURUH KODE DI BAWAH INI.
  * 4. Klik "Simpan" (Ctrl+S / Cmd+S).
- * 5. Klik "Terapkan" (Deploy) -> "Peluncuran Baru" (New Deployment).
- *    - Jalankan sebagai: "Saya" (Me)
- *    - Yang memiliki akses: "Siapa Saja" (Anyone)
- * 6. Klik "Terapkan", lalu Salin URL Web App yang dihasilkan.
+ * 5. Klik "Terapkan" (Deploy) -> "Kelola Penerapan" (Manage Deployments).
+ * 6. Klik ikon Pensil (Edit) pada penerapan aktif -> pilih "Versi Baru" (New Version) -> Klik "Terapkan" (Deploy).
+ *    (Atau klik "Terapkan Baru" -> Web app -> Akses: "Siapa Saja / Anyone").
  */
 
 function doGet(e) {
@@ -27,6 +25,7 @@ function doGet(e) {
     var komponenSheet = ss.getSheetByName("Komponen") || createKomponenSheet(ss);
     var eventSheet = ss.getSheetByName("Event") || createEventSheet(ss);
     var usersSheet = ss.getSheetByName("Users") || createUsersSheet(ss);
+    var auditSheet = ss.getSheetByName("AuditLog") || createAuditLogSheet(ss);
     var ringkasanSheet = ss.getSheetByName("RingkasanKas") || createRingkasanKasSheet(ss);
     var targetSheet = ss.getSheetByName("TargetIPL") || createTargetIPLSheet(ss);
     
@@ -54,41 +53,48 @@ function doGet(e) {
 function doPost(e) {
   var result = {};
   try {
-    var contents = JSON.parse(e.postData.contents);
+    var raw = "";
+    if (e && e.postData && e.postData.contents) {
+      raw = e.postData.contents;
+    } else if (e && e.parameter && e.parameter.data) {
+      raw = e.parameter.data;
+    }
+
+    var contents = typeof raw === "string" ? JSON.parse(raw) : (raw || {});
     var ss = SpreadsheetApp.getActiveSpreadsheet();
     
-    if (contents.rumah) {
-      updateSheetData(ss.getSheetByName("Rumah") || createRumahSheet(ss), contents.rumah, "blokNo");
+    if (contents.rumah && Array.isArray(contents.rumah)) {
+      updateSheetData(ss.getSheetByName("Rumah") || createRumahSheet(ss), contents.rumah, "blokNo", ["id", "blokNo", "pemilik", "noHp", "status", "kelompokIPL"]);
     }
-    if (contents.tagihan) {
-      updateSheetData(ss.getSheetByName("Tagihan") || createTagihanSheet(ss), contents.tagihan, "id");
+    if (contents.tagihan && Array.isArray(contents.tagihan)) {
+      updateSheetData(ss.getSheetByName("Tagihan") || createTagihanSheet(ss), contents.tagihan, "id", ["id", "periode", "bulan", "tahun", "rumahId", "blokNo", "pemilik", "kelompokIPL", "nominal", "status", "tglBayar", "metode", "buktiTransfer", "rincianItems"]);
     }
-    if (contents.pengeluaran) {
-      updateSheetData(ss.getSheetByName("Pengeluaran") || createPengeluaranSheet(ss), contents.pengeluaran, "id");
+    if (contents.pengeluaran && Array.isArray(contents.pengeluaran)) {
+      updateSheetData(ss.getSheetByName("Pengeluaran") || createPengeluaranSheet(ss), contents.pengeluaran, "id", ["id", "tanggal", "kategori", "penerima", "keterangan", "nominal"]);
     }
-    if (contents.pemasukanLain) {
-      updateSheetData(ss.getSheetByName("PemasukanLain") || createPemasukanLainSheet(ss), contents.pemasukanLain, "id");
+    if (contents.pemasukanLain && Array.isArray(contents.pemasukanLain)) {
+      updateSheetData(ss.getSheetByName("PemasukanLain") || createPemasukanLainSheet(ss), contents.pemasukanLain, "id", ["id", "tanggal", "kategori", "penerima", "keterangan", "nominal"]);
     }
-    if (contents.komponenIPL) {
-      updateSheetData(ss.getSheetByName("Komponen") || createKomponenSheet(ss), contents.komponenIPL, "id");
+    if (contents.komponenIPL && Array.isArray(contents.komponenIPL)) {
+      updateSheetData(ss.getSheetByName("Komponen") || createKomponenSheet(ss), contents.komponenIPL, "id", ["id", "nama", "nominalTotal", "isAutoKas", "dibayarOleh", "aktif"]);
     }
-    if (contents.masterEvent) {
-      updateSheetData(ss.getSheetByName("Event") || createEventSheet(ss), contents.masterEvent, "id");
+    if (contents.masterEvent && Array.isArray(contents.masterEvent)) {
+      updateSheetData(ss.getSheetByName("Event") || createEventSheet(ss), contents.masterEvent, "id", ["id", "nama", "nominal", "dibayarOleh", "aktif"]);
     }
-    if (contents.users) {
-      updateSheetData(ss.getSheetByName("Users") || createUsersSheet(ss), contents.users, "username");
+    if (contents.users && Array.isArray(contents.users)) {
+      updateSheetData(ss.getSheetByName("Users") || createUsersSheet(ss), contents.users, "username", ["username", "password", "name", "blokNo", "role", "avatar", "mustChangePassword"]);
     }
-    if (contents.auditLog) {
-      updateSheetData(ss.getSheetByName("AuditLog") || createAuditLogSheet(ss), contents.auditLog, "id");
+    if (contents.auditLog && Array.isArray(contents.auditLog)) {
+      updateSheetData(ss.getSheetByName("AuditLog") || createAuditLogSheet(ss), contents.auditLog, "id", ["id", "timestamp", "actor", "action", "detail"]);
     }
-    if (contents.ringkasanKas) {
+    if (contents.ringkasanKas && typeof contents.ringkasanKas === "object") {
       updateRingkasanKasSheet(ss.getSheetByName("RingkasanKas") || createRingkasanKasSheet(ss), contents.ringkasanKas);
     }
-    if (contents.targetIPL) {
-      updateSheetData(ss.getSheetByName("TargetIPL") || createTargetIPLSheet(ss), contents.targetIPL, "id");
+    if (contents.targetIPL && Array.isArray(contents.targetIPL)) {
+      updateSheetData(ss.getSheetByName("TargetIPL") || createTargetIPLSheet(ss), contents.targetIPL, "id", ["id", "kelompok", "target", "keterangan"]);
     }
     
-    result = { status: "success", message: "Data Google Spreadsheet berhasil dibersihkan & disinkronkan tanpa duplikat!" };
+    result = { status: "success", message: "Data Google Spreadsheet berhasil disinkronkan secara real-time!" };
   } catch (err) {
     result = { status: "error", message: err.toString() };
   }
@@ -112,7 +118,16 @@ function getSheetData(sheet, keyField) {
   for (var i = 1; i < data.length; i++) {
     var obj = {};
     for (var j = 0; j < headers.length; j++) {
-      obj[headers[j]] = data[i][j];
+      var headerName = headers[j];
+      var val = data[i][j];
+      
+      // Auto-parse JSON string values
+      if (typeof val === "string" && (val.startsWith("{") || val.startsWith("["))) {
+        try {
+          val = JSON.parse(val);
+        } catch (e) {}
+      }
+      obj[headerName] = val;
     }
     
     var rawKey = keyField ? obj[keyField] : (obj.id || obj.username || obj.blokNo);
@@ -130,7 +145,7 @@ function getSheetData(sheet, keyField) {
   return rows;
 }
 
-function updateSheetData(sheet, dataArray, keyField) {
+function updateSheetData(sheet, dataArray, keyField, defaultHeaders) {
   if (!sheet) return;
   if (!dataArray || !Array.isArray(dataArray)) dataArray = [];
   
@@ -155,13 +170,37 @@ function updateSheetData(sheet, dataArray, keyField) {
   sheet.clear();
   if (cleanArray.length === 0) return;
 
-  var headers = Object.keys(cleanArray[0]);
+  // Build complete union of headers
+  var headerMap = {};
+  var headers = [];
+  
+  if (defaultHeaders && Array.isArray(defaultHeaders)) {
+    defaultHeaders.forEach(function(h) {
+      if (!headerMap[h]) {
+        headerMap[h] = true;
+        headers.push(h);
+      }
+    });
+  }
+
+  cleanArray.forEach(function(item) {
+    Object.keys(item).forEach(function(k) {
+      if (!headerMap[k]) {
+        headerMap[k] = true;
+        headers.push(k);
+      }
+    });
+  });
+
   sheet.appendRow(headers);
 
   var rowsToAppend = cleanArray.map(function(item) {
     return headers.map(function(key) {
       var val = item[key];
-      if (typeof val === "object" && val !== null) {
+      if (val === undefined || val === null) {
+        return "";
+      }
+      if (typeof val === "object") {
         return JSON.stringify(val);
       }
       return val;
@@ -179,7 +218,7 @@ function createRumahSheet(ss) {
 
 function createTagihanSheet(ss) {
   var sheet = ss.insertSheet("Tagihan");
-  sheet.appendRow(["id", "periode", "bulan", "tahun", "rumahId", "blokNo", "pemilik", "kelompokIPL", "nominal", "status", "tglBayar", "metode", "buktiTransfer"]);
+  sheet.appendRow(["id", "periode", "bulan", "tahun", "rumahId", "blokNo", "pemilik", "kelompokIPL", "nominal", "status", "tglBayar", "metode", "buktiTransfer", "rincianItems"]);
   return sheet;
 }
 
