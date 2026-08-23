@@ -3030,6 +3030,42 @@ function verifikasiLunasTagihan(id) {
   }
 }
 
+function parseDateToTimestamp(dateStr) {
+  if (!dateStr) return 0;
+  if (dateStr instanceof Date) return dateStr.getTime();
+  const s = String(dateStr).trim();
+
+  // If DD/MM/YYYY or D/M/YYYY or DD-MM-YYYY
+  if (s.includes("/") || (s.includes("-") && s.split("-")[0].length <= 2)) {
+    const parts = s.split(/[\/\-\s,]+/);
+    if (parts.length >= 3) {
+      const d = parseInt(parts[0], 10);
+      const m = parseInt(parts[1], 10) - 1;
+      const y = parseInt(parts[2], 10);
+      if (!isNaN(d) && !isNaN(m) && !isNaN(y)) {
+        return new Date(y, m, d).getTime();
+      }
+    }
+  }
+
+  // If ISO YYYY-MM-DD
+  const ts = Date.parse(s);
+  if (!isNaN(ts)) return ts;
+
+  return 0;
+}
+
+function formatDateDisplay(dateStr) {
+  if (!dateStr || dateStr === "-") return "-";
+  const ts = parseDateToTimestamp(dateStr);
+  if (!ts) return String(dateStr);
+  const d = new Date(ts);
+  const day = String(d.getDate()).padStart(2, "0");
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const year = d.getFullYear();
+  return `${day}/${month}/${year}`;
+}
+
 function matchesMonthAndYear(dateStr, filterBulan, filterTahun) {
   if (!dateStr) return true;
 
@@ -3065,7 +3101,7 @@ function matchesMonthAndYear(dateStr, filterBulan, filterTahun) {
                        dateStr.toLowerCase().includes(filterBulan.toLowerCase());
 
   const matchesTahun = filterTahun === "Semua" || 
-                       yearStr === filterTahun || 
+                       (yearStr && yearStr.includes(filterTahun)) ||
                        dateStr.includes(filterTahun);
 
   return matchesBulan && matchesTahun;
@@ -3094,7 +3130,7 @@ function renderPengeluaranTable() {
           .map(
             (p) => `
             <tr>
-              <td>${p.tanggal}</td>
+              <td>${formatDateDisplay(p.tanggal)}</td>
               <td><strong>${p.kategori}</strong></td>
               <td>${p.penerima || "-"}</td>
               <td style="font-weight: 600; color: var(--danger);">${formatRp(p.nominal)}</td>
@@ -3451,33 +3487,36 @@ function renderKasArusKasTable() {
   const tbody = document.getElementById("kas-arus-tbody");
   if (!tbody) return;
 
-  const ledgerRows = [];
+  const now = new Date();
+  const filterBulan = document.getElementById("filter-kas-bulan")?.value || "Semua";
+  const filterTahun = document.getElementById("filter-kas-tahun")?.value || now.getFullYear().toString();
+
+  const mutasiList = [];
   const kasSaatIniVal = (appState.ringkasanKas && appState.ringkasanKas.kasSaatIni) ? appState.ringkasanKas.kasSaatIni : 0;
   const hasSaldoAwalInPemasukan = (appState.pemasukanLain || []).some((p) => p.kategori === "Saldo Awal Kas");
 
-  let currentBalance = 0;
-
-  // Add initial Saldo Awal row if kasSaatIniVal exists and not already in pemasukanLain
+  // Initial Saldo Awal fallback if not in pemasukanLain
   if (!hasSaldoAwalInPemasukan && kasSaatIniVal > 0) {
-    currentBalance = kasSaatIniVal;
-    ledgerRows.push({
-      tanggal: new Date().toLocaleDateString("id-ID"),
+    mutasiList.push({
+      tanggal: "01/08/2026",
+      timestamp: parseDateToTimestamp("2026-08-01"),
+      isSaldoAwal: true,
       referensi: "Saldo Awal Kas Tersedia",
       masuk: kasSaatIniVal,
-      keluar: null,
-      saldo: currentBalance
+      keluar: null
     });
   }
 
-  if (appState.pemasukanLain) {
+  if (appState.pemasukanLain && Array.isArray(appState.pemasukanLain)) {
     appState.pemasukanLain.forEach((m) => {
-      currentBalance += m.nominal;
-      ledgerRows.push({
+      const isAwal = m.kategori === "Saldo Awal Kas";
+      mutasiList.push({
         tanggal: m.tanggal,
+        timestamp: isAwal ? 0 : parseDateToTimestamp(m.tanggal),
+        isSaldoAwal: isAwal,
         referensi: `${m.kategori} - ${m.keterangan || "Penyesuaian"}`,
-        masuk: m.nominal,
-        keluar: null,
-        saldo: currentBalance
+        masuk: parseFloat(m.nominal) || 0,
+        keluar: null
       });
     });
   }
@@ -3486,40 +3525,63 @@ function renderKasArusKasTable() {
     ? appState.tagihan.filter((t) => t.status === "Lunas" && t.metode !== "Sudah Bayar Sblm Sistem" && (!t.tglBayar || !t.tglBayar.includes("Sudah Lunas")))
     : [];
 
-  if (lunasBills.length > 0) {
-    lunasBills.forEach((t) => {
-      currentBalance += t.nominal;
-      ledgerRows.push({
-        tanggal: t.tglBayar || new Date().toLocaleDateString("id-ID"),
-        referensi: `Pembayaran IPL Blok ${t.blokNo} (${t.pemilik}) - ${t.bulan || ""} ${t.tahun || ""}`,
-        masuk: t.nominal,
-        keluar: null,
-        saldo: currentBalance
-      });
+  lunasBills.forEach((t) => {
+    mutasiList.push({
+      tanggal: t.tglBayar || "15/08/2026",
+      timestamp: parseDateToTimestamp(t.tglBayar || "15/08/2026"),
+      isSaldoAwal: false,
+      referensi: `Pembayaran IPL Blok ${t.blokNo} (${t.pemilik}) - ${t.bulan || ""} ${t.tahun || ""}`,
+      masuk: parseFloat(t.nominal) || 0,
+      keluar: null
     });
-  }
+  });
 
-  if (appState.pengeluaran) {
+  if (appState.pengeluaran && Array.isArray(appState.pengeluaran)) {
     appState.pengeluaran.forEach((p) => {
-      currentBalance -= p.nominal;
-      ledgerRows.push({
+      mutasiList.push({
         tanggal: p.tanggal,
-        referensi: p.kategori + (p.penerima ? ` (${p.penerima})` : ""),
+        timestamp: parseDateToTimestamp(p.tanggal),
+        isSaldoAwal: false,
+        referensi: `${p.kategori}${p.penerima ? ` (${p.penerima})` : ""}${p.keterangan && p.keterangan !== p.kategori ? ` - ${p.keterangan}` : ""}`,
         masuk: null,
-        keluar: p.nominal,
-        saldo: currentBalance
+        keluar: parseFloat(p.nominal) || 0
       });
     });
   }
 
-  if (ledgerRows.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 1.5rem;">Belum ada mutasi arus kas.</td></tr>`;
+  // 1. Sort chronologically: Saldo Awal first, then earliest date to newest date!
+  mutasiList.sort((a, b) => {
+    if (a.isSaldoAwal && !b.isSaldoAwal) return -1;
+    if (b.isSaldoAwal && !a.isSaldoAwal) return 1;
+    if (a.timestamp !== b.timestamp) return a.timestamp - b.timestamp;
+    // Same day: pemasukan before pengeluaran
+    if (a.masuk && !b.masuk) return -1;
+    if (b.masuk && !a.masuk) return 1;
+    return 0;
+  });
+
+  // 2. Accumulate running balance chronologically
+  let currentBalance = 0;
+  mutasiList.forEach((row) => {
+    if (row.masuk) currentBalance += row.masuk;
+    if (row.keluar) currentBalance -= row.keluar;
+    row.saldo = currentBalance;
+  });
+
+  // 3. Filter by selected Month & Year (if applicable)
+  const filteredList = mutasiList.filter((row) => {
+    if (row.isSaldoAwal) return true; // Always display Saldo Awal
+    return matchesMonthAndYear(row.tanggal, filterBulan, filterTahun);
+  });
+
+  if (filteredList.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 1.5rem;">Belum ada mutasi arus kas untuk periode yang dipilih.</td></tr>`;
   } else {
-    tbody.innerHTML = ledgerRows
+    tbody.innerHTML = filteredList
       .map(
         (row) => `
         <tr>
-          <td>${row.tanggal}</td>
+          <td>${formatDateDisplay(row.tanggal)}</td>
           <td><strong>${row.referensi}</strong></td>
           <td style="text-align: right; color: var(--success); font-weight: 600;">${row.masuk ? formatRp(row.masuk).replace("Rp ", "") : "-"}</td>
           <td style="text-align: right; color: var(--danger); font-weight: 600;">${row.keluar ? formatRp(row.keluar).replace("Rp ", "") : "-"}</td>
