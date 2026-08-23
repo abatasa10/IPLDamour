@@ -813,11 +813,21 @@ async function manualSyncGoogleSheet() {
         cloudData.tagihan.forEach((cloudT) => {
           if (cloudT && appState && Array.isArray(appState.tagihan)) {
             const localT = appState.tagihan.find((t) => t.id === cloudT.id);
-            if (localT && localT.buktiTransfer && localT.buktiTransfer.startsWith("data:image")) {
-              if (!cloudT.buktiTransfer || cloudT.buktiTransfer === "bukti: foto" || cloudT.buktiTransfer.length < 100) {
-                cloudT.buktiTransfer = localT.buktiTransfer;
+            if (localT) {
+              if (localT.buktiTransfer && localT.buktiTransfer.startsWith("data:image")) {
+                if (!cloudT.buktiTransfer || cloudT.buktiTransfer.startsWith("bukti: foto") || cloudT.buktiTransfer.length < 100) {
+                  cloudT.buktiTransfer = localT.buktiTransfer;
+                }
+              }
+              if (localT.status === "Menunggu Verifikasi" && cloudT.status !== "Lunas") {
+                cloudT.status = "Menunggu Verifikasi";
+                if (localT.tglBayar && localT.tglBayar !== "-") cloudT.tglBayar = localT.tglBayar;
+                if (localT.metode && localT.metode !== "-") cloudT.metode = localT.metode;
               }
             }
+          }
+          if (cloudT && cloudT.buktiTransfer && (cloudT.buktiTransfer.startsWith("data:image") || cloudT.buktiTransfer.length > 20) && cloudT.status !== "Lunas") {
+            cloudT.status = "Menunggu Verifikasi";
           }
         });
         appState.tagihan = cloudData.tagihan;
@@ -874,6 +884,11 @@ function autoUpdateMenunggakStatus() {
 
   appState.tagihan.forEach((t) => {
     if (!t) return;
+    // Auto-heal: If proof of payment is uploaded and status is not Lunas, it is Menunggu Verifikasi
+    if (t.buktiTransfer && (t.buktiTransfer.startsWith("data:image") || t.buktiTransfer.length > 20) && t.status !== "Lunas") {
+      t.status = "Menunggu Verifikasi";
+    }
+
     if (t.status === "Lunas" || t.status === "Menunggu Verifikasi") return;
 
     let billYear = parseInt(t.tahun, 10) || currentYear;
@@ -893,7 +908,7 @@ function autoUpdateMenunggakStatus() {
 
     if (isPastPeriod) {
       t.status = "Menunggak";
-    } else if (t.status !== "Menunggu Verifikasi") {
+    } else {
       t.status = "Menunggu Pembayaran";
     }
   });
@@ -980,11 +995,21 @@ async function loadAppData() {
           cloudData.tagihan.forEach((cloudT) => {
             if (cloudT && appState && Array.isArray(appState.tagihan)) {
               const localT = appState.tagihan.find((t) => t.id === cloudT.id);
-              if (localT && localT.buktiTransfer && localT.buktiTransfer.startsWith("data:image")) {
-                if (!cloudT.buktiTransfer || cloudT.buktiTransfer === "bukti: foto" || cloudT.buktiTransfer.length < 100) {
-                  cloudT.buktiTransfer = localT.buktiTransfer;
+              if (localT) {
+                if (localT.buktiTransfer && localT.buktiTransfer.startsWith("data:image")) {
+                  if (!cloudT.buktiTransfer || cloudT.buktiTransfer.startsWith("bukti: foto") || cloudT.buktiTransfer.length < 100) {
+                    cloudT.buktiTransfer = localT.buktiTransfer;
+                  }
+                }
+                if (localT.status === "Menunggu Verifikasi" && cloudT.status !== "Lunas") {
+                  cloudT.status = "Menunggu Verifikasi";
+                  if (localT.tglBayar && localT.tglBayar !== "-") cloudT.tglBayar = localT.tglBayar;
+                  if (localT.metode && localT.metode !== "-") cloudT.metode = localT.metode;
                 }
               }
+            }
+            if (cloudT && cloudT.buktiTransfer && (cloudT.buktiTransfer.startsWith("data:image") || cloudT.buktiTransfer.length > 20) && cloudT.status !== "Lunas") {
+              cloudT.status = "Menunggu Verifikasi";
             }
           });
           appState.tagihan = cloudData.tagihan;
@@ -2589,7 +2614,12 @@ function renderDaftarTagihan() {
     const matchesTahun = filterTahun === "Semua" || t.tahun === filterTahun || t.periode.includes(filterTahun);
 
     let displayStatus = t.status;
-    if (displayStatus === "Menunggu") displayStatus = "Menunggu Pembayaran";
+    if (t.buktiTransfer && (t.buktiTransfer.startsWith("data:image") || t.buktiTransfer.length > 20) && displayStatus !== "Lunas") {
+      displayStatus = "Menunggu Verifikasi";
+      t.status = "Menunggu Verifikasi";
+    } else if (displayStatus === "Menunggu") {
+      displayStatus = "Menunggu Pembayaran";
+    }
     const matchesStatus = filterStatus === "Semua" || displayStatus === filterStatus;
 
     if (currentUser && currentUser.role === "developer") {
@@ -2626,7 +2656,10 @@ function renderDaftarTagihan() {
       tbody.innerHTML = paginated
         .map((t, idx) => {
           let displayStatus = t.status;
-          if (!displayStatus || displayStatus === "Menunggu") {
+          if (t.buktiTransfer && (t.buktiTransfer.startsWith("data:image") || t.buktiTransfer.length > 20) && displayStatus !== "Lunas") {
+            displayStatus = "Menunggu Verifikasi";
+            t.status = "Menunggu Verifikasi";
+          } else if (!displayStatus || displayStatus === "Menunggu") {
             displayStatus = "Menunggu Pembayaran";
             t.status = "Menunggu Pembayaran";
           }
@@ -2747,7 +2780,12 @@ function viewDetailTagihan(id) {
   document.getElementById("detail-val-nominal").textContent = formatRp(t.nominal);
 
   let displayStatus = t.status;
-  if (!displayStatus || displayStatus === "Menunggu") displayStatus = "Menunggu Pembayaran";
+  if (t.buktiTransfer && (t.buktiTransfer.startsWith("data:image") || t.buktiTransfer.length > 20) && displayStatus !== "Lunas") {
+    displayStatus = "Menunggu Verifikasi";
+    t.status = "Menunggu Verifikasi";
+  } else if (!displayStatus || displayStatus === "Menunggu") {
+    displayStatus = "Menunggu Pembayaran";
+  }
 
   let badgeClass = "badge-secondary";
   if (displayStatus === "Lunas") badgeClass = "badge-success";
