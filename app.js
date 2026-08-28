@@ -1071,7 +1071,7 @@ async function loadAppData() {
   ensureMasterTargetIPLState();
   generateAllMissingHouseUsers(true);
   autoEnsureCurrentMonthBills();
-  setLunasPrepaidB4Nurrudin();
+  setPrepaidLunasBills();
   syncTagihanWithMasterRumah();
   cleanUpSampahFromKomponen();
   deduplicateAppState();
@@ -3949,32 +3949,16 @@ function getCalculatedKasBalance() {
   return calculatedBalance;
 }
 
-function setLunasPrepaidB4Nurrudin() {
+function setPrepaidLunasBills() {
   if (!appState) return;
   if (!appState.tagihan) appState.tagihan = [];
 
-  const now = new Date();
-  const currentYear = now.getFullYear().toString();
-  const currentMonth = MONTH_NAMES[now.getMonth()];
+  const currentYear = "2026";
+  const currentMonth = "Agustus";
 
-  appState.tagihan = appState.tagihan.filter((t) => {
-    if (normalizeBlok(t.blokNo) === "B4") {
-      return t.bulan === currentMonth && t.tahun === currentYear;
-    }
-    return true;
-  });
-
-  let bill = appState.tagihan.find(
-    (t) => normalizeBlok(t.blokNo) === "B4" && t.bulan === currentMonth && t.tahun === currentYear
-  );
-
-  if (!bill) {
-    appState.tagihan.push({
-      id: `TAG-${currentYear}${currentMonth}-B4`,
-      periode: `${currentYear}-${currentMonth}`,
-      bulan: currentMonth,
-      tahun: currentYear,
-      rumahId: "RMH-B4",
+  // Rumah yang sudah lunas sebelum sistem (tidak masuk perhitungan arus kas baru)
+  const prepaidHouses = [
+    {
       blokNo: "B4",
       pemilik: "Nurrudin",
       kelompokIPL: "IPL + Sampah",
@@ -3982,22 +3966,48 @@ function setLunasPrepaidB4Nurrudin() {
       rincianItems: [
         { nama: "IPL Dasar", nominal: 150000 },
         { nama: "Iuran Sampah", nominal: 25000 }
-      ],
-      status: "Lunas",
-      tglBayar: "Sudah Lunas Sblm Sistem",
-      metode: "Sudah Bayar Sblm Sistem",
-      buktiTransfer: ""
-    });
-  } else {
-    bill.nominal = 175000;
-    bill.rincianItems = [
-      { nama: "IPL Dasar", nominal: 150000 },
-      { nama: "Iuran Sampah", nominal: 25000 }
-    ];
-    bill.status = "Lunas";
-    bill.tglBayar = "Sudah Lunas Sblm Sistem";
-    bill.metode = "Sudah Bayar Sblm Sistem";
-  }
+      ]
+    },
+    {
+      blokNo: "B1",
+      pemilik: "B1 (-)",
+      kelompokIPL: "IPL Tanpa Sampah",
+      nominal: 150000,
+      rincianItems: [
+        { nama: "IPL Dasar", nominal: 150000 }
+      ]
+    }
+  ];
+
+  prepaidHouses.forEach((house) => {
+    let bill = appState.tagihan.find(
+      (t) => normalizeBlok(t.blokNo) === normalizeBlok(house.blokNo) && t.bulan === currentMonth && (t.tahun || "").toString() === currentYear
+    );
+
+    if (!bill) {
+      appState.tagihan.push({
+        id: `TAG-${currentYear}${currentMonth}-${house.blokNo}`,
+        periode: `${currentYear}-${currentMonth}`,
+        bulan: currentMonth,
+        tahun: currentYear,
+        rumahId: `RMH-${house.blokNo}`,
+        blokNo: house.blokNo,
+        pemilik: house.pemilik,
+        kelompokIPL: house.kelompokIPL,
+        nominal: house.nominal,
+        rincianItems: house.rincianItems,
+        status: "Lunas",
+        tglBayar: "Sudah Lunas Sblm Sistem",
+        metode: "Sudah Bayar Sblm Sistem",
+        buktiTransfer: ""
+      });
+    } else {
+      bill.status = "Lunas";
+      bill.tglBayar = "Sudah Lunas Sblm Sistem";
+      bill.metode = "Sudah Bayar Sblm Sistem";
+      if (!bill.nominal || bill.nominal === 0) bill.nominal = house.nominal;
+    }
+  });
 }
 
 /* ==========================================================================
