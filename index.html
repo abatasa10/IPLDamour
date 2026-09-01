@@ -708,7 +708,8 @@
                     <th>Rumah</th>
                     <th>Pemilik</th>
                     <th>Kelompok IPL</th>
-                    <th>Total Tagihan</th>
+                    <th>Nominal Tagihan</th>
+                    <th>Jumlah Dibayar</th>
                     <th>Status</th>
                     <th>Aksi</th>
                   </tr>
@@ -769,10 +770,24 @@
                   </tr>
                 </tfoot>
               </table>
+            </div>
+
             <div id="detail-bukti-wrapper" style="display: none; margin-top: 1.25rem; background: #f8fafc; border: 1px solid var(--border-color); padding: 1rem; border-radius: var(--radius-md); max-width: 600px;">
               <h4 style="font-size: 0.9rem; margin-bottom: 0.5rem; color: var(--text-main); font-weight: 700;"><i class="ri-file-search-line"></i> Bukti Transfer Pembayaran</h4>
               <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.75rem;" id="detail-bukti-info">Tanggal: - | Metode: -</p>
               <img id="detail-bukti-img" src="" alt="Bukti Transfer" style="max-width: 100%; max-height: 350px; border-radius: var(--radius-sm); border: 1px solid var(--border-color); object-fit: contain; background: #ffffff; padding: 4px;">
+            </div>
+
+            <div id="detail-action-buttons" style="display: flex; gap: 0.75rem; margin-top: 1.5rem; max-width: 600px; flex-wrap: wrap;">
+              <button class="btn btn-success role-admin-only" id="btn-detail-verifikasi" onclick="verifikasiLunasTagihan(currentDetailTagihanId)">
+                <i class="ri-check-double-line"></i> Verifikasi Lunas
+              </button>
+              <button class="btn btn-outline role-admin-only" id="btn-detail-reset" style="color: #ef4444; border-color: #ef4444;" onclick="resetTagihanMenungguPembayaran(currentDetailTagihanId)">
+                <i class="ri-refresh-line"></i> Reset ke Belum Bayar (Hapus Bukti)
+              </button>
+              <button class="btn btn-outline" onclick="showView('daftar-tagihan')">
+                <i class="ri-arrow-left-line"></i> Kembali
+              </button>
             </div>
           </div>
         </section>
@@ -792,11 +807,12 @@
                   <div id="bayar-form-rumah" style="font-weight: 700; font-size: 1.05rem;">A01 - Pak Budi</div>
                 </div>
                 <div style="margin-bottom: 1rem;">
-                  <span style="font-size: 0.75rem; color: var(--text-muted);">Bulan</span>
-                  <div id="bayar-form-bulan" style="font-weight: 600;">-</div>
+                  <label style="font-size: 0.75rem; color: var(--text-muted); display: block; margin-bottom: 0.35rem; font-weight: 600;"><i class="ri-calendar-check-line"></i> Pilih Periode Tagihan yang Ingin Dibayar</label>
+                  <select id="bayar-form-select-bulan" class="form-control" style="font-weight: 600; font-size: 0.9rem; border-color: var(--primary);" onchange="onPilihBulanBayarChange(this.value)">
+                  </select>
                 </div>
                 <div style="margin-bottom: 1rem;">
-                  <span style="font-size: 0.75rem; color: var(--text-muted);">Total Tagihan</span>
+                  <span style="font-size: 0.75rem; color: var(--text-muted);">Total Tagihan Periode Terpilih</span>
                   <div id="bayar-form-total" style="font-weight: 700; font-size: 1.2rem; color: var(--primary);">Rp 175.000</div>
                 </div>
                 <div>
@@ -820,8 +836,9 @@
                   </select>
                 </div>
                 <div class="form-group">
-                  <label>Nominal Transfer</label>
+                  <label>Nominal yang Ditransfer / Dibayar (Rp)</label>
                   <input type="number" id="bayar-form-nominal" class="form-control" value="175000">
+                  <small style="color: var(--text-muted); font-size: 0.78rem; display: block; margin-top: 0.25rem;"><i class="ri-information-line"></i> Jika transfer melebihi total tagihan, sisa lebihnya otomatis menjadi potongan di tagihan bulan berikutnya.</small>
                 </div>
                 <div class="form-group">
                   <label>Bukti Transfer</label>
@@ -1634,9 +1651,15 @@
           <input type="text" id="edit-tagihan-catatan" class="form-control" placeholder="Contoh: Event Qurban Khusus / Kurang Bayar Bulan Lalu">
         </div>
       </div>
-      <div class="modal-footer">
-        <button class="btn btn-outline" onclick="closeModal('modal-edit-tagihan')">Batal</button>
-        <button class="btn btn-primary" onclick="saveEditTagihanNominal()">Simpan Perubahan</button>
+      <div class="modal-footer" style="display: flex; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;">
+        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+          <button type="button" class="btn btn-warning btn-sm" onclick="tandaiLunasSebelumSistem(document.getElementById('edit-tagihan-id').value)" title="Tandai lunas sebelum sistem / offline tanpa menambah kas"><i class="ri-history-line"></i> Tandai Lunas (Tanpa Kas)</button>
+          <button type="button" class="btn btn-outline btn-sm" style="color: #ef4444; border-color: #ef4444;" onclick="resetTagihanMenungguPembayaran(document.getElementById('edit-tagihan-id').value)" title="Reset ke Menunggu Pembayaran dan hapus bukti transfer"><i class="ri-refresh-line"></i> Reset Belum Bayar</button>
+        </div>
+        <div style="display: flex; gap: 0.5rem;">
+          <button class="btn btn-outline" onclick="closeModal('modal-edit-tagihan')">Batal</button>
+          <button class="btn btn-primary" onclick="saveEditTagihanNominal()">Simpan Perubahan</button>
+        </div>
       </div>
     </div>
   </div>
@@ -1679,7 +1702,7 @@
     </div>
   </div>
 
-  <script src="app.js?v=20260828_01"></script>
+  <script src="app.js?v=20260901_10"></script>
   <script>
     function togglePasswordVisibility() {
       const pwdInp = document.getElementById("login-password");

@@ -63,34 +63,38 @@ function doPost(e) {
     var contents = typeof raw === "string" ? JSON.parse(raw) : (raw || {});
     var ss = SpreadsheetApp.getActiveSpreadsheet();
     
-    if (contents.rumah && Array.isArray(contents.rumah)) {
+    if (contents.rumah && Array.isArray(contents.rumah) && contents.rumah.length > 0) {
       updateSheetData(ss.getSheetByName("Rumah") || createRumahSheet(ss), contents.rumah, "blokNo", ["id", "blokNo", "pemilik", "noHp", "status", "kelompokIPL"]);
     }
-    if (contents.tagihan && Array.isArray(contents.tagihan)) {
-      updateSheetData(ss.getSheetByName("Tagihan") || createTagihanSheet(ss), contents.tagihan, "id", ["id", "periode", "bulan", "tahun", "rumahId", "blokNo", "pemilik", "kelompokIPL", "nominal", "status", "tglBayar", "metode", "buktiTransfer", "rincianItems"]);
+    if (contents.tagihan && Array.isArray(contents.tagihan) && contents.tagihan.length > 0) {
+      updateSheetData(ss.getSheetByName("Tagihan") || createTagihanSheet(ss), contents.tagihan, "id", ["id", "periode", "bulan", "tahun", "rumahId", "blokNo", "pemilik", "kelompokIPL", "nominal", "jumlahDibayar", "potonganDeposit", "status", "tglBayar", "metode", "buktiTransfer", "rincianItems", "catatanKhusus"]);
     }
     if (contents.pengeluaran && Array.isArray(contents.pengeluaran)) {
-      updateSheetData(ss.getSheetByName("Pengeluaran") || createPengeluaranSheet(ss), contents.pengeluaran, "id", ["id", "tanggal", "kategori", "penerima", "keterangan", "nominal"]);
+      if (contents.pengeluaran.length > 0 || contents.allowEmptyPengeluaran === true) {
+        updateSheetData(ss.getSheetByName("Pengeluaran") || createPengeluaranSheet(ss), contents.pengeluaran, "id", ["id", "tanggal", "kategori", "penerima", "keterangan", "nominal"]);
+      }
     }
     if (contents.pemasukanLain && Array.isArray(contents.pemasukanLain)) {
-      updateSheetData(ss.getSheetByName("PemasukanLain") || createPemasukanLainSheet(ss), contents.pemasukanLain, "id", ["id", "tanggal", "kategori", "penerima", "keterangan", "nominal"]);
+      if (contents.pemasukanLain.length > 0 || contents.allowEmptyPemasukanLain === true) {
+        updateSheetData(ss.getSheetByName("PemasukanLain") || createPemasukanLainSheet(ss), contents.pemasukanLain, "id", ["id", "tanggal", "kategori", "penerima", "keterangan", "nominal"]);
+      }
     }
-    if (contents.komponenIPL && Array.isArray(contents.komponenIPL)) {
+    if (contents.komponenIPL && Array.isArray(contents.komponenIPL) && contents.komponenIPL.length > 0) {
       updateSheetData(ss.getSheetByName("Komponen") || createKomponenSheet(ss), contents.komponenIPL, "id", ["id", "nama", "nominalTotal", "isAutoKas", "dibayarOleh", "aktif"]);
     }
-    if (contents.masterEvent && Array.isArray(contents.masterEvent)) {
+    if (contents.masterEvent && Array.isArray(contents.masterEvent) && contents.masterEvent.length > 0) {
       updateSheetData(ss.getSheetByName("Event") || createEventSheet(ss), contents.masterEvent, "id", ["id", "nama", "nominal", "dibayarOleh", "aktif"]);
     }
-    if (contents.users && Array.isArray(contents.users)) {
+    if (contents.users && Array.isArray(contents.users) && contents.users.length > 0) {
       updateSheetData(ss.getSheetByName("Users") || createUsersSheet(ss), contents.users, "username", ["username", "password", "name", "blokNo", "role", "avatar", "mustChangePassword"]);
     }
-    if (contents.auditLog && Array.isArray(contents.auditLog)) {
+    if (contents.auditLog && Array.isArray(contents.auditLog) && contents.auditLog.length > 0) {
       updateSheetData(ss.getSheetByName("AuditLog") || createAuditLogSheet(ss), contents.auditLog, "id", ["id", "timestamp", "actor", "action", "detail"]);
     }
     if (contents.ringkasanKas && typeof contents.ringkasanKas === "object") {
       updateRingkasanKasSheet(ss.getSheetByName("RingkasanKas") || createRingkasanKasSheet(ss), contents.ringkasanKas);
     }
-    if (contents.targetIPL && Array.isArray(contents.targetIPL)) {
+    if (contents.targetIPL && Array.isArray(contents.targetIPL) && contents.targetIPL.length > 0) {
       updateSheetData(ss.getSheetByName("TargetIPL") || createTargetIPLSheet(ss), contents.targetIPL, "id", ["id", "kelompok", "target", "keterangan"]);
     }
     
@@ -168,7 +172,12 @@ function updateSheetData(sheet, dataArray, keyField, defaultHeaders) {
   });
 
   sheet.clear();
-  if (cleanArray.length === 0) return;
+  if (cleanArray.length === 0) {
+    if (defaultHeaders && Array.isArray(defaultHeaders)) {
+      sheet.appendRow(defaultHeaders);
+    }
+    return;
+  }
 
   // Build complete union of headers
   var headerMap = {};
@@ -218,7 +227,7 @@ function createRumahSheet(ss) {
 
 function createTagihanSheet(ss) {
   var sheet = ss.insertSheet("Tagihan");
-  sheet.appendRow(["id", "periode", "bulan", "tahun", "rumahId", "blokNo", "pemilik", "kelompokIPL", "nominal", "status", "tglBayar", "metode", "buktiTransfer", "rincianItems"]);
+  sheet.appendRow(["id", "periode", "bulan", "tahun", "rumahId", "blokNo", "pemilik", "kelompokIPL", "nominal", "jumlahDibayar", "potonganDeposit", "status", "tglBayar", "metode", "buktiTransfer", "rincianItems", "catatanKhusus"]);
   return sheet;
 }
 
