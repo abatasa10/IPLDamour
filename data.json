@@ -181,7 +181,31 @@
     { "id": "RMH-A2", "blokNo": "A2", "pemilik": "Developer", "noHp": "081234567830", "status": "Aktif", "kelompokIPL": "IPL Developer" },
     { "id": "RMH-A3", "blokNo": "A3", "pemilik": "Developer", "noHp": "081234567831", "status": "Aktif", "kelompokIPL": "IPL Developer" }
   ],
-  "tagihan": [],
+  "tagihan": [
+    {
+      "id": "TAG-2026Agustus-C8",
+      "periode": "2026-Agustus",
+      "bulan": "Agustus",
+      "tahun": "2026",
+      "rumahId": "RMH-C8",
+      "blokNo": "C8",
+      "pemilik": "Delon",
+      "kelompokIPL": "IPL + Sampah",
+      "nominal": 268000,
+      "jumlahDibayar": 268000,
+      "potonganDeposit": 0,
+      "status": "Lunas",
+      "tglBayar": "2026-08-31",
+      "metode": "Transfer",
+      "buktiTransfer": "",
+      "rincianItems": [
+        { "nama": "IPL Dasar", "nominal": 150000 },
+        { "nama": "Iuran Sampah", "nominal": 25000 },
+        { "nama": "Tambahan", "nominal": 93000 }
+      ],
+      "catatanKhusus": "Koreksi nominal Agustus 2026 (data restore setelah DB reset)"
+    }
+  ],
   "pengeluaran": [],
   "pemasukanLain": [],
   "grafik6Bulan": [],

@@ -945,3 +945,113 @@ button {
     justify-content: center;
   }
 }
+
+/* =============================================
+   MONITORING TUNGGAKAN - BLOCK CARDS
+   ============================================= */
+.mt-block-card {
+  background: var(--bg-card);
+  border: 2px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 1rem 0.85rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: default;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  position: relative;
+  overflow: hidden;
+  text-align: center;
+}
+
+.mt-block-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 4px;
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+}
+
+.mt-block-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-lg);
+}
+
+.mt-block-card.menunggak {
+  border-color: #fca5a5;
+  background: linear-gradient(160deg, #fff5f5 0%, #fff 100%);
+}
+.mt-block-card.menunggak::before { background: linear-gradient(90deg, #ef4444, #f97316); }
+
+.mt-block-card.lunas {
+  border-color: #6ee7b7;
+  background: linear-gradient(160deg, #f0fdf4 0%, #fff 100%);
+}
+.mt-block-card.lunas::before { background: linear-gradient(90deg, #10b981, #06b6d4); }
+
+.mt-block-card.kosong {
+  border-color: #e2e8f0;
+  background: #f8fafc;
+  opacity: 0.65;
+}
+.mt-block-card.kosong::before { background: #cbd5e1; }
+
+.mt-block-label {
+  font-size: 1.25rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  color: var(--text-main);
+}
+
+.mt-block-owner {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.mt-block-nominal {
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+}
+.mt-block-card.menunggak .mt-block-nominal {
+  color: var(--danger);
+  background: #fee2e2;
+}
+.mt-block-card.lunas .mt-block-nominal {
+  color: var(--success);
+  background: #d1fae5;
+}
+.mt-block-card.kosong .mt-block-nominal {
+  color: var(--text-muted);
+  background: #f1f5f9;
+}
+
+.mt-block-months {
+  font-size: 0.7rem;
+  color: #d97706;
+  font-weight: 600;
+}
+
+.mt-block-icon {
+  font-size: 1.5rem;
+  margin-bottom: 0.15rem;
+}
+.mt-block-card.menunggak .mt-block-icon { color: #ef4444; }
+.mt-block-card.lunas .mt-block-icon { color: #10b981; }
+.mt-block-card.kosong .mt-block-icon { color: #94a3b8; }
+
+@keyframes pulse-danger {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(239,68,68,0.25); }
+  50% { box-shadow: 0 0 0 6px rgba(239,68,68,0); }
+}
+.mt-block-card.menunggak:hover {
+  animation: pulse-danger 1.5s ease infinite;
+}
+

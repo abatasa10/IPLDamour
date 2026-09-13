@@ -109,6 +109,11 @@
           <span>Daftar Tagihan</span>
           <span id="nav-tagihan-badge" class="badge badge-warning" style="display: none; margin-left: auto; font-size: 0.65rem; padding: 0.15rem 0.45rem; border-radius: 10px;">0</span>
         </a>
+        <a href="#" class="nav-item" data-view="monitoring-tunggakan" style="display: flex; align-items: center;">
+          <i class="ri-alarm-warning-line"></i>
+          <span>Monitoring Tunggakan</span>
+          <span id="nav-tunggakan-badge" class="badge badge-danger" style="display: none; margin-left: auto; font-size: 0.65rem; padding: 0.15rem 0.45rem; border-radius: 10px;">0</span>
+        </a>
         <a href="#" class="nav-item" data-view="perhitungan">
           <i class="ri-calculator-line"></i>
           <span>Perhitungan IPL</span>
@@ -188,6 +193,9 @@
           <button id="btn-sinkron-manual" class="btn btn-outline btn-sm role-admin-only" style="margin-left: 0.5rem; font-size: 0.75rem; padding: 0.2rem 0.65rem; border-radius: 20px; display: inline-flex; align-items: center; gap: 0.3rem;" onclick="manualSyncGoogleSheet()">
             <i class="ri-refresh-line"></i> Sinkron Manual
           </button>
+          <button class="btn btn-sm" style="margin-left: 0.5rem; font-size: 0.75rem; padding: 0.25rem 0.75rem; border-radius: 20px; background: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; display: inline-flex; align-items: center; gap: 0.35rem; font-weight: 600; cursor: pointer;" onclick="showView('monitoring-tunggakan')">
+            <i class="ri-alarm-warning-line"></i> Monitoring Tunggakan
+          </button>
         </div>
 
         <div class="nav-right" style="display: flex; align-items: center; gap: 0.75rem;">
@@ -262,13 +270,13 @@
               <div class="kpi-icon blue"><i class="ri-home-heart-line"></i></div>
             </div>
 
-            <div class="kpi-card">
+            <div class="kpi-card" onclick="showView('monitoring-tunggakan')" style="cursor: pointer; transition: transform 0.2s ease, box-shadow 0.2s ease;" title="Klik untuk buka Monitoring Tunggakan">
               <div class="kpi-info">
                 <p>Menunggak / Menunggu</p>
                 <div class="kpi-value" id="kpi-menunggak">0 Unit</div>
-                <span class="kpi-subtext">Perlu ditindaklanjuti</span>
+                <span class="kpi-subtext" style="color: var(--warning); font-weight: 600;">Lihat Detail Tunggakan &rarr;</span>
               </div>
-              <div class="kpi-icon orange"><i class="ri-time-line"></i></div>
+              <div class="kpi-icon orange"><i class="ri-alarm-warning-line"></i></div>
             </div>
 
             <div class="kpi-card">
@@ -698,6 +706,9 @@
                 </select>
               </div>
               <button class="btn btn-outline" onclick="renderDaftarTagihan()"><i class="ri-filter-3-line"></i> Filter</button>
+              <button class="btn btn-sm" style="margin-left: auto; background: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; font-weight: 600; display: inline-flex; align-items: center; gap: 0.35rem; border-radius: var(--radius-sm); padding: 0.4rem 0.85rem; cursor: pointer;" onclick="showView('monitoring-tunggakan')">
+                <i class="ri-alarm-warning-line"></i> Buka Monitoring Tunggakan
+              </button>
             </div>
 
             <div class="table-responsive">
@@ -1119,6 +1130,106 @@
                   </tr>
                 </thead>
                 <tbody id="neraca-table-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- MONITORING TUNGGAKAN IPL VIEW -->
+        <section id="view-monitoring-tunggakan" class="view-section">
+          <!-- KPI Summary Cards -->
+          <div class="kpi-grid" style="margin-bottom: 1.5rem;">
+            <div class="kpi-card" style="border-left: 4px solid var(--danger);">
+              <div class="kpi-info">
+                <p>Total Tunggakan</p>
+                <div class="kpi-value" id="mt-total-nominal" style="color: var(--danger);">Rp 0</div>
+                <span class="kpi-subtext">Belum Terbayar</span>
+              </div>
+              <div class="kpi-icon" style="background: linear-gradient(135deg, #fef2f2, #fee2e2); color: var(--danger);"><i class="ri-money-dollar-circle-line"></i></div>
+            </div>
+            <div class="kpi-card" style="border-left: 4px solid #f59e0b;">
+              <div class="kpi-info">
+                <p>Rumah Menunggak</p>
+                <div class="kpi-value" id="mt-total-rumah" style="color: #d97706;">0 Unit</div>
+                <span class="kpi-subtext">Perlu Tindakan</span>
+              </div>
+              <div class="kpi-icon" style="background: linear-gradient(135deg, #fffbeb, #fde68a); color: #d97706;"><i class="ri-home-wifi-line"></i></div>
+            </div>
+            <div class="kpi-card" style="border-left: 4px solid var(--success);">
+              <div class="kpi-info">
+                <p>Rumah Lunas</p>
+                <div class="kpi-value" id="mt-total-lunas" style="color: var(--success);">0 Unit</div>
+                <span class="kpi-subtext">Sudah Terbayar</span>
+              </div>
+              <div class="kpi-icon" style="background: linear-gradient(135deg, #ecfdf5, #a7f3d0); color: var(--success);"><i class="ri-home-smile-line"></i></div>
+            </div>
+            <div class="kpi-card" style="border-left: 4px solid var(--primary);">
+              <div class="kpi-info">
+                <p>Persentase Lunas</p>
+                <div class="kpi-value" id="mt-pct-lunas" style="color: var(--primary);">0%</div>
+                <span class="kpi-subtext">Tingkat Pembayaran</span>
+              </div>
+              <div class="kpi-icon" style="background: linear-gradient(135deg, #eff6ff, #bfdbfe); color: var(--primary);"><i class="ri-bar-chart-grouped-line"></i></div>
+            </div>
+          </div>
+
+          <!-- Filter & Header -->
+          <div class="card" style="margin-bottom: 1.5rem;">
+            <div class="card-header" style="flex-wrap: wrap; gap: 0.75rem;">
+              <div class="card-title"><i class="ri-alarm-warning-line"></i> Monitoring Tunggakan IPL Per Blok</div>
+              <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center;">
+                <div class="input-search-wrapper" style="max-width: 220px;">
+                  <i class="ri-search-line"></i>
+                  <input type="text" id="mt-search" class="form-control" placeholder="Cari blok / pemilik..." oninput="renderMonitoringTunggakan()">
+                </div>
+                <select id="mt-filter-status" class="form-control" style="width: auto;" onchange="renderMonitoringTunggakan()">
+                  <option value="semua">Semua Status</option>
+                  <option value="menunggak">Menunggak Saja</option>
+                  <option value="lunas">Lunas Saja</option>
+                </select>
+                <select id="mt-filter-periode" class="form-control" style="width: auto;" onchange="renderMonitoringTunggakan()">
+                  <option value="semua">Semua Periode</option>
+                </select>
+                <div style="display: flex; gap: 0.35rem;">
+                  <button class="btn btn-outline btn-sm" id="mt-view-grid" onclick="setMonitoringView('grid')" title="Grid View" style="padding: 0.35rem 0.6rem;"><i class="ri-layout-grid-line"></i></button>
+                  <button class="btn btn-outline btn-sm" id="mt-view-table" onclick="setMonitoringView('table')" title="Table View" style="padding: 0.35rem 0.6rem;"><i class="ri-list-check-2"></i></button>
+                </div>
+                <button class="btn btn-outline btn-sm" onclick="window.print()"><i class="ri-printer-line"></i> Cetak</button>
+              </div>
+            </div>
+
+            <!-- Progress Bar -->
+            <div style="padding: 0 1.25rem 1rem;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+                <span style="font-size: 0.8rem; font-weight: 600; color: var(--text-muted);">Progress Pembayaran Bulan Ini</span>
+                <span id="mt-progress-label" style="font-size: 0.8rem; font-weight: 700; color: var(--primary);">0 / 0 unit lunas</span>
+              </div>
+              <div style="height: 10px; background: #e2e8f0; border-radius: 999px; overflow: hidden;">
+                <div id="mt-progress-bar" style="height: 100%; width: 0%; background: linear-gradient(90deg, #2563eb, #10b981); border-radius: 999px; transition: width 0.6s ease;"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Grid View -->
+          <div id="mt-grid-container" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;"></div>
+
+          <!-- Table View -->
+          <div id="mt-table-container" class="card" style="display: none;">
+            <div class="table-responsive">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>No</th>
+                    <th>Blok</th>
+                    <th>Pemilik</th>
+                    <th>Kelompok IPL</th>
+                    <th style="text-align: center;">Jumlah Bulan Tunggak</th>
+                    <th>Bulan Menunggak</th>
+                    <th style="text-align: right;">Total Belum Dibayar</th>
+                    <th>Aksi</th>
+                  </tr>
+                </thead>
+                <tbody id="mt-table-tbody"></tbody>
               </table>
             </div>
           </div>
@@ -1702,7 +1813,7 @@
     </div>
   </div>
 
-  <script src="app.js?v=20260901_10"></script>
+  <script src="app.js?v=20260908_01"></script>
   <script>
     function togglePasswordVisibility() {
       const pwdInp = document.getElementById("login-password");
