@@ -365,7 +365,8 @@ function handleLogout() {
   }
 }
 
-function toggleUserDropdown() {
+function toggleUserDropdown(e) {
+  if (e) e.stopPropagation();
   const menu = document.getElementById("user-dropdown-menu");
   if (menu) {
     menu.style.display = menu.style.display === "none" || !menu.style.display ? "block" : "none";

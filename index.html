@@ -217,7 +217,7 @@
             </div>
           </div>
 
-          <div class="user-profile" style="position: relative; cursor: pointer;" onclick="toggleUserDropdown()">
+          <div class="user-profile" style="position: relative; cursor: pointer;" onclick="toggleUserDropdown(event)">
             <div class="avatar" id="nav-user-avatar">A</div>
             <div style="display: flex; flex-direction: column;">
               <span style="font-weight: 600; font-size: 0.85rem;" id="nav-user-name">Pak Budi (Admin Warga)</span>
@@ -1816,7 +1816,7 @@
     </div>
   </div>
 
-  <script src="app.js?v=20260913_01"></script>
+  <script src="app.js?v=20260913_02"></script>
   <script>
     function togglePasswordVisibility() {
       const pwdInp = document.getElementById("login-password");
