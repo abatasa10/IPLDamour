@@ -4824,7 +4824,7 @@ function renderLaporanPiutangWarga() {
       .map((w, idx) => {
         const houseObj = (appState.rumah || []).find((r) => normalizeBlok(r.blokNo) === normalizeBlok(w.blokNo));
         const kelompokIPL = houseObj ? houseObj.kelompokIPL : "IPL + Sampah";
-        const phone = houseObj ? (houseObj.noHp || "").replace(/[^0-9]/g, "") : "";
+        const phone = houseObj ? String(houseObj.noHp || "").replace(/[^0-9]/g, "") : "";
         const bulanStr = w.bulanList.join(", ");
 
         return `
@@ -5101,66 +5101,101 @@ function renderMonitoringTunggakan() {
   const searchVal = (document.getElementById("mt-search")?.value || "").toLowerCase();
   const filterStatus = document.getElementById("mt-filter-status")?.value || "semua";
   const filterPeriodeEl = document.getElementById("mt-filter-periode");
-  const filterPeriode = filterPeriodeEl?.value || "semua";
+  let filterPeriode = filterPeriodeEl?.value || "semua";
 
   // --- Populate period filter dynamically ---
   if (filterPeriodeEl) {
-    const allPeriodes = [...new Set(
-      (appState.tagihan || []).map(t => t.periode).filter(Boolean).sort().reverse()
+    const rawPeriodes = [...new Set(
+      (appState.tagihan || []).map(t => {
+        if (t.periode && t.periode.includes("-")) return t.periode;
+        if (t.tahun && t.bulan) return `${t.tahun}-${t.bulan}`;
+        return null;
+      }).filter(Boolean)
     )];
+
+    // Sort periods chronologically descending (newest first)
+    rawPeriodes.sort((a, b) => {
+      const [yA, mA] = a.split("-");
+      const [yB, mB] = b.split("-");
+      const idxA = (parseInt(yA, 10) || 0) * 12 + MONTH_NAMES.indexOf(mA);
+      const idxB = (parseInt(yB, 10) || 0) * 12 + MONTH_NAMES.indexOf(mB);
+      return idxB - idxA;
+    });
+
+    const currentVal = filterPeriodeEl.value;
     const currentOpts = Array.from(filterPeriodeEl.options).map(o => o.value);
-    const expectedOpts = ["semua", ...allPeriodes];
+    const expectedOpts = ["semua", ...rawPeriodes];
+
     if (JSON.stringify(currentOpts) !== JSON.stringify(expectedOpts)) {
       filterPeriodeEl.innerHTML =
-        `<option value="semua">Semua Periode</option>` +
-        allPeriodes.map(p => `<option value="${p}">${p}</option>`).join("");
+        `<option value="semua">Semua Periode (Akumulasi)</option>` +
+        rawPeriodes.map(p => {
+          const parts = p.split("-");
+          const label = parts.length === 2 ? `${parts[1]} ${parts[0]}` : p;
+          return `<option value="${p}">${label}</option>`;
+        }).join("");
+
+      if (currentVal && expectedOpts.includes(currentVal)) {
+        filterPeriodeEl.value = currentVal;
+      }
     }
+    filterPeriode = filterPeriodeEl.value || "semua";
   }
 
   // --- Build per-block summary ---
   const rumahList = appState.rumah || [];
   const tagihanList = appState.tagihan || [];
 
-  // Build tunggakan lookup: blok -> {totalTunggakan, jumlahBulan, bulanList}
-  const tunggakanMap = {};
-  tagihanList.forEach(t => {
-    if (t.status !== "Menunggak") return;
-    if (filterPeriode !== "semua" && t.periode !== filterPeriode) return;
-    const blok = normalizeBlok(t.blokNo);
-    if (!tunggakanMap[blok]) {
-      tunggakanMap[blok] = { totalTunggakan: 0, jumlahBulan: 0, bulanList: [] };
-    }
-    tunggakanMap[blok].totalTunggakan += parseFloat(t.nominal) || 0;
-    tunggakanMap[blok].jumlahBulan += 1;
-    tunggakanMap[blok].bulanList.push(`${t.bulan} ${t.tahun}`);
-  });
-
-  // Lunas check: block has at least 1 Lunas tagihan in the selected period, and 0 Menunggak
-  const lunasBloks = new Set();
-  tagihanList.forEach(t => {
-    if (filterPeriode !== "semua" && t.periode !== filterPeriode) return;
-    if (t.status === "Lunas") lunasBloks.add(normalizeBlok(t.blokNo));
-  });
-
-  // Build combined list per rumah
   const allData = rumahList.map(r => {
     const blok = normalizeBlok(r.blokNo);
-    const tunggakan = tunggakanMap[blok];
-    const isMenunggak = !!tunggakan;
-    const isLunas = !isMenunggak && lunasBloks.has(blok);
+    const houseBills = tagihanList.filter(t => normalizeBlok(t.blokNo) === blok);
+
+    let unpaidBills = [];
+    let lunasBills = [];
+
+    if (filterPeriode === "semua") {
+      // Akumulasi semua tagihan
+      unpaidBills = houseBills.filter(t => t.status !== "Lunas");
+      lunasBills = houseBills.filter(t => t.status === "Lunas");
+    } else {
+      // Periode spesifik (contoh: 2026-September atau 2026-Agustus)
+      const periodParts = filterPeriode.split("-");
+      const targetYear = periodParts[0];
+      const targetMonth = periodParts[1];
+
+      const periodBills = houseBills.filter(t => {
+        const pKey = t.periode || `${t.tahun}-${t.bulan}`;
+        return pKey === filterPeriode || (t.bulan === targetMonth && String(t.tahun) === targetYear);
+      });
+
+      unpaidBills = periodBills.filter(t => t.status !== "Lunas");
+      lunasBills = periodBills.filter(t => t.status === "Lunas");
+    }
+
+    const isMenunggak = unpaidBills.length > 0;
+    const isLunas = !isMenunggak && lunasBills.length > 0;
+    const totalTunggakan = unpaidBills.reduce((sum, t) => {
+      const nom = parseFloat(t.nominal) || 0;
+      const dibayar = parseFloat(t.jumlahDibayar) || 0;
+      return sum + Math.max(0, nom - dibayar);
+    }, 0);
+
+    const bulanList = unpaidBills.map(t => `${t.bulan} ${t.tahun}`);
+
     return {
       blokNo: r.blokNo,
       pemilik: r.pemilik,
       noHp: r.noHp || "",
       kelompokIPL: r.kelompokIPL || "",
       status: isMenunggak ? "menunggak" : (isLunas ? "lunas" : "kosong"),
-      totalTunggakan: tunggakan ? tunggakan.totalTunggakan : 0,
-      jumlahBulan: tunggakan ? tunggakan.jumlahBulan : 0,
-      bulanList: tunggakan ? tunggakan.bulanList : []
+      totalTunggakan: totalTunggakan,
+      jumlahBulan: unpaidBills.length,
+      bulanList: bulanList,
+      unpaidBills: unpaidBills
     };
   });
 
-  // Apply filters
+  // Apply search and status filters
   const filtered = allData.filter(r => {
     const matchSearch = r.blokNo.toLowerCase().includes(searchVal) ||
       r.pemilik.toLowerCase().includes(searchVal);
@@ -5174,7 +5209,8 @@ function renderMonitoringTunggakan() {
   const totalMenunggak = allData.filter(r => r.status === "menunggak");
   const totalLunas = allData.filter(r => r.status === "lunas");
   const totalNominal = totalMenunggak.reduce((s, r) => s + r.totalTunggakan, 0);
-  const pct = allData.length ? Math.round((totalLunas.length / allData.length) * 100) : 0;
+  const totalRumah = allData.length;
+  const pct = totalRumah ? Math.round((totalLunas.length / totalRumah) * 100) : 0;
 
   const el = (id, val) => { const e = document.getElementById(id); if (e) e.textContent = val; };
   el("mt-total-nominal", formatRp(totalNominal));
@@ -5182,17 +5218,25 @@ function renderMonitoringTunggakan() {
   el("mt-total-lunas", `${totalLunas.length} Unit`);
   el("mt-pct-lunas", `${pct}%`);
 
-  // Progress bar (current-month data)
+  // Progress bar
   const progressBar = document.getElementById("mt-progress-bar");
   const progressLabel = document.getElementById("mt-progress-label");
-  const totalRumah = allData.length;
+  const progressTitle = document.getElementById("mt-progress-title");
   if (progressBar) progressBar.style.width = `${pct}%`;
-  if (progressLabel) progressLabel.textContent = `${totalLunas.length} / ${totalRumah} unit lunas`;
+  if (progressLabel) progressLabel.textContent = `${totalLunas.length} / ${totalRumah} unit lunas (${pct}%)`;
+  if (progressTitle) {
+    if (filterPeriode === "semua") {
+      progressTitle.textContent = "Progress Pembayaran (Semua Periode)";
+    } else {
+      const parts = filterPeriode.split("-");
+      progressTitle.textContent = `Progress Pembayaran ${parts.length === 2 ? parts[1] + ' ' + parts[0] : filterPeriode}`;
+    }
+  }
 
   // Update nav badge
   updateMonitoringNavBadge(totalMenunggak.length);
 
-  // Apply view
+  // Apply view mode
   setMonitoringView(_monitoringView);
 
   // --- Render Grid Cards ---
@@ -5205,16 +5249,16 @@ function renderMonitoringTunggakan() {
       </div>`;
     } else {
       gridEl.innerHTML = filtered.map(r => {
-        const icon = r.status === "menunggak" ? "ri-home-wifi-line" :
-                     r.status === "lunas"      ? "ri-home-smile-line" : "ri-home-line";
+        const icon = r.status === "menunggak" ? "ri-alarm-warning-line" :
+                     r.status === "lunas"      ? "ri-checkbox-circle-line" : "ri-home-line";
         const nominalText = r.status === "menunggak"
           ? formatRp(r.totalTunggakan)
           : r.status === "lunas" ? "✓ Lunas" : "—";
         const monthsText = r.status === "menunggak" && r.jumlahBulan > 0
-          ? `${r.jumlahBulan} bulan menunggak` : "";
+          ? `${r.jumlahBulan} bulan belum bayar` : "";
 
         return `
-          <div class="mt-block-card ${r.status}" title="${r.pemilik} · ${r.kelompokIPL}${r.status === 'menunggak' ? '\nTunggak: ' + r.bulanList.join(', ') : ''}">
+          <div class="mt-block-card ${r.status}" title="${r.pemilik} · ${r.kelompokIPL}${r.status === 'menunggak' ? '\nBelum bayar: ' + r.bulanList.join(', ') : ''}">
             <div class="mt-block-icon"><i class="${icon}"></i></div>
             <div class="mt-block-label">${r.blokNo}</div>
             <div class="mt-block-owner">${r.pemilik}</div>
@@ -5226,35 +5270,48 @@ function renderMonitoringTunggakan() {
     }
   }
 
-  // --- Render Table ---
+  // --- Render Table / List View (Menampilkan SEMUA baris sesuai filter) ---
   const tbody = document.getElementById("mt-table-tbody");
   if (tbody) {
-    const menunggakOnly = filtered.filter(r => r.status === "menunggak");
-    if (menunggakOnly.length === 0) {
-      const msg = filterStatus === "lunas"
-        ? "Semua rumah yang dipilih sudah lunas."
-        : "Tidak ada rumah yang menunggak.";
-      tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: var(--text-muted); padding: 1.5rem;">${msg}</td></tr>`;
+    if (filtered.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: var(--text-muted); padding: 1.5rem;">Tidak ada data yang cocok dengan filter.</td></tr>`;
     } else {
-      tbody.innerHTML = menunggakOnly.map((r, idx) => {
-        const phone = r.noHp.replace(/[^0-9]/g, "");
-        const bulanStr = r.bulanList.join(", ");
+      tbody.innerHTML = filtered.map((r, idx) => {
+        const phone = String(r.noHp || "").replace(/[^0-9]/g, "");
+        const bulanStr = r.bulanList.length > 0 ? r.bulanList.join(", ") : "-";
+
+        const statusBadge = r.status === "menunggak"
+          ? `<span class="badge badge-danger" style="font-size: 0.75rem;">⚠ Belum Bayar (${r.jumlahBulan} Bln)</span>`
+          : r.status === "lunas"
+          ? `<span class="badge badge-success" style="font-size: 0.75rem;">✓ Lunas</span>`
+          : `<span class="badge badge-secondary" style="font-size: 0.75rem;">Belum Ada Tagihan</span>`;
+
+        const nominalDisplay = r.status === "menunggak"
+          ? `<strong style="color: var(--danger); font-size: 0.95rem;">${formatRp(r.totalTunggakan)}</strong>`
+          : r.status === "lunas"
+          ? `<span style="color: var(--success); font-weight: 600;">Rp 0 (Lunas)</span>`
+          : `<span style="color: var(--text-muted);">-</span>`;
+
+        const waAction = r.status === "menunggak" && phone
+          ? `<button class="btn btn-outline btn-sm" style="color: #16a34a; border-color: #86efac; padding: 0.25rem 0.6rem; font-size: 0.75rem; border-radius: 6px; display: inline-flex; align-items: center; gap: 0.25rem;"
+              onclick="sendWhatsAppReminder('${r.blokNo}', '${r.pemilik}', '${phone}', ${r.jumlahBulan}, '${bulanStr}', ${r.totalTunggakan})"
+              title="Kirim Pesan WhatsApp Pengingat">
+              <i class="ri-whatsapp-line"></i> Ingatkan WA
+            </button>`
+          : `<span style="color: var(--text-muted); font-size: 0.8rem;">-</span>`;
+
+        const rowBg = r.status === "menunggak" ? "background: #fef2f2;" : "";
+
         return `
-          <tr>
-            <td>${idx + 1}</td>
+          <tr style="${rowBg}">
+            <td style="text-align: center; color: var(--text-muted); font-size: 0.85rem;">${idx + 1}</td>
             <td><strong>${r.blokNo}</strong></td>
             <td>${r.pemilik}</td>
             <td><span class="badge badge-secondary" style="font-size: 0.7rem;">${r.kelompokIPL}</span></td>
-            <td style="text-align: center;"><span class="badge badge-warning">${r.jumlahBulan} Bulan</span></td>
-            <td><span style="font-size: 0.82rem; color: var(--danger); font-weight: 500;">${bulanStr}</span></td>
-            <td style="text-align: right; font-weight: 700; color: var(--danger);">${formatRp(r.totalTunggakan)}</td>
-            <td>
-              <button class="btn btn-outline btn-sm" style="color: #16a34a; border-color: #86efac;"
-                onclick="sendWhatsAppReminder('${r.blokNo}', '${r.pemilik}', '${phone}', ${r.jumlahBulan}, '${bulanStr}', ${r.totalTunggakan})"
-                title="Kirim Pengingat WA">
-                <i class="ri-whatsapp-line"></i> Remind WA
-              </button>
-            </td>
+            <td>${statusBadge}</td>
+            <td><span style="font-size: 0.82rem; ${r.status === 'menunggak' ? 'color: var(--danger); font-weight: 600;' : 'color: var(--success);'}">${r.status === 'lunas' ? '✓ Lunas' : bulanStr}</span></td>
+            <td style="text-align: right;">${nominalDisplay}</td>
+            <td style="text-align: center;">${waAction}</td>
           </tr>
         `;
       }).join("");

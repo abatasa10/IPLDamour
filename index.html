@@ -1178,21 +1178,24 @@
             <div class="card-header" style="flex-wrap: wrap; gap: 0.75rem;">
               <div class="card-title"><i class="ri-alarm-warning-line"></i> Monitoring Tunggakan IPL Per Blok</div>
               <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center;">
-                <div class="input-search-wrapper" style="max-width: 220px;">
+                <div class="input-search-wrapper" style="max-width: 200px;">
                   <i class="ri-search-line"></i>
                   <input type="text" id="mt-search" class="form-control" placeholder="Cari blok / pemilik..." oninput="renderMonitoringTunggakan()">
                 </div>
+                <div style="display: flex; align-items: center; gap: 0.4rem;">
+                  <label for="mt-filter-periode" style="margin: 0; font-size: 0.8rem; font-weight: 600; color: var(--text-muted); white-space: nowrap;"><i class="ri-calendar-event-line"></i> Periode Bulan:</label>
+                  <select id="mt-filter-periode" class="form-control" style="width: auto; font-weight: 600;" onchange="renderMonitoringTunggakan()">
+                    <option value="semua">Semua Periode (Akumulasi)</option>
+                  </select>
+                </div>
                 <select id="mt-filter-status" class="form-control" style="width: auto;" onchange="renderMonitoringTunggakan()">
                   <option value="semua">Semua Status</option>
-                  <option value="menunggak">Menunggak Saja</option>
+                  <option value="menunggak">Belum Bayar Saja</option>
                   <option value="lunas">Lunas Saja</option>
                 </select>
-                <select id="mt-filter-periode" class="form-control" style="width: auto;" onchange="renderMonitoringTunggakan()">
-                  <option value="semua">Semua Periode</option>
-                </select>
                 <div style="display: flex; gap: 0.35rem;">
-                  <button class="btn btn-outline btn-sm" id="mt-view-grid" onclick="setMonitoringView('grid')" title="Grid View" style="padding: 0.35rem 0.6rem;"><i class="ri-layout-grid-line"></i></button>
-                  <button class="btn btn-outline btn-sm" id="mt-view-table" onclick="setMonitoringView('table')" title="Table View" style="padding: 0.35rem 0.6rem;"><i class="ri-list-check-2"></i></button>
+                  <button class="btn btn-outline btn-sm" id="mt-view-grid" onclick="setMonitoringView('grid')" title="Tampilan Kotak" style="padding: 0.35rem 0.6rem;"><i class="ri-layout-grid-line"></i> Kotak</button>
+                  <button class="btn btn-outline btn-sm" id="mt-view-table" onclick="setMonitoringView('table')" title="Tampilan List / Tabel" style="padding: 0.35rem 0.6rem;"><i class="ri-list-check-2"></i> List</button>
                 </div>
                 <button class="btn btn-outline btn-sm" onclick="window.print()"><i class="ri-printer-line"></i> Cetak</button>
               </div>
@@ -1201,7 +1204,7 @@
             <!-- Progress Bar -->
             <div style="padding: 0 1.25rem 1rem;">
               <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
-                <span style="font-size: 0.8rem; font-weight: 600; color: var(--text-muted);">Progress Pembayaran Bulan Ini</span>
+                <span style="font-size: 0.8rem; font-weight: 600; color: var(--text-muted);" id="mt-progress-title">Progress Pembayaran Periode</span>
                 <span id="mt-progress-label" style="font-size: 0.8rem; font-weight: 700; color: var(--primary);">0 / 0 unit lunas</span>
               </div>
               <div style="height: 10px; background: #e2e8f0; border-radius: 999px; overflow: hidden;">
@@ -1219,14 +1222,14 @@
               <table class="table">
                 <thead>
                   <tr>
-                    <th>No</th>
-                    <th>Blok</th>
-                    <th>Pemilik</th>
+                    <th style="width: 50px;">No</th>
+                    <th>No Blok</th>
+                    <th>Nama Pemilik</th>
                     <th>Kelompok IPL</th>
-                    <th style="text-align: center;">Jumlah Bulan Tunggak</th>
-                    <th>Bulan Menunggak</th>
-                    <th style="text-align: right;">Total Belum Dibayar</th>
-                    <th>Aksi</th>
+                    <th>Status</th>
+                    <th>Periode / Bulan</th>
+                    <th style="text-align: right;">Nominal Belum Dibayar</th>
+                    <th style="text-align: center; width: 140px;">Aksi</th>
                   </tr>
                 </thead>
                 <tbody id="mt-table-tbody"></tbody>
@@ -1813,7 +1816,7 @@
     </div>
   </div>
 
-  <script src="app.js?v=20260908_01"></script>
+  <script src="app.js?v=20260913_01"></script>
   <script>
     function togglePasswordVisibility() {
       const pwdInp = document.getElementById("login-password");
