@@ -5103,37 +5103,27 @@ function renderMonitoringTunggakan() {
   const filterPeriodeEl = document.getElementById("mt-filter-periode");
   let filterPeriode = filterPeriodeEl?.value || "semua";
 
-  // --- Populate period filter dynamically ---
+  // --- Populate period filter dynamically (by month only) ---
   if (filterPeriodeEl) {
-    const rawPeriodes = [...new Set(
+    const rawMonths = [...new Set(
       (appState.tagihan || []).map(t => {
-        if (t.periode && t.periode.includes("-")) return t.periode;
-        if (t.tahun && t.bulan) return `${t.tahun}-${t.bulan}`;
+        if (t.bulan) return t.bulan;
+        if (t.periode && t.periode.includes("-")) return t.periode.split("-")[1];
         return null;
       }).filter(Boolean)
     )];
 
-    // Sort periods chronologically descending (newest first)
-    rawPeriodes.sort((a, b) => {
-      const [yA, mA] = a.split("-");
-      const [yB, mB] = b.split("-");
-      const idxA = (parseInt(yA, 10) || 0) * 12 + MONTH_NAMES.indexOf(mA);
-      const idxB = (parseInt(yB, 10) || 0) * 12 + MONTH_NAMES.indexOf(mB);
-      return idxB - idxA;
-    });
+    // Sort months chronologically descending (newest first)
+    rawMonths.sort((a, b) => MONTH_NAMES.indexOf(b) - MONTH_NAMES.indexOf(a));
 
     const currentVal = filterPeriodeEl.value;
     const currentOpts = Array.from(filterPeriodeEl.options).map(o => o.value);
-    const expectedOpts = ["semua", ...rawPeriodes];
+    const expectedOpts = ["semua", ...rawMonths];
 
     if (JSON.stringify(currentOpts) !== JSON.stringify(expectedOpts)) {
       filterPeriodeEl.innerHTML =
         `<option value="semua">Semua Periode (Akumulasi)</option>` +
-        rawPeriodes.map(p => {
-          const parts = p.split("-");
-          const label = parts.length === 2 ? `${parts[1]} ${parts[0]}` : p;
-          return `<option value="${p}">${label}</option>`;
-        }).join("");
+        rawMonths.map(m => `<option value="${m}">${m}</option>`).join("");
 
       if (currentVal && expectedOpts.includes(currentVal)) {
         filterPeriodeEl.value = currentVal;
@@ -5158,15 +5148,8 @@ function renderMonitoringTunggakan() {
       unpaidBills = houseBills.filter(t => t.status !== "Lunas");
       lunasBills = houseBills.filter(t => t.status === "Lunas");
     } else {
-      // Periode spesifik (contoh: 2026-September atau 2026-Agustus)
-      const periodParts = filterPeriode.split("-");
-      const targetYear = periodParts[0];
-      const targetMonth = periodParts[1];
-
-      const periodBills = houseBills.filter(t => {
-        const pKey = t.periode || `${t.tahun}-${t.bulan}`;
-        return pKey === filterPeriode || (t.bulan === targetMonth && String(t.tahun) === targetYear);
-      });
+      // Bulan spesifik (contoh: Agustus) — agregasi semua tahun
+      const periodBills = houseBills.filter(t => t.bulan === filterPeriode);
 
       unpaidBills = periodBills.filter(t => t.status !== "Lunas");
       lunasBills = periodBills.filter(t => t.status === "Lunas");
@@ -5228,8 +5211,7 @@ function renderMonitoringTunggakan() {
     if (filterPeriode === "semua") {
       progressTitle.textContent = "Progress Pembayaran (Semua Periode)";
     } else {
-      const parts = filterPeriode.split("-");
-      progressTitle.textContent = `Progress Pembayaran ${parts.length === 2 ? parts[1] + ' ' + parts[0] : filterPeriode}`;
+      progressTitle.textContent = `Progress Pembayaran Bulan ${filterPeriode}`;
     }
   }
 
