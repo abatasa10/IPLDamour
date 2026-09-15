@@ -189,14 +189,7 @@ async function handleLoginSubmit(e) {
     const pMatch =
       userPass === rawPass ||
       userPass.toLowerCase() === pInput ||
-      userPass === hashedInput ||
-      pInput === "admin123" ||
-      pInput === "123qwe" ||
-      pInput === "damour123" ||
-      pInput === "warga123" ||
-      pInput === "dev123" ||
-      pInput === uClean ||
-      pInput === userBlokClean;
+      userPass === hashedInput;
 
     return pMatch;
   });
@@ -1456,11 +1449,8 @@ function ensureMasterRumahState() {
   } else {
     DEFAULT_31_RUMAH.forEach((defR) => {
       const cleanDef = normalizeBlok(defR.blokNo);
-      let target = appState.rumah.find((r) => normalizeBlok(r.blokNo) === cleanDef);
-      if (target) {
-        target.pemilik = defR.pemilik;
-        target.kelompokIPL = defR.kelompokIPL;
-      } else {
+      const exists = appState.rumah.some((r) => normalizeBlok(r.blokNo) === cleanDef);
+      if (!exists) {
         appState.rumah.push(defR);
       }
     });
