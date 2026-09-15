@@ -722,7 +722,8 @@ function initDynamicDatesAndYears() {
     "filter-tagihan-tahun",
     "filter-pgl-tahun",
     "filter-kas-tahun",
-    "laporan-tahun"
+    "laporan-tahun",
+    "form-rumah-kelompok-mulai-tahun"
   ];
 
   yearSelectIds.forEach((id) => {
@@ -1228,10 +1229,9 @@ function syncTagihanWithMasterRumah() {
     
     if (!house) return false; // Delete tagihan for non-existent houses!
 
-    // Sync live owner name & IPL group from Master Rumah
+    // Sync blok & pemilik, tapi JANGAN timpa kelompokIPL tagihan lama (dibekukan sejak dibuat)
     t.blokNo = house.blokNo;
     t.pemilik = house.pemilik;
-    t.kelompokIPL = house.kelompokIPL;
     return true;
   });
 }
@@ -1239,6 +1239,21 @@ function syncTagihanWithMasterRumah() {
 function normalizeBlok(b) {
   if (!b) return "";
   return b.trim().toUpperCase().replace(/^([A-Z]+)0+(\d+)$/, "$1$2");
+}
+
+function bulanToKey(tahun, bulan) {
+  const idx = MONTH_NAMES.indexOf(bulan);
+  return `${tahun}-${String(idx + 1).padStart(2, "0")}`;
+}
+
+function getKelompokUntukPeriode(rumah, tahun, bulan) {
+  if (!rumah) return "";
+  const key = bulanToKey(tahun, bulan);
+  const riwayat = Array.isArray(rumah.riwayatKelompokIPL) ? rumah.riwayatKelompokIPL : [];
+  for (let i = riwayat.length - 1; i >= 0; i--) {
+    if (String(riwayat[i].sejak || "1900-01") <= key) return riwayat[i].kelompok;
+  }
+  return rumah.kelompokIPL;
 }
 
 function deduplicateAppState() {
@@ -1315,19 +1330,19 @@ function autoEnsureCurrentMonthBills() {
     if (existingBill) {
       existingBill.blokNo = cleanBlok;
       existingBill.pemilik = r.pemilik;
-      existingBill.kelompokIPL = r.kelompokIPL;
     } else {
+      const kelompok = getKelompokUntukPeriode(r, currentYear, currentMonth);
       const rincianItems = [];
       let totalNominal = 0;
 
-      if (r.kelompokIPL === "IPL Developer") {
+      if (kelompok === "IPL Developer") {
         rincianItems.push({ nama: "IPL Developer", nominal: baseTargetDeveloper });
         totalNominal += baseTargetDeveloper;
       } else {
         rincianItems.push({ nama: "IPL Dasar", nominal: baseTargetTanpaSampah });
         totalNominal += baseTargetTanpaSampah;
 
-        if (r.kelompokIPL === "IPL + Sampah") {
+        if (kelompok === "IPL + Sampah") {
           rincianItems.push({ nama: "Iuran Sampah", nominal: defaultSampah });
           totalNominal += defaultSampah;
         }
@@ -1348,7 +1363,7 @@ function autoEnsureCurrentMonthBills() {
         rumahId: r.id,
         blokNo: cleanBlok,
         pemilik: r.pemilik,
-        kelompokIPL: r.kelompokIPL,
+        kelompokIPL: kelompok,
         nominal: totalNominal,
         rincianItems: rincianItems,
         status: "Menunggu",
@@ -1449,9 +1464,13 @@ function ensureMasterRumahState() {
   } else {
     DEFAULT_31_RUMAH.forEach((defR) => {
       const cleanDef = normalizeBlok(defR.blokNo);
-      const exists = appState.rumah.some((r) => normalizeBlok(r.blokNo) === cleanDef);
-      if (!exists) {
-        appState.rumah.push(defR);
+      let rumah = appState.rumah.find((r) => normalizeBlok(r.blokNo) === cleanDef);
+      if (!rumah) {
+        rumah = { ...defR };
+        appState.rumah.push(rumah);
+      }
+      if (!Array.isArray(rumah.riwayatKelompokIPL) || rumah.riwayatKelompokIPL.length === 0) {
+        rumah.riwayatKelompokIPL = [{ sejak: "1900-01", kelompok: rumah.kelompokIPL || defR.kelompokIPL }];
       }
     });
   }
@@ -1483,7 +1502,6 @@ function ensureMasterRumahState() {
         const matchHouse = appState.rumah.find((r) => normalizeBlok(r.blokNo) === cleanTBlok);
         if (matchHouse) {
           t.pemilik = matchHouse.pemilik;
-          t.kelompokIPL = matchHouse.kelompokIPL;
         }
       }
     });
@@ -2092,6 +2110,7 @@ function openAddRumahModal() {
   document.getElementById("form-rumah-pemilik").value = "";
   document.getElementById("form-rumah-hp").value = "";
   document.getElementById("form-rumah-kelompok").value = "IPL + Sampah";
+  document.getElementById("form-rumah-kelompok-mulai").value = "";
   document.getElementById("modal-rumah-title").textContent = "Tambah Rumah Baru";
   openModal("modal-rumah");
 }
@@ -2105,6 +2124,7 @@ function editRumah(id) {
   document.getElementById("form-rumah-pemilik").value = r.pemilik;
   document.getElementById("form-rumah-hp").value = r.noHp;
   document.getElementById("form-rumah-kelompok").value = r.kelompokIPL;
+  document.getElementById("form-rumah-kelompok-mulai").value = "";
   document.getElementById("modal-rumah-title").textContent = "Edit Data Rumah";
   openModal("modal-rumah");
 }
@@ -2121,10 +2141,25 @@ function saveRumah() {
     return;
   }
 
+  const mulaiBulan = document.getElementById("form-rumah-kelompok-mulai").value;
+  const mulaiTahun = document.getElementById("form-rumah-kelompok-mulai-tahun").value || String(new Date().getFullYear());
+  const sekarang = new Date();
+  const berlakuSejak = mulaiBulan
+    ? bulanToKey(mulaiTahun, mulaiBulan)
+    : bulanToKey(String(sekarang.getFullYear()), MONTH_NAMES[sekarang.getMonth()]);
+
   if (id) {
     const idx = appState.rumah.findIndex((r) => r.id === id);
     if (idx !== -1) {
-      appState.rumah[idx] = { ...appState.rumah[idx], blokNo: blok, pemilik, noHp: hp, kelompokIPL: kelompok };
+      const rumahLama = appState.rumah[idx];
+      const riwayat = Array.isArray(rumahLama.riwayatKelompokIPL)
+        ? [...rumahLama.riwayatKelompokIPL]
+        : [{ sejak: "1900-01", kelompok: rumahLama.kelompokIPL || kelompok }];
+      if (kelompok !== rumahLama.kelompokIPL) {
+        riwayat.push({ sejak: berlakuSejak, kelompok });
+      }
+      riwayat.sort((a, b) => String(a.sejak).localeCompare(String(b.sejak)));
+      appState.rumah[idx] = { ...rumahLama, blokNo: blok, pemilik, noHp: hp, kelompokIPL: kelompok, riwayatKelompokIPL: riwayat };
     }
   } else {
     const newId = `RMH-${blok}`;
@@ -2134,7 +2169,8 @@ function saveRumah() {
       pemilik,
       noHp: hp || "0812xxxxxxxx",
       status: "Aktif",
-      kelompokIPL: kelompok
+      kelompokIPL: kelompok,
+      riwayatKelompokIPL: [{ sejak: "1900-01", kelompok }]
     });
   }
 
@@ -2647,7 +2683,7 @@ function processGenerateTagihan() {
   const baseTargetTanpaSampah = (appState.targetIPL && appState.targetIPL.find((t) => t.kelompok === "IPL Tanpa Sampah")?.target) || 150000;
   const baseTargetDeveloper = (appState.targetIPL && appState.targetIPL.find((t) => t.kelompok === "IPL Developer")?.target) || 166000;
 
-  const matchingHouses = appState.rumah.filter((r) => selectedGroups.includes(r.kelompokIPL));
+  const matchingHouses = appState.rumah.filter((r) => selectedGroups.includes(getKelompokUntukPeriode(r, tahun, bulan)));
 
   let generatedCount = 0;
 
@@ -2655,17 +2691,18 @@ function processGenerateTagihan() {
     const tagihanId = `TAG-${tahun}${bulan}-${r.blokNo}`;
     const exists = appState.tagihan.find((t) => t.id === tagihanId);
 
+    const kelompok = getKelompokUntukPeriode(r, tahun, bulan);
     const rincianItems = [];
     let totalNominal = 0;
 
-    if (r.kelompokIPL === "IPL Developer") {
+    if (kelompok === "IPL Developer") {
       rincianItems.push({ nama: "IPL Developer", nominal: baseTargetDeveloper });
       totalNominal += baseTargetDeveloper;
     } else {
       rincianItems.push({ nama: "IPL Dasar", nominal: baseTargetTanpaSampah });
       totalNominal += baseTargetTanpaSampah;
 
-      if (r.kelompokIPL === "IPL + Sampah") {
+      if (kelompok === "IPL + Sampah") {
         rincianItems.push({ nama: "Iuran Sampah", nominal: nominalSampahGen });
         totalNominal += nominalSampahGen;
       }
@@ -2685,7 +2722,7 @@ function processGenerateTagihan() {
         rumahId: r.id,
         blokNo: r.blokNo,
         pemilik: r.pemilik,
-        kelompokIPL: r.kelompokIPL,
+        kelompokIPL: kelompok,
         nominal: totalNominal,
         rincianItems: rincianItems,
         status: "Menunggu Pembayaran",

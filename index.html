@@ -1634,6 +1634,32 @@
             <option value="IPL Developer">IPL Developer</option>
           </select>
         </div>
+        <div class="form-group">
+          <label>Kelompok Ini Berlaku Mulai Bulan (opsional)</label>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <div style="flex:1;min-width:120px;">
+              <select id="form-rumah-kelompok-mulai" class="form-control">
+                <option value="">Segera / langsung berlaku</option>
+                <option>Januari</option>
+                <option>Februari</option>
+                <option>Maret</option>
+                <option>April</option>
+                <option>Mei</option>
+                <option>Juni</option>
+                <option>Juli</option>
+                <option>Agustus</option>
+                <option>September</option>
+                <option>Oktober</option>
+                <option>November</option>
+                <option>Desember</option>
+              </select>
+            </div>
+            <div style="flex:1;min-width:110px;">
+              <select id="form-rumah-kelompok-mulai-tahun" class="form-control"></select>
+            </div>
+          </div>
+          <small style="color:#888;">Contoh: ubah B1 mulai September → pilih September + tahun. Tagihan sebelum bulan tersebut tetap pakai kelompok lama.</small>
+        </div>
       </div>
       <div class="modal-footer">
         <button class="btn btn-outline" onclick="closeModal('modal-rumah')">Batal</button>
