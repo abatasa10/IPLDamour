@@ -69,10 +69,9 @@ document.addEventListener("DOMContentLoaded", async () => {
                  (normalizeBlok && normalizeBlok(t.blokNo) === "C8" && t.bulan === "Agustus" && t.tahun === "2026") ||
                  (String(t.blokNo || "").trim().toUpperCase() === "C8" && t.bulan === "Agustus" && t.tahun === "2026")
         );
-        const c8NeedsUpdate = c8AgustusIdx < 0 || db.tagihan[c8AgustusIdx].nominal !== 268000 || db.tagihan[c8AgustusIdx].status !== "Lunas";
-        if (c8NeedsUpdate) {
-          const kasBackup = db.ringkasanKas ? { ...db.ringkasanKas } : null;
-          const c8Entry = {
+        if (c8AgustusIdx < 0) {
+          // Bill belum ada → seed sebagai Lunas (data lama sebelum sistem)
+          db.tagihan.push({
             id: c8AgustusId,
             periode: "2026-Agustus",
             bulan: "Agustus",
@@ -94,15 +93,20 @@ document.addEventListener("DOMContentLoaded", async () => {
               { nama: "Tambahan", nominal: 93000 }
             ],
             catatanKhusus: "Koreksi nominal Agustus 2026 (restore setelah DB reset)"
-          };
-          if (c8AgustusIdx >= 0) {
-            db.tagihan[c8AgustusIdx] = c8Entry;
-          } else {
-            db.tagihan.push(c8Entry);
-          }
-          // Preserve kas — tidak mengubah saldo
-          if (kasBackup) db.ringkasanKas = kasBackup;
+          });
           localStorage.setItem("damour_ipl_db", JSON.stringify(db));
+        } else {
+          const c8Pl = db.tagihan[c8AgustusIdx];
+          // Hanya koreksi nominal/rincian jika salah; JANGAN ubah status (hormati reset admin)
+          if (c8Pl.nominal !== 268000 || !Array.isArray(c8Pl.rincianItems) || c8Pl.rincianItems.length === 0) {
+            c8Pl.nominal = 268000;
+            c8Pl.rincianItems = [
+              { nama: "IPL Dasar", nominal: 150000 },
+              { nama: "Iuran Sampah", nominal: 25000 },
+              { nama: "Tambahan", nominal: 93000 }
+            ];
+            localStorage.setItem("damour_ipl_db", JSON.stringify(db));
+          }
         }
       }
     }
@@ -1102,19 +1106,18 @@ async function loadAppData() {
             (t) => t.id === "TAG-2026Agustus-C8" ||
                    (String(t.blokNo || "").trim().toUpperCase() === "C8" && t.bulan === "Agustus" && t.tahun === "2026")
           );
-          if (c8AgCloud && (c8AgCloud.nominal !== 268000 || c8AgCloud.status !== "Lunas")) {
-            c8AgCloud.nominal = 268000;
-            c8AgCloud.jumlahDibayar = 268000;
-            c8AgCloud.status = "Lunas";
-            c8AgCloud.tglBayar = "2026-08-31";
-            c8AgCloud.metode = "Transfer";
-            c8AgCloud.rincianItems = [
-              { nama: "IPL Dasar", nominal: 150000 },
-              { nama: "Iuran Sampah", nominal: 25000 },
-              { nama: "Tambahan", nominal: 93000 }
-            ];
-          } else if (!c8AgCloud) {
-            // Jika tidak ada sama sekali di cloud, sisipkan
+          if (c8AgCloud) {
+            // Hanya koreksi nominal/rincian jika salah; JANGAN ubah status (hormati reset admin)
+            if (c8AgCloud.nominal !== 268000 || !Array.isArray(c8AgCloud.rincianItems) || c8AgCloud.rincianItems.length === 0) {
+              c8AgCloud.nominal = 268000;
+              c8AgCloud.rincianItems = [
+                { nama: "IPL Dasar", nominal: 150000 },
+                { nama: "Iuran Sampah", nominal: 25000 },
+                { nama: "Tambahan", nominal: 93000 }
+              ];
+            }
+          } else {
+            // Jika tidak ada sama sekali di cloud, sisipkan sebagai seed
             (appState.tagihan || []).push({
               id: "TAG-2026Agustus-C8",
               periode: "2026-Agustus",
@@ -1254,6 +1257,46 @@ function getKelompokUntukPeriode(rumah, tahun, bulan) {
     if (String(riwayat[i].sejak || "1900-01") <= key) return riwayat[i].kelompok;
   }
   return rumah.kelompokIPL;
+}
+
+function applyKelompokPerubahanKeTagihan(rumah, kelompokBaru, sejak) {
+  if (!appState || !appState.tagihan) return;
+  const cleanBlok = normalizeBlok(rumah.blokNo);
+  const baseTanpa = (appState.targetIPL && appState.targetIPL.find((t) => t.kelompok === "IPL Tanpa Sampah")?.target) || 150000;
+  const baseDev = (appState.targetIPL && appState.targetIPL.find((t) => t.kelompok === "IPL Developer")?.target) || 166000;
+  const sampah = appState.biayaSampahDefault || 25000;
+  const excludedNama = ["IPL Dasar", "Iuran Sampah", "IPL Developer"];
+
+  appState.tagihan.forEach((t) => {
+    if (!t || !t.bulan || !t.tahun) return;
+    if (normalizeBlok(t.blokNo) !== cleanBlok) return;
+    if (bulanToKey(String(t.tahun), t.bulan) < sejak) return;
+    if (!["Menunggu", "Menunggu Pembayaran", "Menunggak"].includes(t.status)) return;
+
+    let rincianItems = [];
+    let total = 0;
+    if (kelompokBaru === "IPL Developer") {
+      rincianItems.push({ nama: "IPL Developer", nominal: baseDev });
+      total = baseDev;
+    } else {
+      rincianItems.push({ nama: "IPL Dasar", nominal: baseTanpa });
+      total = baseTanpa;
+      if (kelompokBaru === "IPL + Sampah") {
+        rincianItems.push({ nama: "Iuran Sampah", nominal: sampah });
+        total += sampah;
+      }
+    }
+    (Array.isArray(t.rincianItems) ? t.rincianItems : []).forEach((ri) => {
+      if (ri && ri.nama && excludedNama.indexOf(ri.nama) === -1) {
+        rincianItems.push(ri);
+        total += typeof ri.nominal === "number" ? ri.nominal : 0;
+      }
+    });
+
+    t.kelompokIPL = kelompokBaru;
+    t.rincianItems = rincianItems;
+    t.nominal = total;
+  });
 }
 
 function deduplicateAppState() {
@@ -2160,6 +2203,10 @@ function saveRumah() {
       }
       riwayat.sort((a, b) => String(a.sejak).localeCompare(String(b.sejak)));
       appState.rumah[idx] = { ...rumahLama, blokNo: blok, pemilik, noHp: hp, kelompokIPL: kelompok, riwayatKelompokIPL: riwayat };
+
+      if (kelompok !== rumahLama.kelompokIPL) {
+        applyKelompokPerubahanKeTagihan(appState.rumah[idx], kelompok, berlakuSejak);
+      }
     }
   } else {
     const newId = `RMH-${blok}`;
@@ -2182,6 +2229,7 @@ function saveRumah() {
   renderMasterUsers();
   renderDashboard();
   renderPerhitunganIPL();
+  renderDaftarTagihan();
   renderSimulasiInputs();
   runSimulasiIPL();
 }
@@ -4578,13 +4626,9 @@ function setPrepaidLunasBills() {
           buktiTransfer: ""
         });
       } else {
-        bill.status = "Lunas";
-        bill.tglBayar = "Sudah Lunas Sblm Sistem";
-        bill.metode = "Sudah Bayar Sblm Sistem";
-        bill.buktiTransfer = "";
+        // JANGAN paksa status Lunas — hormati reset admin. Hanya lengkapi data kosong/rusak.
         if (house.blokNo === "C8" && monthName === "Agustus") {
           bill.nominal = 268000;
-          bill.jumlahDibayar = 268000;
           bill.rincianItems = house.rincianItems;
         } else {
           if (!bill.nominal || bill.nominal === 0) bill.nominal = house.nominal;
