@@ -674,7 +674,7 @@
               </div>
               <div style="display: flex; align-items: center; gap: 0.5rem;">
                 <span style="font-size: 0.8rem; color: var(--text-muted);">Bulan</span>
-                <select id="filter-tagihan-bulan" class="form-control" style="width: auto;">
+                <select id="filter-tagihan-bulan" class="form-control" style="width: auto;" onchange="renderDaftarTagihan()">
                   <option value="Semua">Semua Bulan</option>
                   <option value="Januari">Januari</option>
                   <option value="Februari">Februari</option>
@@ -692,7 +692,7 @@
               </div>
               <div style="display: flex; align-items: center; gap: 0.5rem;">
                 <span style="font-size: 0.8rem; color: var(--text-muted);">Tahun</span>
-                <select id="filter-tagihan-tahun" class="form-control" style="width: auto;">
+                <select id="filter-tagihan-tahun" class="form-control" style="width: auto;" onchange="renderDaftarTagihan()">
                 </select>
               </div>
               <div style="display: flex; align-items: center; gap: 0.5rem;">
