@@ -1299,6 +1299,73 @@ function applyKelompokPerubahanKeTagihan(rumah, kelompokBaru, sejak) {
   });
 }
 
+function syncAllTagihanWithKelompokRumah() {
+  if (!appState || !appState.rumah || !appState.tagihan) return 0;
+
+  const baseTanpa = (appState.targetIPL && appState.targetIPL.find((t) => t.kelompok === "IPL Tanpa Sampah")?.target) || 150000;
+  const baseDev = (appState.targetIPL && appState.targetIPL.find((t) => t.kelompok === "IPL Developer")?.target) || 166000;
+  const sampah = appState.biayaSampahDefault || 25000;
+  const excludedNama = ["IPL Dasar", "Iuran Sampah", "IPL Developer"];
+  let updated = 0;
+
+  appState.tagihan.forEach((t) => {
+    if (!t || !t.bulan || !t.tahun) return;
+    if (["Lunas", "Menunggu Verifikasi"].includes(t.status)) return;
+
+    const rumah = appState.rumah.find((r) => normalizeBlok(r.blokNo) === normalizeBlok(t.blokNo));
+    if (!rumah) return;
+
+    const kelompokBenar = getKelompokUntukPeriode(rumah, String(t.tahun), t.bulan);
+    if (!kelompokBenar || kelompokBenar === t.kelompokIPL) return;
+
+    let rincianItems = [];
+    let total = 0;
+    if (kelompokBenar === "IPL Developer") {
+      rincianItems.push({ nama: "IPL Developer", nominal: baseDev });
+      total = baseDev;
+    } else {
+      rincianItems.push({ nama: "IPL Dasar", nominal: baseTanpa });
+      total = baseTanpa;
+      if (kelompokBenar === "IPL + Sampah") {
+        rincianItems.push({ nama: "Iuran Sampah", nominal: sampah });
+        total += sampah;
+      }
+    }
+    (Array.isArray(t.rincianItems) ? t.rincianItems : []).forEach((ri) => {
+      if (ri && ri.nama && excludedNama.indexOf(ri.nama) === -1) {
+        rincianItems.push(ri);
+        total += typeof ri.nominal === "number" ? ri.nominal : 0;
+      }
+    });
+
+    t.kelompokIPL = kelompokBenar;
+    t.rincianItems = rincianItems;
+    t.nominal = total;
+    updated++;
+  });
+
+  updateHouseGroupCounts();
+  return updated;
+}
+
+function syncKelompokTagihan() {
+  const isAdmin = currentUser && currentUser.role === "admin";
+  if (!isAdmin) {
+    alert("Hanya Admin yang berhak menyinkronkan kelompok IPL.");
+    return;
+  }
+
+  const updated = syncAllTagihanWithKelompokRumah();
+  saveState();
+  renderDaftarTagihan();
+  renderPerhitunganIPL();
+  renderDashboard();
+  addAuditLog("Sync Kelompok IPL", `${updated} tagihan disinkronkan ulang sesuai kelompok IPL terbaru tiap rumah.`);
+  alert(updated > 0
+    ? `Berhasil menyinkronkan ${updated} tagihan sesuai kelompok IPL terbaru.`
+    : "Semua tagihan sudah sesuai dengan kelompok IPL rumah. Tidak ada yang perlu diubah.");
+}
+
 function deduplicateAppState() {
   if (!appState) return;
 

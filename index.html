@@ -407,7 +407,10 @@
           <div class="card">
             <div class="card-header">
               <div class="card-title">1. Master Rumah</div>
-              <button class="btn btn-primary role-admin-only" onclick="openAddRumahModal()"><i class="ri-add-line"></i> Tambah Rumah</button>
+              <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                <button class="btn btn-outline role-admin-only" onclick="syncKelompokTagihan()" title="Hitung ulang tagihan yang belum dibayar sesuai kelompok IPL terbaru tiap rumah"><i class="ri-refresh-line"></i> Sync Kelompok</button>
+                <button class="btn btn-primary role-admin-only" onclick="openAddRumahModal()"><i class="ri-add-line"></i> Tambah Rumah</button>
+              </div>
             </div>
             
             <div style="margin-bottom: 1rem;">
@@ -706,6 +709,7 @@
                 </select>
               </div>
               <button class="btn btn-outline" onclick="renderDaftarTagihan()"><i class="ri-filter-3-line"></i> Filter</button>
+              <button class="btn btn-outline role-admin-only" onclick="syncKelompokTagihan()" title="Hitung ulang tagihan yang belum dibayar sesuai kelompok IPL terbaru tiap rumah"><i class="ri-refresh-line"></i> Sync Kelompok</button>
               <button class="btn btn-sm" style="margin-left: auto; background: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; font-weight: 600; display: inline-flex; align-items: center; gap: 0.35rem; border-radius: var(--radius-sm); padding: 0.4rem 0.85rem; cursor: pointer;" onclick="showView('monitoring-tunggakan')">
                 <i class="ri-alarm-warning-line"></i> Buka Monitoring Tunggakan
               </button>
