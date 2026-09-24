@@ -153,6 +153,13 @@ function checkAuthSession() {
       if (loginOverlay) loginOverlay.classList.remove("active");
       updateNavbarProfile();
       applyRolePermissions();
+
+      // Trigger tunggakan alert for warga on session restore (page reload)
+      if (currentUser && currentUser.role === "warga" && currentUser.blokNo && currentUser.blokNo !== "-") {
+        setTimeout(() => {
+          checkWargaTunggakanAlert(currentUser);
+        }, 1200);
+      }
       return;
     } catch (e) {
       console.error("Failed to parse user session", e);
@@ -1165,14 +1172,33 @@ async function loadAppData() {
             });
           }
         }
-        if (Array.isArray(cloudData.pengeluaran) && cloudData.pengeluaran.length > 0) {
-          appState.pengeluaran = cloudData.pengeluaran;
+        // Protect pengeluaran: only overwrite if cloud has MORE entries (avoid wiping local entries)
+        if (Array.isArray(cloudData.pengeluaran)) {
+          const localPgl = appState.pengeluaran || [];
+          if (cloudData.pengeluaran.length >= localPgl.length) {
+            appState.pengeluaran = cloudData.pengeluaran;
+          } else {
+            // Merge: keep local items not in cloud (by id)
+            const cloudPglIds = new Set(cloudData.pengeluaran.map(p => p.id).filter(Boolean));
+            const localOnly = localPgl.filter(p => p.id && !cloudPglIds.has(p.id));
+            appState.pengeluaran = [...cloudData.pengeluaran, ...localOnly];
+            console.warn(`[MERGE] pengeluaran: cloud=${cloudData.pengeluaran.length}, local=${localPgl.length} → merged=${appState.pengeluaran.length}`);
+          }
         } else if (!appState.pengeluaran) {
           appState.pengeluaran = [];
         }
 
-        if (Array.isArray(cloudData.pemasukanLain) && cloudData.pemasukanLain.length > 0) {
-          appState.pemasukanLain = cloudData.pemasukanLain;
+        // Protect pemasukanLain: same strategy
+        if (Array.isArray(cloudData.pemasukanLain)) {
+          const localPmsk = appState.pemasukanLain || [];
+          if (cloudData.pemasukanLain.length >= localPmsk.length) {
+            appState.pemasukanLain = cloudData.pemasukanLain;
+          } else {
+            const cloudPmskIds = new Set(cloudData.pemasukanLain.map(p => p.id).filter(Boolean));
+            const localOnly = localPmsk.filter(p => p.id && !cloudPmskIds.has(p.id));
+            appState.pemasukanLain = [...cloudData.pemasukanLain, ...localOnly];
+            console.warn(`[MERGE] pemasukanLain: cloud=${cloudData.pemasukanLain.length}, local=${localPmsk.length} → merged=${appState.pemasukanLain.length}`);
+          }
         } else if (!appState.pemasukanLain) {
           appState.pemasukanLain = [];
         }
