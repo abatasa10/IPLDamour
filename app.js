@@ -365,6 +365,17 @@ function saveNewPassword() {
   alert("Password Anda berhasil diperbarui! Silakan gunakan password baru ini untuk login berikutnya.");
 
   // Setelah ganti password default, tampilkan popup tunggakan warga (jika ada tagihan belum lunas)
+  maybeShowTunggakanAfterPasswordFlow();
+}
+
+function closeChangePasswordModal() {
+  closeModal("modal-change-password");
+  // Biarpun password default tidak diganti (ditutup/skip),
+  // popup tunggakan tetap muncul untuk seluruh warga yang punya tagihan belum lunas
+  maybeShowTunggakanAfterPasswordFlow();
+}
+
+function maybeShowTunggakanAfterPasswordFlow() {
   if (currentUser && currentUser.blokNo && currentUser.blokNo !== "-") {
     setTimeout(() => {
       checkWargaTunggakanAlert(currentUser);
