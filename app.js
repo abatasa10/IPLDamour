@@ -1882,9 +1882,9 @@ function mergeCloudTagihanIntoLocal(cloudTagihan) {
     const isLocalUnpaid = localStatus === "Menunggu Pembayaran" || localStatus === "Menunggak";
     const hasCloudBukti = !!(cloudT.buktiTransfer && cloudT.buktiTransfer.length > 20 && cloudT.buktiTransfer !== "-" && cloudT.buktiTransfer !== "bukti: foto (ukuran terlalu besar)");
 
-    if (cloudStatus === "Menunggu Verifikasi" && hasCloudBukti && isLocalUnpaid) {
+    if (cloudStatus === "Menunggu Verifikasi" && isLocalUnpaid) {
       out.status = "Menunggu Verifikasi";
-      out.buktiTransfer = cloudT.buktiTransfer;
+      if (hasCloudBukti) out.buktiTransfer = cloudT.buktiTransfer;
       if (cloudT.jumlahDibayar) out.jumlahDibayar = cloudT.jumlahDibayar;
       if (cloudT.tglBayar && cloudT.tglBayar !== "-") out.tglBayar = cloudT.tglBayar;
       if (cloudT.metode && cloudT.metode !== "-") out.metode = cloudT.metode;
