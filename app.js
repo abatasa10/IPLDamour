@@ -1948,25 +1948,6 @@ function setupEventListeners() {
     });
   });
 
-  const toggleBtn = document.getElementById("toggle-sidebar");
-  if (toggleBtn) {
-    toggleBtn.addEventListener("click", (e) => {
-      e.preventDefault();
-      if (typeof window.toggleSidebar === "function") {
-        window.toggleSidebar();
-      }
-    });
-  }
-
-  const backdrop = document.getElementById("sidebar-backdrop");
-  if (backdrop) {
-    backdrop.addEventListener("click", () => {
-      if (typeof window.toggleSidebar === "function") {
-        window.toggleSidebar(false);
-      }
-    });
-  }
-
   const searchInput = document.getElementById("search-rumah-input");
   if (searchInput) {
     searchInput.addEventListener("input", () => {

@@ -29,6 +29,49 @@
   <meta name="apple-mobile-web-app-title" content="IPL D'AMOUR">
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
   <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32x32.png">
+
+  <script>
+    // Robust Global Sidebar Toggle with debounce
+    let _lastToggleTime = 0;
+    window.toggleSidebar = function(forceState, event) {
+      if (event && event.stopPropagation) {
+        event.stopPropagation();
+        event.preventDefault();
+      }
+      const now = Date.now();
+      if (now - _lastToggleTime < 350 && forceState === undefined) {
+        return;
+      }
+      _lastToggleTime = now;
+
+      const sidebar = document.querySelector(".sidebar");
+      const backdrop = document.getElementById("sidebar-backdrop");
+      if (!sidebar) return;
+
+      const isOpen = sidebar.classList.contains("open");
+      const willOpen = (typeof forceState === "boolean") ? forceState : !isOpen;
+
+      if (willOpen) {
+        sidebar.classList.add("open");
+        if (backdrop) {
+          backdrop.style.display = "block";
+          requestAnimationFrame(() => backdrop.classList.add("active"));
+        }
+        document.body.classList.add("sidebar-is-open");
+      } else {
+        sidebar.classList.remove("open");
+        if (backdrop) {
+          backdrop.classList.remove("active");
+          setTimeout(() => {
+            if (!sidebar.classList.contains("open")) {
+              backdrop.style.display = "none";
+            }
+          }, 250);
+        }
+        document.body.classList.remove("sidebar-is-open");
+      }
+    };
+  </script>
 </head>
 <body>
 
@@ -90,7 +133,7 @@
     </div>
   </div>
 
-  <div id="sidebar-backdrop" class="sidebar-backdrop"></div>
+  <div id="sidebar-backdrop" class="sidebar-backdrop" onclick="window.toggleSidebar(false, event)"></div>
   <div class="app-container">
     
     <!-- Sidebar Navigation -->
@@ -105,7 +148,7 @@
             <div class="brand-subtitle">Sistem IPL</div>
           </div>
         </div>
-        <button class="sidebar-close-btn" onclick="toggleSidebar(false)" aria-label="Tutup Menu">
+        <button class="sidebar-close-btn" onclick="window.toggleSidebar(false, event)" aria-label="Tutup Menu">
           <i class="ri-close-line"></i>
         </button>
       </div>
@@ -212,7 +255,7 @@
       <!-- Top Navbar -->
       <header class="navbar">
         <div class="nav-left">
-          <button class="toggle-sidebar-btn" id="toggle-sidebar" onclick="toggleSidebar()" aria-label="Buka Menu Navigasi" title="Menu Navigasi">
+          <button class="toggle-sidebar-btn" id="toggle-sidebar" onclick="window.toggleSidebar(undefined, event)" aria-label="Buka Menu Navigasi" title="Menu Navigasi">
             <i class="ri-menu-line"></i>
           </button>
           <div class="page-breadcrumb" id="page-title-breadcrumb">Dashboard</div>
@@ -1918,41 +1961,8 @@
     </div>
   </div>
 
-  <script src="app.js?v=20260924_01"></script>
+  <script src="app.js?v=20260924_03"></script>
   <script>
-    // Global Sidebar Toggle for Mobile & Tablet
-    window.toggleSidebar = function(forceState) {
-      const sidebar = document.querySelector(".sidebar");
-      const backdrop = document.getElementById("sidebar-backdrop");
-      if (!sidebar) return;
-      const willOpen = (typeof forceState === "boolean") ? forceState : !sidebar.classList.contains("open");
-      if (willOpen) {
-        sidebar.classList.add("open");
-        if (backdrop) {
-          backdrop.style.display = "block";
-          setTimeout(() => backdrop.classList.add("active"), 10);
-        }
-        document.body.classList.add("sidebar-is-open");
-      } else {
-        sidebar.classList.remove("open");
-        if (backdrop) {
-          backdrop.classList.remove("active");
-          setTimeout(() => {
-            if (!sidebar.classList.contains("open")) backdrop.style.display = "none";
-          }, 250);
-        }
-        document.body.classList.remove("sidebar-is-open");
-      }
-    };
-
-    // Close sidebar when clicking backdrop
-    window.addEventListener("DOMContentLoaded", () => {
-      const backdrop = document.getElementById("sidebar-backdrop");
-      if (backdrop) {
-        backdrop.addEventListener("click", () => window.toggleSidebar(false));
-      }
-    });
-
     function togglePasswordVisibility() {
       const pwdInp = document.getElementById("login-password");
       const icon = document.getElementById("toggle-pwd-icon");
