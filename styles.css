@@ -1438,3 +1438,348 @@ body.sidebar-is-open {
   }
 }
 
+
+/* =============================================
+   TAGIHAN SAYA - WARGA PORTAL
+   ============================================= */
+
+/* Hero Banner */
+.ts-hero-banner {
+  background: linear-gradient(135deg, #1e40af 0%, #2563eb 50%, #0ea5e9 100%);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem 1.75rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+  box-shadow: 0 8px 24px rgba(37, 99, 235, 0.3);
+}
+
+.ts-hero-left {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.ts-hero-icon {
+  width: 52px;
+  height: 52px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.6rem;
+  color: white;
+  backdrop-filter: blur(6px);
+  flex-shrink: 0;
+}
+
+.ts-hero-title {
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: white;
+  margin: 0 0 0.15rem;
+  letter-spacing: -0.02em;
+}
+
+.ts-hero-sub {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.8);
+  margin: 0;
+}
+
+.ts-hero-stats {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.ts-stat {
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  backdrop-filter: blur(8px);
+  border-radius: 10px;
+  padding: 0.65rem 1rem;
+  text-align: center;
+  min-width: 110px;
+}
+
+.ts-stat-label {
+  display: block;
+  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.8);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.2rem;
+}
+
+.ts-stat-val {
+  display: block;
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: white;
+}
+
+.ts-stat-danger .ts-stat-val { color: #fca5a5; }
+.ts-stat-primary .ts-stat-val { color: #bfdbfe; }
+
+.ts-alert {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.85rem 1.1rem;
+  border-radius: var(--radius-md);
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+}
+.ts-alert-success {
+  background: #ecfdf5;
+  border: 1px solid #6ee7b7;
+  color: #065f46;
+}
+.ts-alert-danger {
+  background: #fef2f2;
+  border: 1px solid #fca5a5;
+  color: #991b1b;
+}
+
+.ts-bill-list { padding: 0 0 0.5rem; }
+
+.ts-bill-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.85rem 1.25rem;
+  border-bottom: 1px solid var(--border-color);
+  flex-wrap: wrap;
+}
+.ts-bill-item:last-child { border-bottom: none; }
+
+.ts-bill-meta { flex: 1; min-width: 150px; }
+
+.ts-bill-period {
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: var(--text-main);
+  margin-bottom: 0.15rem;
+}
+
+.ts-bill-type { font-size: 0.75rem; color: var(--text-muted); }
+
+.ts-bill-right { text-align: right; }
+
+.ts-bill-amount {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--danger);
+}
+
+.ts-bill-item.paid .ts-bill-amount { color: var(--success); }
+.ts-bill-item.paid .ts-bill-period { color: var(--text-muted); }
+
+.ts-bill-date {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  margin-top: 0.1rem;
+}
+
+.ts-rapel-box {
+  background: linear-gradient(135deg, #7f1d1d 0%, #ef4444 100%);
+  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+  padding: 1rem 1.25rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.ts-rapel-info {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  flex: 1;
+  color: rgba(255,255,255,0.9);
+  font-size: 1.35rem;
+}
+
+.ts-rapel-title { font-size: 0.85rem; font-weight: 700; color: white; }
+.ts-rapel-months { font-size: 0.75rem; color: rgba(255,255,255,0.8); }
+
+.ts-rapel-amount {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: white;
+  letter-spacing: -0.02em;
+}
+
+.ts-rapel-btn {
+  background: white !important;
+  color: var(--danger) !important;
+  border: none !important;
+  font-weight: 700 !important;
+  padding: 0.55rem 1.1rem !important;
+  border-radius: 10px !important;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2) !important;
+}
+
+.ts-empty {
+  text-align: center;
+  padding: 2rem 1rem;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+.ts-empty i {
+  font-size: 2rem;
+  display: block;
+  margin-bottom: 0.5rem;
+  color: #cbd5e1;
+}
+
+/* =============================================
+   TUNGGAKAN ALERT MODAL (TNA)
+   ============================================= */
+
+.tna-box {
+  max-width: 420px !important;
+  border-radius: 20px !important;
+  overflow: hidden;
+  padding: 0 !important;
+  border: 2px solid #fca5a5;
+}
+
+.tna-header {
+  background: linear-gradient(135deg, #7f1d1d 0%, #dc2626 50%, #ef4444 100%);
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 1.25rem 1.35rem;
+}
+
+.tna-header-icon {
+  width: 44px;
+  height: 44px;
+  background: rgba(255,255,255,0.2);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.4rem;
+  color: white;
+  flex-shrink: 0;
+  animation: tna-pulse 2s ease-in-out infinite;
+}
+
+@keyframes tna-pulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.1); opacity: 0.85; }
+}
+
+.tna-greeting { font-size: 1.05rem; font-weight: 800; color: white; margin-bottom: 0.1rem; }
+.tna-subtitle { font-size: 0.78rem; color: rgba(255,255,255,0.85); }
+
+.tna-body {
+  padding: 1.25rem 1.35rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.tna-summary-card {
+  background: #fef2f2;
+  border: 1px solid #fca5a5;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.tna-summary-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.65rem 1rem;
+  border-bottom: 1px solid #fde8e8;
+  gap: 0.5rem;
+}
+.tna-summary-row:last-child { border-bottom: none; }
+
+.tna-summary-label {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.tna-summary-val { font-size: 0.9rem; font-weight: 800; }
+.tna-val-danger { color: var(--danger); }
+
+.tna-months-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.tna-months-list { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+
+.tna-month-chip {
+  background: #fee2e2;
+  color: #991b1b;
+  border: 1px solid #fca5a5;
+  padding: 0.2rem 0.65rem;
+  border-radius: 999px;
+  font-size: 0.76rem;
+  font-weight: 600;
+}
+
+.tna-note {
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  border-radius: 8px;
+  padding: 0.65rem 0.85rem;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+  color: #78350f;
+  line-height: 1.45;
+}
+.tna-note i { color: #d97706; font-size: 0.95rem; flex-shrink: 0; margin-top: 0.05rem; }
+
+.tna-footer {
+  display: flex;
+  gap: 0.65rem;
+  padding: 1rem 1.35rem;
+  border-top: 1px solid var(--border-color);
+}
+
+.tna-pay-btn {
+  font-weight: 700 !important;
+  background: linear-gradient(135deg, #dc2626, #ef4444) !important;
+  border: none !important;
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.35) !important;
+}
+
+/* Mobile responsive for Tagihan Saya */
+@media (max-width: 768px) {
+  .ts-hero-banner {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 1.1rem 1rem;
+  }
+  .ts-hero-title { font-size: 1.1rem; }
+  .ts-hero-stats { width: 100%; }
+  .ts-stat { flex: 1; min-width: 90px; padding: 0.5rem 0.65rem; }
+  .ts-stat-val { font-size: 0.95rem; }
+  .ts-rapel-box { flex-direction: column; align-items: stretch; gap: 0.75rem; }
+  .ts-rapel-btn { width: 100%; text-align: center; justify-content: center; }
+  .tna-box { max-width: 95vw !important; margin: 0 auto; }
+  .tna-footer { flex-direction: column; }
+}

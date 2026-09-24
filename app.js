@@ -271,6 +271,11 @@ async function handleLoginSubmit(e) {
       setTimeout(() => {
         openChangePasswordModal(true);
       }, 600);
+    } else if (found.role === "warga" && found.blokNo && found.blokNo !== "-") {
+      // Show tunggakan alert for warga after login
+      setTimeout(() => {
+        checkWargaTunggakanAlert(found);
+      }, 800);
     }
   } else {
     if (errBox) {
@@ -510,6 +515,7 @@ function updateNavbarProfile() {
 
 function applyRolePermissions() {
   const isAdmin = currentUser && currentUser.role === "admin";
+  const isWarga = currentUser && currentUser.role === "warga";
 
   document.querySelectorAll(".role-admin-only").forEach((el) => {
     if (isAdmin) {
@@ -518,6 +524,12 @@ function applyRolePermissions() {
       el.style.display = "none";
     }
   });
+
+  // Show/hide Tagihan Saya nav item for warga
+  const tsNavItem = document.getElementById("nav-tagihan-saya-item");
+  if (tsNavItem) {
+    tsNavItem.style.display = isWarga ? "flex" : "none";
+  }
 
   renderMasterUsers();
   renderMasterRumah();
@@ -1903,6 +1915,11 @@ function showView(viewId) {
       pengaturan: "Pengaturan Sistem"
     };
     breadcrumb.textContent = titles[viewId] || "Dashboard";
+    // Extra entries for warga portal
+    const extraTitles = {
+      "tagihan-saya": "Tagihan & Pembayaran Saya"
+    };
+    if (extraTitles[viewId]) breadcrumb.textContent = extraTitles[viewId];
   }
 
   if (viewId === "dashboard") renderDashboard();
@@ -1917,6 +1934,7 @@ function showView(viewId) {
   if (viewId === "audit-log") renderAuditLogTable();
   if (viewId === "target") renderSettingTarget();
   if (viewId === "perhitungan") renderPerhitunganIPL();
+  if (viewId === "tagihan-saya") renderTagihanSaya();
   if (viewId === "generate-tagihan") {
     updateHouseGroupCounts();
     renderGenerateTagihanForm();
@@ -5446,4 +5464,249 @@ function updateMonitoringNavBadge(count) {
   } else {
     badge.style.display = "none";
   }
+}
+
+/* =============================================
+   WARGA: TAGIHAN SAYA & TUNGGAKAN ALERT
+   ============================================= */
+
+// Cek dan tampilkan pop-up notifikasi tunggakan setelah warga login
+function checkWargaTunggakanAlert(user) {
+  if (!appState || !user || user.role !== "warga" || !user.blokNo || user.blokNo === "-") return;
+
+  const blok = normalizeBlok(user.blokNo);
+  const unpaidBills = (appState.tagihan || []).filter(t =>
+    normalizeBlok(t.blokNo) === blok && t.status !== "Lunas"
+  );
+
+  if (unpaidBills.length === 0) return; // Lunas semua, jangan tampilkan
+
+  const totalNominal = unpaidBills.reduce((s, t) => s + (parseFloat(t.nominal) || 0) - (parseFloat(t.jumlahDibayar) || 0), 0);
+
+  // Update popup content
+  const greetingEl = document.getElementById("tna-greeting");
+  if (greetingEl) greetingEl.textContent = `Halo, ${user.name}!`;
+
+  const bulanCountEl = document.getElementById("tna-bulan-count");
+  if (bulanCountEl) bulanCountEl.textContent = `${unpaidBills.length} Bulan`;
+
+  const totalNominalEl = document.getElementById("tna-total-nominal");
+  if (totalNominalEl) totalNominalEl.textContent = formatRp(totalNominal);
+
+  const monthsListEl = document.getElementById("tna-months-list");
+  if (monthsListEl) {
+    monthsListEl.innerHTML = unpaidBills
+      .map(t => `<span class="tna-month-chip">${t.bulan || ""} ${t.tahun || ""}</span>`)
+      .join("");
+  }
+
+  openModal("modal-tunggakan-alert");
+}
+
+// Render halaman Tagihan Saya untuk warga
+function renderTagihanSaya() {
+  if (!currentUser || currentUser.role !== "warga" || !currentUser.blokNo || currentUser.blokNo === "-") {
+    // Jika bukan warga, redirect ke dashboard
+    showView("dashboard");
+    return;
+  }
+
+  const blok = normalizeBlok(currentUser.blokNo);
+  const allBills = (appState && appState.tagihan || []).filter(t =>
+    normalizeBlok(t.blokNo) === blok
+  );
+
+  const unpaidBills = allBills.filter(t => t.status !== "Lunas").sort((a, b) => {
+    const keyA = bulanToKey(a.tahun || "2000", a.bulan || "Januari");
+    const keyB = bulanToKey(b.tahun || "2000", b.bulan || "Januari");
+    return keyA.localeCompare(keyB);
+  });
+
+  const paidBills = allBills.filter(t => t.status === "Lunas").sort((a, b) => {
+    const keyA = bulanToKey(a.tahun || "2000", a.bulan || "Januari");
+    const keyB = bulanToKey(b.tahun || "2000", b.bulan || "Januari");
+    return keyB.localeCompare(keyA); // newest first
+  });
+
+  const totalTunggakan = unpaidBills.reduce((s, t) =>
+    s + Math.max(0, (parseFloat(t.nominal) || 0) - (parseFloat(t.jumlahDibayar) || 0)), 0);
+
+  // Update hero stats
+  const elTotal = document.getElementById("ts-total-tunggakan");
+  const elBulan = document.getElementById("ts-jumlah-bulan");
+  if (elTotal) elTotal.textContent = formatRp(totalTunggakan);
+  if (elBulan) elBulan.textContent = `${unpaidBills.length} Bulan`;
+
+  // Update nav badge
+  const navTsBadge = document.getElementById("nav-ts-badge");
+  if (navTsBadge) {
+    if (unpaidBills.length > 0) {
+      navTsBadge.textContent = unpaidBills.length;
+      navTsBadge.style.display = "inline-block";
+    } else {
+      navTsBadge.style.display = "none";
+    }
+  }
+
+  // Status Alert
+  const alertEl = document.getElementById("ts-status-alert");
+  const alertMsg = document.getElementById("ts-status-msg");
+  const tunggakanSection = document.getElementById("ts-tunggakan-section");
+
+  if (unpaidBills.length === 0) {
+    if (alertEl) { alertEl.style.display = "flex"; alertEl.className = "ts-alert ts-alert-success"; }
+    if (alertMsg) alertMsg.textContent = `Selamat! Semua tagihan Blok ${currentUser.blokNo} sudah lunas. Terima kasih atas ketepatan pembayaran Anda! 🎉`;
+    if (tunggakanSection) tunggakanSection.style.display = "none";
+  } else {
+    if (alertEl) { alertEl.style.display = "flex"; alertEl.className = "ts-alert ts-alert-danger"; }
+    if (alertMsg) alertMsg.textContent = `⚠ Anda memiliki ${unpaidBills.length} tagihan belum lunas. Silakan segera selesaikan.`;
+    if (tunggakanSection) tunggakanSection.style.display = "block";
+
+    // Badge
+    const tsBadgeTunggak = document.getElementById("ts-badge-tunggak");
+    if (tsBadgeTunggak) tsBadgeTunggak.textContent = `${unpaidBills.length} Tagihan`;
+  }
+
+  // Render unpaid list
+  const unpaidList = document.getElementById("ts-unpaid-list");
+  if (unpaidList) {
+    if (unpaidBills.length === 0) {
+      unpaidList.innerHTML = `<div class="ts-empty"><i class="ri-checkbox-circle-line"></i>Tidak ada tagihan menunggak</div>`;
+    } else {
+      unpaidList.innerHTML = unpaidBills.map(t => {
+        const sisa = Math.max(0, (parseFloat(t.nominal) || 0) - (parseFloat(t.jumlahDibayar) || 0));
+        return `
+          <div class="ts-bill-item">
+            <div class="ts-bill-meta">
+              <div class="ts-bill-period"><i class="ri-calendar-line" style="color: var(--danger);"></i> ${t.bulan || ""} ${t.tahun || ""}</div>
+              <div class="ts-bill-type">${t.kelompokIPL || "IPL"} &bull; ${t.status}</div>
+            </div>
+            <div class="ts-bill-right">
+              <div class="ts-bill-amount">${formatRp(sisa)}</div>
+              <div class="ts-bill-date">Jatuh Tempo: ${formatTableDate(t.tglBayar) !== "-" ? formatTableDate(t.tglBayar) : "Segera"}</div>
+            </div>
+          </div>`;
+      }).join("");
+    }
+  }
+
+  // Rapel box
+  const rapelBox = document.getElementById("ts-rapel-box");
+  const rapelMonths = document.getElementById("ts-rapel-months");
+  const rapelAmount = document.getElementById("ts-rapel-amount");
+  if (rapelBox) {
+    if (unpaidBills.length > 0) {
+      rapelBox.style.display = "flex";
+      if (rapelMonths) rapelMonths.textContent = `${unpaidBills.length} bulan tunggakan`;
+      if (rapelAmount) rapelAmount.textContent = formatRp(totalTunggakan);
+    } else {
+      rapelBox.style.display = "none";
+    }
+  }
+
+  // Render paid list (history)
+  const paidList = document.getElementById("ts-paid-list");
+  const tsBadgeLunas = document.getElementById("ts-badge-lunas");
+  if (tsBadgeLunas) tsBadgeLunas.textContent = `${paidBills.length} Lunas`;
+
+  if (paidList) {
+    if (paidBills.length === 0) {
+      paidList.innerHTML = `<div class="ts-empty"><i class="ri-history-line"></i>Belum ada riwayat pembayaran</div>`;
+    } else {
+      paidList.innerHTML = paidBills.map(t => `
+        <div class="ts-bill-item paid">
+          <div class="ts-bill-meta">
+            <div class="ts-bill-period"><i class="ri-checkbox-circle-line" style="color: var(--success);"></i> ${t.bulan || ""} ${t.tahun || ""}</div>
+            <div class="ts-bill-type">${t.kelompokIPL || "IPL"} &bull; ${t.metode || "-"}</div>
+          </div>
+          <div class="ts-bill-right">
+            <div class="ts-bill-amount">${formatRp(t.nominal)}</div>
+            <div class="ts-bill-date">Tgl Bayar: ${formatTableDate(t.tglBayar)}</div>
+          </div>
+        </div>`).join("");
+    }
+  }
+}
+
+// Buka form pembayaran rapel
+function openRapelPayment() {
+  if (!currentUser || !appState) return;
+
+  const blok = normalizeBlok(currentUser.blokNo);
+  const unpaidBills = (appState.tagihan || []).filter(t =>
+    normalizeBlok(t.blokNo) === blok && t.status !== "Lunas"
+  ).sort((a, b) => {
+    const keyA = bulanToKey(a.tahun || "2000", a.bulan || "Januari");
+    const keyB = bulanToKey(b.tahun || "2000", b.bulan || "Januari");
+    return keyA.localeCompare(keyB);
+  });
+
+  if (unpaidBills.length === 0) return;
+
+  const totalRapel = unpaidBills.reduce((s, t) =>
+    s + Math.max(0, (parseFloat(t.nominal) || 0) - (parseFloat(t.jumlahDibayar) || 0)), 0);
+
+  // Fill rapel summary detail
+  const detailEl = document.getElementById("rapel-summary-detail");
+  if (detailEl) {
+    detailEl.innerHTML = unpaidBills.map((t, i) => {
+      const sisa = Math.max(0, (parseFloat(t.nominal) || 0) - (parseFloat(t.jumlahDibayar) || 0));
+      return `<div>${i + 1}. ${t.bulan || ""} ${t.tahun || ""} — <strong>${formatRp(sisa)}</strong></div>`;
+    }).join("");
+  }
+
+  const totalEl = document.getElementById("rapel-total-display");
+  if (totalEl) totalEl.textContent = formatRp(totalRapel);
+
+  // Set today's date as default
+  const tglEl = document.getElementById("rapel-tgl-bayar");
+  if (tglEl) tglEl.value = new Date().toISOString().slice(0, 10);
+
+  openModal("modal-rapel-payment");
+}
+
+// Submit pembayaran rapel: tandai semua sebagai "Menunggu Verifikasi"
+function submitRapelPayment() {
+  if (!currentUser || !appState) return;
+
+  const tglBayar = document.getElementById("rapel-tgl-bayar")?.value;
+  const metode = document.getElementById("rapel-metode")?.value || "Transfer";
+  const bukti = document.getElementById("rapel-bukti")?.value?.trim() || "-";
+
+  if (!tglBayar) {
+    alert("Harap isi tanggal pembayaran terlebih dahulu.");
+    return;
+  }
+
+  const blok = normalizeBlok(currentUser.blokNo);
+  const unpaidBills = (appState.tagihan || []).filter(t =>
+    normalizeBlok(t.blokNo) === blok && t.status !== "Lunas"
+  );
+
+  if (unpaidBills.length === 0) {
+    alert("Tidak ada tagihan yang perlu dibayar.");
+    closeModal("modal-rapel-payment");
+    return;
+  }
+
+  // Mark all unpaid as "Menunggu Verifikasi"
+  unpaidBills.forEach(t => {
+    t.status = "Menunggu Verifikasi";
+    t.tglBayar = tglBayar;
+    t.metode = metode;
+    t.buktiTransfer = bukti;
+    t.jumlahDibayar = parseFloat(t.nominal) || 0;
+  });
+
+  saveState();
+  closeModal("modal-rapel-payment");
+
+  const totalBulan = unpaidBills.length;
+  const totalNom = unpaidBills.reduce((s, t) => s + (parseFloat(t.nominal) || 0), 0);
+  addAuditLog("Pembayaran Rapel", `Warga ${currentUser.name} (${currentUser.blokNo}) mengajukan pembayaran rapel ${totalBulan} bulan (${formatRp(totalNom)}) via ${metode}`);
+
+  renderTagihanSaya();
+  updateAdminNotifications();
+
+  alert(`✅ Berhasil!\n\nBukti pembayaran rapel ${totalBulan} bulan (${formatRp(totalNom)}) telah dikirim.\nAdmin akan segera memverifikasi pembayaran Anda.`);
 }

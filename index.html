@@ -18,7 +18,7 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   
   <!-- App Styles -->
-  <link rel="stylesheet" href="styles.css?v=20260924_04">
+  <link rel="stylesheet" href="styles.css?v=20260924_05">
 
   <!-- PWA & Mobile Meta Tags -->
   <link rel="manifest" href="manifest.json">
@@ -165,6 +165,12 @@
         </a>
 
         <div class="nav-group-title">IPL & Tagihan</div>
+        <!-- Warga-only: Tagihan Saya -->
+        <a href="#" class="nav-item nav-warga-only" id="nav-tagihan-saya-item" data-view="tagihan-saya" style="display: none; align-items: center;">
+          <i class="ri-wallet-line"></i>
+          <span>Tagihan Saya</span>
+          <span id="nav-ts-badge" class="badge badge-danger" style="display: none; margin-left: auto; font-size: 0.65rem; padding: 0.15rem 0.45rem; border-radius: 10px;">0</span>
+        </a>
         <a href="#" class="nav-item role-admin-only" data-view="generate-tagihan">
           <i class="ri-file-add-line"></i>
           <span>Generate Tagihan</span>
@@ -1536,6 +1542,69 @@
         </section>
 
         <!-- PENGATURAN VIEW -->
+        <!-- TAGIHAN SAYA (Warga Portal) -->
+        <section id="view-tagihan-saya" class="view-section">
+          <div class="ts-hero-banner">
+            <div class="ts-hero-left">
+              <div class="ts-hero-icon"><i class="ri-wallet-3-line"></i></div>
+              <div>
+                <h2 class="ts-hero-title">Tagihan Saya</h2>
+                <p class="ts-hero-sub">Rincian IPL Perumahan D'AMOUR untuk blok Anda</p>
+              </div>
+            </div>
+            <div class="ts-hero-stats">
+              <div class="ts-stat ts-stat-danger">
+                <span class="ts-stat-label">Tunggakan</span>
+                <span class="ts-stat-val" id="ts-total-tunggakan">Rp 0</span>
+              </div>
+              <div class="ts-stat ts-stat-primary">
+                <span class="ts-stat-label">Bulan Menunggak</span>
+                <span class="ts-stat-val" id="ts-jumlah-bulan">0 Bulan</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Status Alert -->
+          <div id="ts-status-alert" class="ts-alert ts-alert-success" style="display:none;">
+            <i class="ri-checkbox-circle-line"></i>
+            <span id="ts-status-msg">Semua tagihan Anda sudah lunas. Terima kasih!</span>
+          </div>
+
+          <!-- Daftar Tagihan Belum Lunas -->
+          <div id="ts-tunggakan-section" style="display:none;">
+            <div class="card" style="border: 2px solid #fca5a5; background: linear-gradient(135deg, #fff5f5 0%, #fff 100%);">
+              <div class="card-header" style="border-bottom-color: #fca5a5;">
+                <div class="card-title" style="color: var(--danger);"><i class="ri-alarm-warning-line"></i> Tagihan Belum Lunas</div>
+                <span id="ts-badge-tunggak" class="badge badge-danger">0 Tagihan</span>
+              </div>
+              <div id="ts-unpaid-list" class="ts-bill-list"></div>
+              <!-- Rapel Summary -->
+              <div class="ts-rapel-box" id="ts-rapel-box" style="display:none;">
+                <div class="ts-rapel-info">
+                  <i class="ri-bank-card-2-line"></i>
+                  <div>
+                    <div class="ts-rapel-title">Total Pembayaran Rapel</div>
+                    <div class="ts-rapel-months" id="ts-rapel-months">0 bulan tunggakan</div>
+                  </div>
+                </div>
+                <div class="ts-rapel-amount" id="ts-rapel-amount">Rp 0</div>
+                <button class="btn btn-danger ts-rapel-btn" onclick="openRapelPayment()">
+                  <i class="ri-bank-card-line"></i> Bayar Sekarang (Rapel)
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Riwayat Pembayaran Lunas -->
+          <div class="card" style="margin-top: 1.25rem;">
+            <div class="card-header">
+              <div class="card-title"><i class="ri-history-line"></i> Riwayat Pembayaran</div>
+              <span id="ts-badge-lunas" class="badge badge-success">0 Lunas</span>
+            </div>
+            <div id="ts-paid-list" class="ts-bill-list"></div>
+          </div>
+        </section>
+
         <section id="view-pengaturan" class="view-section">
           <div class="card">
             <div class="card-header">
@@ -1588,6 +1657,97 @@
   </div>
 
   <!-- MODALS -->
+
+  <!-- MODAL: Notifikasi Tunggakan Warga (muncul setelah login) -->
+  <div class="modal-overlay" id="modal-tunggakan-alert" style="z-index: 10002;">
+    <div class="modal-box tna-box">
+      <!-- Header with urgent branding -->
+      <div class="tna-header">
+        <div class="tna-header-icon">
+          <i class="ri-alarm-warning-fill"></i>
+        </div>
+        <div class="tna-header-text">
+          <div class="tna-greeting" id="tna-greeting">Halo, Pak Budi!</div>
+          <div class="tna-subtitle">Ada tagihan IPL yang belum diselesaikan</div>
+        </div>
+        <button class="close-modal-btn" onclick="closeModal('modal-tunggakan-alert')" style="align-self: flex-start; margin-left: auto;">&times;</button>
+      </div>
+
+      <div class="tna-body">
+        <!-- Tunggakan Summary Card -->
+        <div class="tna-summary-card">
+          <div class="tna-summary-row">
+            <span class="tna-summary-label"><i class="ri-calendar-close-line"></i> Jumlah Bulan Menunggak</span>
+            <span class="tna-summary-val tna-val-danger" id="tna-bulan-count">0 Bulan</span>
+          </div>
+          <div class="tna-summary-row">
+            <span class="tna-summary-label"><i class="ri-money-dollar-circle-line"></i> Total Tunggakan</span>
+            <span class="tna-summary-val tna-val-danger" id="tna-total-nominal">Rp 0</span>
+          </div>
+        </div>
+
+        <!-- List of unpaid months -->
+        <div class="tna-months-label">Bulan yang belum dibayar:</div>
+        <div id="tna-months-list" class="tna-months-list"></div>
+
+        <!-- Urgency note -->
+        <div class="tna-note">
+          <i class="ri-information-line"></i>
+          <span>Harap segera melakukan pembayaran. Gunakan fitur <strong>Bayar Rapel</strong> untuk menyelesaikan semua tunggakan sekaligus.</span>
+        </div>
+      </div>
+
+      <div class="tna-footer">
+        <button class="btn btn-outline" onclick="closeModal('modal-tunggakan-alert')" style="flex: 1;">
+          <i class="ri-close-line"></i> Tutup
+        </button>
+        <button class="btn btn-danger tna-pay-btn" onclick="closeModal('modal-tunggakan-alert'); showView('tagihan-saya');" style="flex: 2;">
+          <i class="ri-bank-card-line"></i> Lihat &amp; Bayar Sekarang
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Form Pembayaran Rapel -->
+  <div class="modal-overlay" id="modal-rapel-payment" style="z-index: 10003;">
+    <div class="modal-box" style="max-width: 460px; border-radius: 18px;">
+      <div class="modal-header">
+        <div class="modal-title"><i class="ri-bank-card-2-line" style="color: var(--primary);"></i> Form Pembayaran Rapel IPL</div>
+        <button class="close-modal-btn" onclick="closeModal('modal-rapel-payment')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div style="background: #fef2f2; border: 1px solid #fca5a5; border-radius: var(--radius-md); padding: 1rem; margin-bottom: 1rem;">
+          <div style="font-size: 0.8rem; color: var(--danger); font-weight: 600; margin-bottom: 0.5rem;"><i class="ri-alarm-warning-line"></i> Ringkasan Pembayaran Rapel</div>
+          <div id="rapel-summary-detail" style="font-size: 0.85rem; color: var(--text-main); line-height: 1.6;"></div>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px dashed #fca5a5;">
+            <span style="font-size: 0.85rem; font-weight: 600; color: var(--text-muted);">Total Wajib Dibayar:</span>
+            <span id="rapel-total-display" style="font-size: 1.15rem; font-weight: 800; color: var(--danger);">Rp 0</span>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Tanggal Pembayaran</label>
+          <input type="date" id="rapel-tgl-bayar" class="form-control">
+        </div>
+        <div class="form-group">
+          <label>Metode Pembayaran</label>
+          <select id="rapel-metode" class="form-control">
+            <option value="Transfer">Transfer Bank</option>
+            <option value="Cash">Tunai (Cash)</option>
+            <option value="QRIS">QRIS</option>
+            <option value="Lainnya">Lainnya</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Nomor Bukti / Referensi (opsional)</label>
+          <input type="text" id="rapel-bukti" class="form-control" placeholder="No. referensi transaksi / nomor resi">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" onclick="closeModal('modal-rapel-payment')">Batal</button>
+        <button class="btn btn-primary" onclick="submitRapelPayment()"><i class="ri-send-plane-line"></i> Kirim Bukti Pembayaran</button>
+      </div>
+    </div>
+  </div>
 
   <!-- Modal Ubah Password -->
   <div class="modal-overlay" id="modal-change-password" style="z-index: 10000;">
@@ -1976,7 +2136,7 @@
     </div>
   </div>
 
-  <script src="app.js?v=20260924_03"></script>
+  <script src="app.js?v=20260924_04"></script>
   <script>
     function togglePasswordVisibility() {
       const pwdInp = document.getElementById("login-password");
