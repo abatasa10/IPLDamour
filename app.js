@@ -153,6 +153,7 @@ function checkAuthSession() {
       if (loginOverlay) loginOverlay.classList.remove("active");
       updateNavbarProfile();
       applyRolePermissions();
+      startRealTimeCloudPolling();
 
       // Trigger tunggakan alert for house owners on session restore (page reload)
       if (currentUser && currentUser.blokNo && currentUser.blokNo !== "-") {
@@ -265,6 +266,7 @@ async function handleLoginSubmit(e) {
     if (errBox) errBox.style.display = "none";
     updateNavbarProfile();
     applyRolePermissions();
+    startRealTimeCloudPolling();
     const savedView = localStorage.getItem("damour_last_view") || "dashboard";
     showView(savedView);
     addAuditLog("Login System", `User ${found.name} (${found.username}) berhasil login`);
@@ -526,6 +528,15 @@ function applyRolePermissions() {
 
   document.querySelectorAll(".role-admin-only").forEach((el) => {
     if (isAdmin) {
+      el.style.display = "";
+    } else {
+      el.style.display = "none";
+    }
+  });
+
+  // Aksi super-admin (reset default dll) hanya untuk Ridwan / C16
+  document.querySelectorAll(".superadmin-only").forEach((el) => {
+    if (isSuperAdmin()) {
       el.style.display = "";
     } else {
       el.style.display = "none";
@@ -1823,8 +1834,24 @@ function autoSyncToGoogleSheet(immediate = false) {
     autoSyncDebounceTimer = null;
   }
 
-  const executeSync = () => {
+  const executeSync = async () => {
     updateStorageBadge("syncing", "Menyimpan ke Google Sheet...");
+
+    // AMAN (pengaman data uang): tarik & gabungkan state cloud terbaru dulu
+    // sebelum POST, agar posting data admin tidak menimpa pembayaran warga
+    // yang baru diunggah dari perangkat lain.
+    try {
+      const cloudRes = await fetch(activeUrl);
+      if (cloudRes && cloudRes.ok) {
+        const cloudData = await cloudRes.json();
+        if (cloudData && cloudData.status === "success" && Array.isArray(cloudData.tagihan)) {
+          mergeCloudTagihanIntoLocal(cloudData.tagihan);
+        }
+      }
+    } catch (mergeErr) {
+      console.log("Pre-POST merge skipped:", mergeErr);
+    }
+
     const payload = getCleanPayloadForGoogleSheet(appState);
 
     try {
@@ -1852,6 +1879,123 @@ function autoSyncToGoogleSheet(immediate = false) {
     executeSync();
   } else {
     autoSyncDebounceTimer = setTimeout(executeSync, 500);
+  }
+}
+
+// ============================================================================
+// REAL-TIME PULL & NOTIFIKASI UNTUK ADMIN (POLLING KE GOOGLE SHEET)
+// ============================================================================
+let _cloudPollTimer = null;
+
+// Hanya akun pemilik sistem (Ridwan / C16) yang boleh menjalankan aksi super-admin
+function isSuperAdmin() {
+  if (!currentUser) return false;
+  const u = (currentUser.username || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+  const b = (currentUser.blokNo || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+  return u === "ridwan" || u === "c16" || b === "c16";
+}
+
+function startRealTimeCloudPolling() {
+  if (_cloudPollTimer) return;
+  pullCloudAndNotify();
+  _cloudPollTimer = setInterval(() => {
+    pullCloudAndNotify();
+  }, 45000);
+
+  const refreshOnVisible = () => {
+    if (!document.hidden) pullCloudAndNotify();
+  };
+  document.addEventListener("visibilitychange", refreshOnVisible);
+  window.addEventListener("focus", refreshOnVisible);
+}
+
+// Gabungkan tagihan dari cloud (Google Sheet) ke local state tanpa menghapus data lokal
+function mergeCloudTagihanIntoLocal(cloudTagihan) {
+  if (!Array.isArray(cloudTagihan) || !appState) return;
+  if (!Array.isArray(appState.tagihan)) appState.tagihan = [];
+
+  const localMap = {};
+  appState.tagihan.forEach((t) => { if (t && t.id) localMap[t.id] = t; });
+
+  const merged = cloudTagihan.map((cloudT) => {
+    if (!cloudT || !cloudT.id) return cloudT;
+    const localT = localMap[cloudT.id];
+    if (!localT) return cloudT;
+
+    const out = { ...localT };
+    const cloudStatus = cloudT.status || "";
+    const localStatus = (out.status || "Menunggu Pembayaran");
+    const isLocalUnpaid = localStatus === "Menunggu Pembayaran" || localStatus === "Menunggak";
+    const hasCloudBukti = !!(cloudT.buktiTransfer && cloudT.buktiTransfer.length > 20 && cloudT.buktiTransfer !== "-" && cloudT.buktiTransfer !== "bukti: foto (ukuran terlalu besar)");
+
+    if (cloudStatus === "Menunggu Verifikasi" && hasCloudBukti && isLocalUnpaid) {
+      out.status = "Menunggu Verifikasi";
+      out.buktiTransfer = cloudT.buktiTransfer;
+      if (cloudT.jumlahDibayar) out.jumlahDibayar = cloudT.jumlahDibayar;
+      if (cloudT.tglBayar && cloudT.tglBayar !== "-") out.tglBayar = cloudT.tglBayar;
+      if (cloudT.metode && cloudT.metode !== "-") out.metode = cloudT.metode;
+    } else if (cloudStatus === "Lunas" && localStatus !== "Lunas") {
+      out.status = "Lunas";
+      out.buktiTransfer = cloudT.buktiTransfer || "";
+      if (cloudT.tglBayar && cloudT.tglBayar !== "-") out.tglBayar = cloudT.tglBayar;
+      if (cloudT.jumlahDibayar) out.jumlahDibayar = cloudT.jumlahDibayar;
+    } else if (cloudStatus === "Menunggu Pembayaran" && isLocalUnpaid) {
+      out.status = cloudT.status;
+      out.buktiTransfer = "";
+    }
+    return out;
+  });
+
+  // Sertakan tagihan lokal yang belum ada di cloud (jangan membuang data lokal)
+  const cloudIds = new Set(cloudTagihan.filter((t) => t && t.id).map((t) => t.id));
+  const localOnly = appState.tagihan.filter((t) => t && t.id && !cloudIds.has(t.id));
+  appState.tagihan = [...merged, ...localOnly];
+}
+
+async function pullCloudAndNotify() {
+  if (!appState || !currentUser || !isSuperAdmin()) return;
+  const activeUrl = getGoogleSheetUrl();
+  if (!activeUrl) return;
+
+  try {
+    const cloudRes = await fetch(activeUrl);
+    if (!cloudRes || !cloudRes.ok) return;
+    const cloudData = await cloudRes.json();
+    if (!cloudData || typeof cloudData !== "object" || cloudData.status !== "success") return;
+
+    mergeCloudTagihanIntoLocal(cloudData.tagihan);
+
+    // Adopsi data keuangan bila cloud lebih lengkap (hindari menimpa data lokal yang lebih baru)
+    if (Array.isArray(cloudData.pengeluaran) && cloudData.pengeluaran.length >= (appState.pengeluaran || []).length) {
+      appState.pengeluaran = cloudData.pengeluaran;
+    }
+    if (Array.isArray(cloudData.pemasukanLain) && cloudData.pemasukanLain.length >= (appState.pemasukanLain || []).length) {
+      appState.pemasukanLain = cloudData.pemasukanLain;
+    }
+    if (Array.isArray(cloudData.auditLog) && cloudData.auditLog.length > 0) appState.auditLog = cloudData.auditLog;
+    if (cloudData.ringkasanKas && typeof cloudData.ringkasanKas === "object") {
+      appState.ringkasanKas = { ...appState.ringkasanKas, ...cloudData.ringkasanKas };
+    }
+
+    // Simpan ke cache lokal TANPA memicu loop posting ke cloud
+    localStorage.setItem("damour_ipl_db", JSON.stringify(appState));
+
+    updateAdminNotifications();
+
+    // Segarkan tampilan yang terbuka agar notifikasi baru langsung terlihat
+    const activeSection = document.querySelector(".view-section.active");
+    if (activeSection) {
+      const viewId = activeSection.id.replace(/^view-/, "");
+      if (viewId === "dashboard") renderDashboard();
+      else if (viewId === "daftar-tagihan") renderDaftarTagihan();
+      else if (viewId === "kas") renderKasArusKasTable();
+      else if (viewId === "tagihan-saya" && typeof renderTagihanSaya === "function") renderTagihanSaya();
+    }
+
+    const now = new Date();
+    updateStorageBadge("connected", `Terakhir sinkron: ${now.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })}`);
+  } catch (e) {
+    console.log("Real-time cloud pull gagal:", e);
   }
 }
 
@@ -5165,7 +5309,21 @@ function importDataJSON(input) {
 function resetPembayaranRidwanDanPengeluaran() {
   if (!appState) return;
 
-  if (confirm("Apakah Anda yakin ingin mengembalikan status pembayaran Ridwan (C16) ke 'Menunggu Pembayaran' dan menghapus SELURUH catatan pengeluaran?")) {
+  if (!isSuperAdmin()) {
+    alert("Akses Ditolak: Hanya akun pemilik sistem (Ridwan / C16) yang berwenang melakukan aksi ini.");
+    return;
+  }
+
+  if (confirm("Apakah Anda yakin ingin mengembalikan status pembayaran Ridwan (C16) ke 'Menunggu Pembayaran' dan menghapus SELURUH catatan pengeluaran?" + "\n\n✅ Snapshot otomatis akan disimpan sebelum aksi.")) {
+    try {
+      const snapshot = JSON.parse(JSON.stringify(appState));
+      localStorage.setItem("damour_ipl_db_pre_reset", JSON.stringify(snapshot));
+      localStorage.setItem("damour_ipl_db_pre_reset_time", new Date().toISOString());
+    } catch (e) {
+      alert("Gagal membuat snapshot pra-reset. Aksi dibatalkan demi keamanan data keuangan.");
+      return;
+    }
+
     if (appState.tagihan && Array.isArray(appState.tagihan)) {
       appState.tagihan.forEach((t) => {
         const blokClean = (t.blokNo || "").toLowerCase().trim();
@@ -5203,16 +5361,21 @@ function resetPembayaranRidwanDanPengeluaran() {
 }
 
 function resetDataDefault() {
-  const isAdmin = currentUser && currentUser.role === "admin";
-  if (!isAdmin) {
-    alert("Akses Ditolak: Hanya Admin yang berwenang melakukan reset data default.");
+  if (!isSuperAdmin()) {
+    alert("Akses Ditolak: Hanya akun pemilik sistem (Ridwan / C16) yang berwenang melakukan reset data default.");
     return;
   }
 
   const nameInput = document.getElementById("reset-admin-username");
-  if (nameInput && currentUser) nameInput.value = currentUser.username || "";
+  if (nameInput) {
+    nameInput.value = "ridwan";
+    nameInput.setAttribute("readonly", "readonly");
+    nameInput.style.background = "#f1f5f9";
+  }
   const pwdInput = document.getElementById("reset-admin-password");
   if (pwdInput) pwdInput.value = "";
+  const phraseInput = document.getElementById("reset-konfirmasi-frase");
+  if (phraseInput) phraseInput.value = "";
   const errBox = document.getElementById("reset-pwd-err");
   if (errBox) errBox.style.display = "none";
 
@@ -5230,9 +5393,15 @@ async function confirmResetDataDefault() {
 
   const username = (document.getElementById("reset-admin-username")?.value || "").trim();
   const password = (document.getElementById("reset-admin-password")?.value || "").trim();
+  const phrase = (document.getElementById("reset-konfirmasi-frase")?.value || "").trim();
 
   if (!username || !password) {
-    showErr("Username dan password admin wajib diisi.");
+    showErr("Username dan password wajib diisi.");
+    return;
+  }
+
+  if (phrase.toUpperCase() !== "RESET D'AMOUR" && phrase.toUpperCase() !== "RESET DAMOUR") {
+    showErr("Frasa konfirmasi salah. Ketik RESET D'AMOUR untuk melanjutkan.");
     return;
   }
 
@@ -5271,14 +5440,39 @@ async function confirmResetDataDefault() {
   });
 
   if (!actor || actor.role !== "admin") {
+    addAuditLog("Reset Ditolak", `Upaya reset data default ditolak: akun '${username}' tidak ditemukan / bukan admin.`);
     showErr("Akun tidak ditemukan, bukan Admin, atau password salah. Reset dibatalkan.");
     return;
   }
 
+  const actorIsOwner = !!actor && (
+    /^ridwan$/i.test((actor.username || "").trim()) ||
+    /^c16$/i.test((actor.blokNo || "").replace(/\s/g, "").toLowerCase()) ||
+    (actor.name || "").toLowerCase().includes("ridwan")
+  );
+
+  if (!actorIsOwner) {
+    addAuditLog("Reset Ditolak", `Upaya reset data default DITOLAK: ${actor.name} (${actor.username}). Hanya akun Ridwan (C16) yang berwenang.`);
+    showErr("Hanya akun pemilik sistem (Ridwan / C16) yang berwenang melakukan reset data default. Aksi Anda telah dicatat di Log Aktivitas.");
+    return;
+  }
+
+  // AMAN: snapshot seluruh data SEBELUM reset (lindungi uang/user dari kesalahan aksi)
+  try {
+    const snapshot = JSON.parse(JSON.stringify(appState));
+    localStorage.setItem("damour_ipl_db_pre_reset", JSON.stringify(snapshot));
+    localStorage.setItem("damour_ipl_db_pre_reset_time", new Date().toISOString());
+  } catch (e) {
+    console.error("Gagal membuat snapshot pra-reset:", e);
+    showErr("Gagal membuat snapshot pra-reset. Reset dibatalkan demi keamanan data keuangan.");
+    return;
+  }
+
   const confirmMsg =
-    `PERINGATAN TERAKHIR!\n\n` +
+    `PERINGATAN TERAKHIR!!\n\n` +
     `Admin: ${actor.name} (${actor.username})\n\n` +
-    `Seluruh data transaksi (tagihan, pengeluaran, pemasukan, kas) akan dihapus dan dikembalikan ke kondisi default.\n\n` +
+    `Seluruh data transaksi (tagihan, pengeluaran, pemasukan, kas) akan DIHAPUS dan dikembalikan ke kondisi default.\n\n` +
+    `✅ Snapshot otomatis sudah tersimpan di browser ini ("Snapshot Pra-Reset") dan bisa dipulihkan kapan saja.\n\n` +
     `Identitas Anda akan tercatat di Log Aktivitas. Lanjutkan?`;
   if (!confirm(confirmMsg)) return;
 
@@ -5329,8 +5523,42 @@ function executeResetDataDefault(actorLabel) {
   appState = freshState;
   saveState();
 
-  alert(`Seluruh data telah dikosongkan oleh ${actorLabel}.\nTindakan ini tercatat di Log Aktivitas.`);
+  alert(`Seluruh data telah dikosongkan oleh ${actorLabel}.\n\nSnapshot otomatis TERSIMPAN di browser ini ("Snapshot Pra-Reset").\nGunakan menu Pulihkan Snapshot Pra-Reset untuk mengembalikan data bila diperlukan.\nTindakan ini tercatat di Log Aktivitas.`);
   location.reload();
+}
+
+function restorePreResetSnapshot() {
+  const snapshot = localStorage.getItem("damour_ipl_db_pre_reset");
+  if (!snapshot) {
+    alert("Belum ada Snapshot Pra-Reset yang tersimpan di browser ini.");
+    return;
+  }
+  if (!isSuperAdmin()) {
+    alert("Akses Ditolak: Hanya Ridwan (C16) yang dapat memulihkan Snapshot Pra-Reset.");
+    return;
+  }
+
+  const snapTime = localStorage.getItem("damour_ipl_db_pre_reset_time");
+  const timeText = snapTime ? new Date(snapTime).toLocaleString("id-ID") : "Waktu tidak diketahui";
+
+  if (confirm(`Pulihkan SELURUH data dari Snapshot Pra-Reset?\n\nWaktu snapshot: ${timeText}\n\nIni akan MENIMPA seluruh data saat ini. Lanjutkan?`)) {
+    try {
+      const restored = JSON.parse(snapshot);
+      if (!restored || !restored.rumah) {
+        alert("Snapshot rusak / format tidak valid.");
+        return;
+      }
+      appState = restored;
+      localStorage.setItem("damour_ipl_db", JSON.stringify(appState));
+      localStorage.setItem("damour_ipl_db_backup", JSON.stringify(appState));
+      localStorage.setItem("damour_ipl_db_backup_time", new Date().toISOString());
+      addAuditLog("Pulihkan Snapshot", "Admin memulihkan seluruh data dari Snapshot Pra-Reset.");
+      alert("Data berhasil dipulihkan dari Snapshot Pra-Reset!");
+      location.reload();
+    } catch (e) {
+      alert("Gagal memulihkan snapshot: format data tidak valid.");
+    }
+  }
 }
 
 // Modal Helpers

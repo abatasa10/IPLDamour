@@ -1632,6 +1632,7 @@
                     <input type="file" accept=".json" onchange="importDataJSON(this)" style="display: none;">
                   </label>
                   <button class="btn btn-outline" style="color: #0284c7; border-color: #0284c7;" onclick="restoreFromLocalBackup()"><i class="ri-shield-check-line"></i> Pulihkan Cadangan Lokal (Lapisan 2)</button>
+                  <button class="btn btn-outline superadmin-only" style="color: #7c3aed; border-color: #7c3aed;" onclick="restorePreResetSnapshot()"><i class="ri-history-line"></i> Pulihkan Snapshot Pra-Reset</button>
                 </div>
               </div>
 
@@ -1640,13 +1641,13 @@
               <div class="form-group">
                 <label>Reset Transaksi Tertentu</label>
                 <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.5rem;">Mengembalikan status pembayaran Ridwan (C16) ke "Menunggu Pembayaran" dan menghapus seluruh catatan pengeluaran.</p>
-                <button class="btn btn-outline" style="color: var(--danger); border-color: var(--danger); margin-bottom: 1rem;" onclick="resetPembayaranRidwanDanPengeluaran()"><i class="ri-refresh-line"></i> Reset Status Ridwan & Hapus Pengeluaran</button>
+                <button class="btn btn-outline superadmin-only" style="color: var(--danger); border-color: var(--danger); margin-bottom: 1rem;" onclick="resetPembayaranRidwanDanPengeluaran()"><i class="ri-refresh-line"></i> Reset Status Ridwan & Hapus Pengeluaran</button>
               </div>
 
               <div class="form-group">
                 <label>Reset System Utuh</label>
                 <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.5rem;">Mengembalikan seluruh data transaksi ke keadaan default awal.</p>
-                <button class="btn btn-danger" onclick="resetDataDefault()"><i class="ri-refresh-line"></i> Reset Data Default</button>
+                <button class="btn btn-danger superadmin-only" onclick="resetDataDefault()"><i class="ri-refresh-line"></i> Reset Data Default</button>
               </div>
             </div>
           </div>
@@ -1786,15 +1787,19 @@
       <div class="modal-body">
         <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem;">
           Tindakan ini akan menghapus <strong>seluruh data transaksi</strong> (tagihan, pengeluaran, pemasukan, kas) dan mengembalikan ke kondisi default.<br><br>
-          Demi keamanan, wajib diisi oleh <strong>Admin yang berwenang</strong>. Siapa yang mereset akan tercatat di Log Aktivitas.
+          HANYA akun pemilik sistem (<strong>Ridwan / C16</strong>) yang berwenang. Aksi lain dicatat dan ditolak. Sebelum reset, <strong>Snapshot otomatis</strong> dibuat di browser (bisa dipulihkan lewat <strong>Pulihkan Snapshot Pra-Reset</strong>).
         </p>
         <div class="form-group">
           <label>Username Admin</label>
-          <input type="text" id="reset-admin-username" class="form-control" placeholder="Username admin" autocomplete="username">
+          <input type="text" id="reset-admin-username" class="form-control" value="ridwan" readonly style="background:#f1f5f9;" placeholder="ridwan" autocomplete="username">
         </div>
         <div class="form-group">
           <label>Password Admin</label>
           <input type="password" id="reset-admin-password" class="form-control" placeholder="Password admin" autocomplete="current-password">
+        </div>
+        <div class="form-group">
+          <label>Tulis frasa konfirmasi <span style="color: var(--danger); font-weight:700;">RESET D'AMOUR</span></label>
+          <input type="text" id="reset-konfirmasi-frase" class="form-control" placeholder="Ketik: RESET D'AMOUR" autocomplete="off">
         </div>
         <div id="reset-pwd-err" style="color: var(--danger); font-size: 0.8rem; display: none; margin-top: 0.5rem;"></div>
       </div>
