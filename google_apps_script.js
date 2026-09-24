@@ -61,48 +61,65 @@ function doPost(e) {
     }
 
     var contents = typeof raw === "string" ? JSON.parse(raw) : (raw || {});
+    // forceReplace = sinkronisasi penuh ADMIn (mis. "Simpan & Sinkronkan Sekarang").
+    // Semua sync otomatis (unggah warga / perangkat lama) TIDAK punya flag ini,
+    // sehingga server hanya melakukan UPSERT:
+    //   - tidak pernah menghapus baris yang tidak dikirim
+    //   - status tagihan TIDAK bisa mundur (Lunas/Verifikasi tidak bisa jadi Belum Bayar)
+    var forceReplace = contents.forceReplace === true;
     var ss = SpreadsheetApp.getActiveSpreadsheet();
-    
+
+    function sheetOpts() {
+      return { replaceAllowed: forceReplace, statusForwardOnly: !forceReplace };
+    }
+
     if (contents.rumah && Array.isArray(contents.rumah) && contents.rumah.length > 0) {
-      updateSheetData(ss.getSheetByName("Rumah") || createRumahSheet(ss), contents.rumah, "blokNo", ["id", "blokNo", "pemilik", "noHp", "status", "kelompokIPL"]);
+      updateSheetData(ss.getSheetByName("Rumah") || createRumahSheet(ss), contents.rumah, "blokNo", ["id", "blokNo", "pemilik", "noHp", "status", "kelompokIPL"], sheetOpts());
     }
     if (contents.tagihan && Array.isArray(contents.tagihan) && contents.tagihan.length > 0) {
-      updateSheetData(ss.getSheetByName("Tagihan") || createTagihanSheet(ss), contents.tagihan, "id", ["id", "periode", "bulan", "tahun", "rumahId", "blokNo", "pemilik", "kelompokIPL", "nominal", "jumlahDibayar", "potonganDeposit", "status", "tglBayar", "metode", "buktiTransfer", "rincianItems", "catatanKhusus"]);
+      updateSheetData(ss.getSheetByName("Tagihan") || createTagihanSheet(ss), contents.tagihan, "id", ["id", "periode", "bulan", "tahun", "rumahId", "blokNo", "pemilik", "kelompokIPL", "nominal", "jumlahDibayar", "potonganDeposit", "status", "tglBayar", "metode", "buktiTransfer", "rincianItems", "catatanKhusus"], sheetOpts());
     }
     if (contents.pengeluaran && Array.isArray(contents.pengeluaran)) {
-      if (contents.pengeluaran.length > 0 || contents.allowEmptyPengeluaran === true) {
-        updateSheetData(ss.getSheetByName("Pengeluaran") || createPengeluaranSheet(ss), contents.pengeluaran, "id", ["id", "tanggal", "kategori", "penerima", "keterangan", "nominal"]);
+      if (contents.pengeluaran.length > 0 || (contents.allowEmptyPengeluaran === true && forceReplace)) {
+        updateSheetData(ss.getSheetByName("Pengeluaran") || createPengeluaranSheet(ss), contents.pengeluaran, "id", ["id", "tanggal", "kategori", "penerima", "keterangan", "nominal"], sheetOpts());
       }
     }
     if (contents.pemasukanLain && Array.isArray(contents.pemasukanLain)) {
-      if (contents.pemasukanLain.length > 0 || contents.allowEmptyPemasukanLain === true) {
-        updateSheetData(ss.getSheetByName("PemasukanLain") || createPemasukanLainSheet(ss), contents.pemasukanLain, "id", ["id", "tanggal", "kategori", "penerima", "keterangan", "nominal"]);
+      if (contents.pemasukanLain.length > 0 || (contents.allowEmptyPemasukanLain === true && forceReplace)) {
+        updateSheetData(ss.getSheetByName("PemasukanLain") || createPemasukanLainSheet(ss), contents.pemasukanLain, "id", ["id", "tanggal", "kategori", "penerima", "keterangan", "nominal"], sheetOpts());
       }
     }
     if (contents.komponenIPL && Array.isArray(contents.komponenIPL) && contents.komponenIPL.length > 0) {
-      updateSheetData(ss.getSheetByName("Komponen") || createKomponenSheet(ss), contents.komponenIPL, "id", ["id", "nama", "nominalTotal", "isAutoKas", "dibayarOleh", "aktif"]);
+      updateSheetData(ss.getSheetByName("Komponen") || createKomponenSheet(ss), contents.komponenIPL, "id", ["id", "nama", "nominalTotal", "isAutoKas", "dibayarOleh", "aktif"], sheetOpts());
     }
     if (contents.masterEvent && Array.isArray(contents.masterEvent) && contents.masterEvent.length > 0) {
-      updateSheetData(ss.getSheetByName("Event") || createEventSheet(ss), contents.masterEvent, "id", ["id", "nama", "nominal", "dibayarOleh", "aktif"]);
+      updateSheetData(ss.getSheetByName("Event") || createEventSheet(ss), contents.masterEvent, "id", ["id", "nama", "nominal", "dibayarOleh", "aktif"], sheetOpts());
     }
     if (contents.users && Array.isArray(contents.users) && contents.users.length > 0) {
-      updateSheetData(ss.getSheetByName("Users") || createUsersSheet(ss), contents.users, "username", ["username", "password", "name", "blokNo", "role", "avatar", "mustChangePassword"]);
+      updateSheetData(ss.getSheetByName("Users") || createUsersSheet(ss), contents.users, "username", ["username", "password", "name", "blokNo", "role", "avatar", "mustChangePassword"], sheetOpts());
     }
     if (contents.auditLog && Array.isArray(contents.auditLog) && contents.auditLog.length > 0) {
-      updateSheetData(ss.getSheetByName("AuditLog") || createAuditLogSheet(ss), contents.auditLog, "id", ["id", "timestamp", "actor", "action", "detail"]);
-    }
-    if (contents.ringkasanKas && typeof contents.ringkasanKas === "object") {
-      updateRingkasanKasSheet(ss.getSheetByName("RingkasanKas") || createRingkasanKasSheet(ss), contents.ringkasanKas);
+      // Log aktivitas TIDAK PERNAH dihapus oleh sinkronisasi (hanya di-upsert/ditambah)
+      updateSheetData(ss.getSheetByName("AuditLog") || createAuditLogSheet(ss), contents.auditLog, "id", ["id", "timestamp", "actor", "action", "detail"], { replaceAllowed: false, statusForwardOnly: false });
     }
     if (contents.targetIPL && Array.isArray(contents.targetIPL) && contents.targetIPL.length > 0) {
-      updateSheetData(ss.getSheetByName("TargetIPL") || createTargetIPLSheet(ss), contents.targetIPL, "id", ["id", "kelompok", "target", "keterangan"]);
+      updateSheetData(ss.getSheetByName("TargetIPL") || createTargetIPLSheet(ss), contents.targetIPL, "id", ["id", "kelompok", "target", "keterangan"], sheetOpts());
     }
-    
-    result = { status: "success", message: "Data Google Spreadsheet berhasil disinkronkan secara real-time!" };
+
+    // KAS DIHITUNG OLEH SERVER dari data di sheet (sumber utama),
+    // BUKAN dari angka yang dikirim klien — mencegah perangkat lama menimpa angka kas.
+    var kasComputed = computeRingkasanKas(ss);
+    updateRingkasanKasSheet(ss.getSheetByName("RingkasanKas") || createRingkasanKasSheet(ss), kasComputed);
+
+    result = {
+      status: "success",
+      message: "Data Google Spreadsheet berhasil disinkronkan secara real-time!",
+      ringkasanKas: kasComputed
+    };
   } catch (err) {
     result = { status: "error", message: err.toString() };
   }
-  
+
   return ContentService.createTextOutput(JSON.stringify(result))
     .setMimeType(ContentService.MimeType.JSON);
 }
@@ -149,69 +166,164 @@ function getSheetData(sheet, keyField) {
   return rows;
 }
 
-function updateSheetData(sheet, dataArray, keyField, defaultHeaders) {
+function statusRankTagihan(s) {
+  var table = { "Menunggu Pembayaran": 1, "Menunggak": 2, "Menunggu Verifikasi": 3, "Lunas": 4 };
+  var v = table[String(s || "").trim()];
+  return v === undefined ? 0 : v;
+}
+
+function keyOfRow(row, keyField) {
+  if (!row) return "";
+  var rawKey = keyField ? row[keyField] : (row.id || row.username || row.blokNo);
+  if (rawKey === undefined || rawKey === null) return "";
+  if (keyField === "blokNo") return normalizeBlokGS(rawKey);
+  return String(rawKey).trim().toLowerCase();
+}
+
+function mergeRows(base, overlay) {
+  var out = {};
+  if (base && typeof base === "object") { for (var k in base) { if (base.hasOwnProperty(k)) out[k] = base[k]; } }
+  if (overlay && typeof overlay === "object") { for (var k2 in overlay) { if (overlay.hasOwnProperty(k2)) out[k2] = overlay[k2]; } }
+  return out;
+}
+
+function isPaidishStatus(s) {
+  s = String(s || "").trim();
+  return s === "Lunas" || s === "Menunggu Verifikasi";
+}
+
+function isPrepaidMethod(m) {
+  m = String(m || "").trim();
+  return m === "Sudah Bayar Sblm Sistem" || m === "Saldo Lebih Bayar";
+}
+
+// PROTEKSI KAS #2: baris tagihan yang SUDAH Lunas/Menunggu Verifikasi tahan-banting
+// terhadap auto-sync/perangkat lama. Kiriman biasa tidak boleh:
+//   - mengubah Metode normal jadi "Sudah Bayar Sblm Sistem"/"Saldo Lebih Bayar" (kas turun)
+//   - mengosongkan jumlahDibayar yang sudah terisi
+//   - menimpa tglBayar jadi penanda prepaid ("Sudah Lunas..."/"Lebih Bayar Bulan Lalu")
+//   - me-nol-kan nominal yang sudah ada
+// Hanya sinkronisasi admin penuh (forceReplace) yang diperbolehkan mengubah hal ini.
+function protectCashFields(merged, existingRow, incoming) {
+  var exMet = String(existingRow.metode || "");
+  var inMet = String(incoming.metode || "");
+  if (isPrepaidMethod(inMet) && !isPrepaidMethod(exMet)) {
+    merged.metode = existingRow.metode;
+  }
+  if (existingRow.jumlahDibayar !== undefined && existingRow.jumlahDibayar !== null &&
+      existingRow.jumlahDibayar !== "" && money(existingRow.jumlahDibayar) > 0) {
+    var incVal = incoming.jumlahDibayar;
+    if (incVal === undefined || incVal === null || incVal === "" ||
+        money(incVal) < money(existingRow.jumlahDibayar)) {
+      // pembayaran yang sudah tercatat TIDAK boleh menyusut/terhapus oleh auto-sync
+      merged.jumlahDibayar = existingRow.jumlahDibayar;
+    }
+  }
+  var exTgl = String(existingRow.tglBayar || "");
+  var inTgl = String(incoming.tglBayar || "");
+  if ((inTgl.indexOf("Sudah Lunas") !== -1 || inTgl.indexOf("Lebih Bayar Bulan Lalu") !== -1) &&
+      exTgl.indexOf("Sudah Lunas") === -1 && exTgl.indexOf("Lebih Bayar Bulan Lalu") === -1) {
+    merged.tglBayar = existingRow.tglBayar;
+  }
+  if (existingRow.nominal !== undefined && existingRow.nominal !== null &&
+      money(existingRow.nominal) > 0 && money(incoming.nominal) < money(existingRow.nominal)) {
+    merged.nominal = existingRow.nominal;
+  }
+}
+
+function updateSheetData(sheet, dataArray, keyField, defaultHeaders, opts) {
   if (!sheet) return;
+  opts = opts || {};
+  var replaceAllowed = opts.replaceAllowed === true;
+  var statusForwardOnly = opts.statusForwardOnly === true;
+  var isTagihan = keyField === "id" && sheet.getName() === "Tagihan";
+  var useStatusGuard = statusForwardOnly && isTagihan;
+
   if (!dataArray || !Array.isArray(dataArray)) dataArray = [];
-  
-  var seenKeys = {};
+
+  // Dedupe payload masuk berdasarkan kunci unik
   var cleanArray = [];
-  
-  dataArray.forEach(function(item) {
+  var seenKeys = {};
+  dataArray.forEach(function (item) {
     if (!item) return;
-    var rawKey = keyField ? item[keyField] : (item.id || item.username || item.blokNo);
-    var key = keyField === "blokNo" ? normalizeBlokGS(rawKey) : String(rawKey).trim().toLowerCase();
-    
-    if (keyField === "blokNo" && item.blokNo) {
-      item.blokNo = normalizeBlokGS(item.blokNo);
+    if (keyField === "blokNo" && item.blokNo) item.blokNo = normalizeBlokGS(item.blokNo);
+    var key = keyOfRow(item, keyField);
+    if (key && !seenKeys[key]) { seenKeys[key] = true; cleanArray.push(item); }
+  });
+
+  var existing = getSheetData(sheet, keyField);
+
+  // Gabungkan: mulai dari semua baris yang ADA di sheet, lalu timpa dengan payload masuk.
+  // Baris yang TIDAK dikirim tetap dipertahankan (TIDAK dihapus otomatis).
+  var finalByKey = {};
+  var order = [];
+  var seenOrder = {};
+
+  existing.forEach(function (row) {
+    var key = keyOfRow(row, keyField);
+    if (key && !seenOrder[key]) { seenOrder[key] = true; order.push(key); }
+    if (key) finalByKey[key] = row;
+  });
+
+  var incomingKeys = {};
+  var blockedKeys = {};
+
+  cleanArray.forEach(function (item) {
+    var key = keyOfRow(item, keyField);
+    if (!key) return;
+    incomingKeys[key] = true;
+    var cur = finalByKey[key];
+    // PROTEKSI KAS #1: status tagihan TIDAK BOLEH MUNDUR.
+    // Kiriman lama/otomatis tidak bisa mengubah Lunas/Verifikasi kembali jadi Belum Bayar.
+    if (cur && useStatusGuard && statusRankTagihan(item.status) < statusRankTagihan(cur.status)) {
+      blockedKeys[key] = true;
+      return; // pertahankan baris existing apa adanya
     }
-    
-    if (key && !seenKeys[key]) {
-      seenKeys[key] = true;
-      cleanArray.push(item);
+    var merged = cur ? mergeRows(cur, item) : mergeRows(null, item);
+    // PROTEKSI KAS #2: baris yang sudah Lunas/Verifikasi tahan-banting utk auto-sync
+    if (useStatusGuard && cur && isPaidishStatus(cur.status)) {
+      protectCashFields(merged, cur, item);
     }
+    finalByKey[key] = merged;
+    if (!seenOrder[key]) { seenOrder[key] = true; order.push(key); }
+  });
+
+  var finalRows = [];
+  if (replaceAllowed) {
+    // Sinkronisasi admin penuh: baris yang TIDAK dikirim & tidak diblokir = dihapus
+    order.forEach(function (key) {
+      if (incomingKeys[key] || blockedKeys[key]) finalRows.push(finalByKey[key]);
+    });
+  } else {
+    order.forEach(function (key) { finalRows.push(finalByKey[key]); });
+  }
+
+  // Tulis ulang sheet dengan kolom union
+  var headerMap = {};
+  var headers = [];
+  function addHeader(h) {
+    if (!headerMap[h]) { headerMap[h] = true; headers.push(h); }
+  }
+  if (defaultHeaders && Array.isArray(defaultHeaders)) {
+    defaultHeaders.forEach(addHeader);
+  }
+  finalRows.forEach(function (row) {
+    for (var k in row) { if (row.hasOwnProperty(k)) addHeader(k); }
   });
 
   sheet.clear();
-  if (cleanArray.length === 0) {
-    if (defaultHeaders && Array.isArray(defaultHeaders)) {
-      sheet.appendRow(defaultHeaders);
-    }
+  if (finalRows.length === 0) {
+    if (headers.length > 0) sheet.appendRow(headers);
     return;
   }
 
-  // Build complete union of headers
-  var headerMap = {};
-  var headers = [];
-  
-  if (defaultHeaders && Array.isArray(defaultHeaders)) {
-    defaultHeaders.forEach(function(h) {
-      if (!headerMap[h]) {
-        headerMap[h] = true;
-        headers.push(h);
-      }
-    });
-  }
-
-  cleanArray.forEach(function(item) {
-    Object.keys(item).forEach(function(k) {
-      if (!headerMap[k]) {
-        headerMap[k] = true;
-        headers.push(k);
-      }
-    });
-  });
-
   sheet.appendRow(headers);
 
-  var rowsToAppend = cleanArray.map(function(item) {
-    return headers.map(function(key) {
-      var val = item[key];
-      if (val === undefined || val === null) {
-        return "";
-      }
-      if (typeof val === "object") {
-        return JSON.stringify(val);
-      }
+  var rowsToAppend = finalRows.map(function (row) {
+    return headers.map(function (key) {
+      var val = row[key];
+      if (val === undefined || val === null) return "";
+      if (typeof val === "object") return JSON.stringify(val);
       return val;
     });
   });
@@ -296,6 +408,46 @@ function getRingkasanKasData(sheet) {
     keluar: Number(row[2]) || 0,
     selisih: Number(row[3]) || 0
   };
+}
+
+function money(v) {
+  if (v === undefined || v === null || v === "") return 0;
+  var n = typeof v === "number" ? v : parseFloat(String(v));
+  return isNaN(n) ? 0 : n;
+}
+
+// Menghitung kas PERSIS sama dengan rumus di aplikasi (getCalculatedKasBalance):
+//   masuk = (tagihan Lunas non-prepay, non-saldo-lebih) + pemasukanLain
+//   keluar = pengeluaran
+//   kas = masuk - keluar
+function computeRingkasanKas(ss) {
+  var tagihan = getSheetData(ss.getSheetByName("Tagihan") || createTagihanSheet(ss), "id");
+  var pemasukanLain = getSheetData(ss.getSheetByName("PemasukanLain") || createPemasukanLainSheet(ss), "id");
+  var pengeluaran = getSheetData(ss.getSheetByName("Pengeluaran") || createPengeluaranSheet(ss), "id");
+
+  var masukIPL = 0;
+  tagihan.forEach(function (t) {
+    if (!t || t.status !== "Lunas") return;
+    var metode = String(t.metode || "");
+    if (metode === "Sudah Bayar Sblm Sistem" || metode === "Saldo Lebih Bayar") return;
+    var tglStr = (t.tglBayar === undefined || t.tglBayar === null) ? "" : String(t.tglBayar);
+    if (tglStr.indexOf("Sudah Lunas") !== -1 || tglStr.indexOf("Lebih Bayar Bulan Lalu") !== -1) return;
+    if (t.jumlahDibayar !== undefined && t.jumlahDibayar !== null && t.jumlahDibayar !== "") {
+      masukIPL += money(t.jumlahDibayar);
+    } else {
+      masukIPL += money(t.nominal);
+    }
+  });
+
+  var masukLain = 0;
+  pemasukanLain.forEach(function (p) { if (p) masukLain += money(p.nominal); });
+
+  var keluar = 0;
+  pengeluaran.forEach(function (p) { if (p) keluar += money(p.nominal); });
+
+  var masuk = masukIPL + masukLain;
+  var saldo = masuk - keluar;
+  return { kasSaatIni: saldo, masuk: masuk, keluar: keluar, selisih: saldo };
 }
 
 function createTargetIPLSheet(ss) {

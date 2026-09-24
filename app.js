@@ -944,8 +944,8 @@ async function manualSyncGoogleSheet() {
     getCalculatedKasBalance();
     saveState();
 
-    // 3. POST clean merged state back to Google Sheet
-    const payload = getCleanPayloadForGoogleSheet(appState);
+    // 3. POST clean merged state back to Google Sheet (sinkronisasi penuh admin)
+    const payload = getCleanPayloadForGoogleSheet(appState, { forceReplace: true });
     await fetch(activeUrl, {
       method: "POST",
       mode: "no-cors",
@@ -1747,11 +1747,16 @@ function restoreFromLocalBackup() {
   }
 }
 
-function getCleanPayloadForGoogleSheet(state) {
+function getCleanPayloadForGoogleSheet(state, opts) {
   if (!state || typeof state !== "object") return {};
-  
+
   try {
     const stateCopy = JSON.parse(JSON.stringify(state));
+
+    // forceReplace = true HANYA untuk sinkronisasi penuh admin
+    // ("Simpan & Sinkronkan Sekarang" / reset). Auto-sync biasa tetap merge-only
+    // di sisi server (tidak hapus baris, status tidak bisa mundur).
+    stateCopy.forceReplace = !!(opts && opts.forceReplace);
 
     if (stateCopy.tagihan && Array.isArray(stateCopy.tagihan)) {
       stateCopy.tagihan.forEach((t) => {
@@ -1774,7 +1779,7 @@ function getCleanPayloadForGoogleSheet(state) {
 
 // Automatic Real-Time Background Sync to Google Sheet (PRIMARY STORAGE)
 let autoSyncDebounceTimer = null;
-function autoSyncToGoogleSheet(immediate = false) {
+function autoSyncToGoogleSheet(immediate = false, opts = {}) {
   if (!appState) return;
 
   const activeUrl = getGoogleSheetUrl();
@@ -1806,7 +1811,7 @@ function autoSyncToGoogleSheet(immediate = false) {
       console.log("Pre-POST merge skipped:", mergeErr);
     }
 
-    const payload = getCleanPayloadForGoogleSheet(appState);
+    const payload = getCleanPayloadForGoogleSheet(appState, opts);
 
     try {
       fetch(activeUrl, {
@@ -5266,7 +5271,7 @@ function resetPembayaranRidwanDanPengeluaran() {
     getCalculatedKasBalance();
     addAuditLog("Reset Data", "Admin mereset status pembayaran Ridwan (C16) ke Menunggu Pembayaran & menghapus seluruh data pengeluaran");
     saveState();
-    autoSyncToGoogleSheet(true);
+    autoSyncToGoogleSheet(true, { forceReplace: true });
 
     alert("Status pembayaran Ridwan (C16) telah dikembalikan ke Menunggu Pembayaran dan seluruh data pengeluaran telah berhasil dihapus!");
     location.reload();
