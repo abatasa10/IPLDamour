@@ -277,6 +277,8 @@ async function handleLoginSubmit(e) {
       found.mustChangePassword === true;
 
     if (isDefaultPass) {
+      // Password default: wajib ganti password dulu.
+      // Popup tunggakan akan muncul otomatis SETELAH password berhasil disimpan.
       setTimeout(() => {
         openChangePasswordModal(true);
       }, 600);
@@ -361,6 +363,13 @@ function saveNewPassword() {
   saveState();
   closeModal("modal-change-password");
   alert("Password Anda berhasil diperbarui! Silakan gunakan password baru ini untuk login berikutnya.");
+
+  // Setelah ganti password default, tampilkan popup tunggakan warga (jika ada tagihan belum lunas)
+  if (currentUser && currentUser.blokNo && currentUser.blokNo !== "-") {
+    setTimeout(() => {
+      checkWargaTunggakanAlert(currentUser);
+    }, 500);
+  }
 }
 
 function quickLoginDemo(roleType) {
