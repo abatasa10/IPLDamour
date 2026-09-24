@@ -1776,6 +1776,35 @@
     </div>
   </div>
 
+  <!-- MODAL: Konfirmasi Reset Data Default (wajib username + password admin) -->
+  <div class="modal-overlay" id="modal-reset-data" style="z-index: 10003;">
+    <div class="modal-box" style="max-width: 420px; border-radius: 16px; border-top: 4px solid var(--danger);">
+      <div class="modal-header">
+        <div class="modal-title" style="color: var(--danger);"><i class="ri-alert-line"></i> Reset Data Default</div>
+        <button class="close-modal-btn" onclick="closeModal('modal-reset-data')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem;">
+          Tindakan ini akan menghapus <strong>seluruh data transaksi</strong> (tagihan, pengeluaran, pemasukan, kas) dan mengembalikan ke kondisi default.<br><br>
+          Demi keamanan, wajib diisi oleh <strong>Admin yang berwenang</strong>. Siapa yang mereset akan tercatat di Log Aktivitas.
+        </p>
+        <div class="form-group">
+          <label>Username Admin</label>
+          <input type="text" id="reset-admin-username" class="form-control" placeholder="Username admin" autocomplete="username">
+        </div>
+        <div class="form-group">
+          <label>Password Admin</label>
+          <input type="password" id="reset-admin-password" class="form-control" placeholder="Password admin" autocomplete="current-password">
+        </div>
+        <div id="reset-pwd-err" style="color: var(--danger); font-size: 0.8rem; display: none; margin-top: 0.5rem;"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" onclick="closeModal('modal-reset-data')">Batal</button>
+        <button class="btn btn-danger" onclick="confirmResetDataDefault()">Ya, Reset Data Default</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Modal User Management -->
   <div class="modal-overlay" id="modal-user">
     <div class="modal-box">

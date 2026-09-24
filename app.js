@@ -154,8 +154,8 @@ function checkAuthSession() {
       updateNavbarProfile();
       applyRolePermissions();
 
-      // Trigger tunggakan alert for warga on session restore (page reload)
-      if (currentUser && currentUser.role === "warga" && currentUser.blokNo && currentUser.blokNo !== "-") {
+      // Trigger tunggakan alert for house owners on session restore (page reload)
+      if (currentUser && currentUser.blokNo && currentUser.blokNo !== "-") {
         setTimeout(() => {
           checkWargaTunggakanAlert(currentUser);
         }, 1200);
@@ -278,8 +278,8 @@ async function handleLoginSubmit(e) {
       setTimeout(() => {
         openChangePasswordModal(true);
       }, 600);
-    } else if (found.role === "warga" && found.blokNo && found.blokNo !== "-") {
-      // Show tunggakan alert for warga after login
+    } else if (found.blokNo && found.blokNo !== "-") {
+      // Show tunggakan alert for house owners after login
       setTimeout(() => {
         checkWargaTunggakanAlert(found);
       }, 800);
@@ -532,10 +532,11 @@ function applyRolePermissions() {
     }
   });
 
-  // Show/hide Tagihan Saya nav item for warga
+  // Show/hide Tagihan Saya nav item for users connected to a house
   const tsNavItem = document.getElementById("nav-tagihan-saya-item");
   if (tsNavItem) {
-    tsNavItem.style.display = isWarga ? "flex" : "none";
+    const hasHouse = currentUser && currentUser.blokNo && currentUser.blokNo !== "-";
+    tsNavItem.style.display = hasHouse ? "flex" : "none";
   }
 
   renderMasterUsers();
@@ -1844,44 +1845,6 @@ function autoSyncToGoogleSheet(immediate = false) {
     executeSync();
   } else {
     autoSyncDebounceTimer = setTimeout(executeSync, 500);
-  }
-}
-
-function clearAllAppData() {
-  if (confirm("Apakah Anda yakin ingin mengosongkan SELURUH data? Anda dapat menginput ulang data rumah dan transaksi satu per satu dari awal.")) {
-    appState = {
-      settings: { appName: "D'AMOUR Sistem IPL", perumahan: "Perumahan D'AMOUR", periodeAktif: "2025-08", googleSheetApiUrl: "" },
-      biayaSampahDefault: 25000,
-      _transactionsCleared: true,
-      users: DEFAULT_USERS,
-      targetIPL: [
-        { id: "tgt-1", kelompok: "IPL + Sampah", target: 175000, keterangan: "IPL + Sampah" },
-        { id: "tgt-2", kelompok: "IPL Tanpa Sampah", target: 150000, keterangan: "IPL Tanpa Sampah" },
-        { id: "tgt-3", kelompok: "IPL Developer", target: 166000, keterangan: "IPL Developer" }
-      ],
-      masterEvent: [
-        { id: "evt-1", nama: "Iuran THR Satpam", nominal: 50000, dibayarOleh: "Semua", aktif: true },
-        { id: "evt-2", nama: "Iuran 17 Agustus", nominal: 20000, dibayarOleh: "Semua", aktif: false }
-      ],
-      komponenIPL: [
-        { id: "komp-1", nama: "Satpam 1", nominalTotal: 1750000, isAutoKas: false, dibayarOleh: "Semua", aktif: true },
-        { id: "komp-2", nama: "Kas (Otomatis)", nominalTotal: 0, isAutoKas: true, dibayarOleh: "Semua", aktif: true },
-        { id: "komp-4", nama: "Listrik + Wifi", nominalTotal: 550000, isAutoKas: false, dibayarOleh: "Semua", aktif: true },
-        { id: "komp-5", nama: "Tambahan Developer", nominalTotal: 32000, isAutoKas: false, dibayarOleh: "IPL Developer", aktif: true },
-        { id: "komp-6", nama: "Satpam 2", nominalTotal: 1500000, isAutoKas: false, dibayarOleh: "Semua", aktif: true },
-        { id: "komp-7", nama: "Satpam (Inval)", nominalTotal: 450000, isAutoKas: false, dibayarOleh: "Semua", aktif: true }
-      ],
-      rumah: [],
-      tagihan: [],
-      pengeluaran: [],
-      pemasukanLain: [],
-      grafik6Bulan: [],
-      ringkasanKas: { kasSaatIni: 0, masuk: 0, keluar: 0, selisih: 0 }
-    };
-
-    saveState();
-    alert("Seluruh data telah dikosongkan. Silakan mulai menginput data rumah dan transaksi satu per satu!");
-    location.reload();
   }
 }
 
@@ -5233,7 +5196,134 @@ function resetPembayaranRidwanDanPengeluaran() {
 }
 
 function resetDataDefault() {
-  clearAllAppData();
+  const isAdmin = currentUser && currentUser.role === "admin";
+  if (!isAdmin) {
+    alert("Akses Ditolak: Hanya Admin yang berwenang melakukan reset data default.");
+    return;
+  }
+
+  const nameInput = document.getElementById("reset-admin-username");
+  if (nameInput && currentUser) nameInput.value = currentUser.username || "";
+  const pwdInput = document.getElementById("reset-admin-password");
+  if (pwdInput) pwdInput.value = "";
+  const errBox = document.getElementById("reset-pwd-err");
+  if (errBox) errBox.style.display = "none";
+
+  openModal("modal-reset-data");
+}
+
+async function confirmResetDataDefault() {
+  const errBox = document.getElementById("reset-pwd-err");
+  const showErr = (msg) => {
+    if (errBox) {
+      errBox.textContent = msg;
+      errBox.style.display = "block";
+    }
+  };
+
+  const username = (document.getElementById("reset-admin-username")?.value || "").trim();
+  const password = (document.getElementById("reset-admin-password")?.value || "").trim();
+
+  if (!username || !password) {
+    showErr("Username dan password admin wajib diisi.");
+    return;
+  }
+
+  let searchPool = [...DEFAULT_USERS];
+  if (appState && Array.isArray(appState.users) && appState.users.length > 0) {
+    appState.users.forEach((u) => {
+      const idx = searchPool.findIndex((existing) => existing.username.toLowerCase() === u.username.toLowerCase());
+      if (idx !== -1) {
+        searchPool[idx] = u;
+      } else {
+        searchPool.push(u);
+      }
+    });
+  }
+
+  const hashedInput = await hashPassword(password);
+  const uClean = username.toLowerCase().replace(/[^a-z0-9]/g, "");
+
+  const actor = searchPool.find((u) => {
+    const uUserClean = (u.username || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+    const uBlokClean = (u.blokNo || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+    const uNameClean = (u.name || "").toLowerCase();
+    const match =
+      uUserClean === uClean ||
+      uBlokClean === uClean ||
+      (u.username || "").toLowerCase() === username.toLowerCase() ||
+      (username.length >= 3 && uNameClean.includes(username.toLowerCase()));
+    if (!match) return false;
+
+    const storedPass = (u.password || "").trim();
+    return (
+      storedPass === password ||
+      storedPass.toLowerCase() === password.toLowerCase() ||
+      storedPass === hashedInput
+    );
+  });
+
+  if (!actor || actor.role !== "admin") {
+    showErr("Akun tidak ditemukan, bukan Admin, atau password salah. Reset dibatalkan.");
+    return;
+  }
+
+  const confirmMsg =
+    `PERINGATAN TERAKHIR!\n\n` +
+    `Admin: ${actor.name} (${actor.username})\n\n` +
+    `Seluruh data transaksi (tagihan, pengeluaran, pemasukan, kas) akan dihapus dan dikembalikan ke kondisi default.\n\n` +
+    `Identitas Anda akan tercatat di Log Aktivitas. Lanjutkan?`;
+  if (!confirm(confirmMsg)) return;
+
+  closeModal("modal-reset-data");
+  executeResetDataDefault(`${actor.name} (${actor.username})`);
+}
+
+function executeResetDataDefault(actorLabel) {
+  const freshState = {
+    settings: { appName: "D'AMOUR Sistem IPL", perumahan: "Perumahan D'AMOUR", periodeAktif: "2025-08", googleSheetApiUrl: "" },
+    biayaSampahDefault: 25000,
+    _transactionsCleared: true,
+    users: DEFAULT_USERS,
+    targetIPL: [
+      { id: "tgt-1", kelompok: "IPL + Sampah", target: 175000, keterangan: "IPL + Sampah" },
+      { id: "tgt-2", kelompok: "IPL Tanpa Sampah", target: 150000, keterangan: "IPL Tanpa Sampah" },
+      { id: "tgt-3", kelompok: "IPL Developer", target: 166000, keterangan: "IPL Developer" }
+    ],
+    masterEvent: [
+      { id: "evt-1", nama: "Iuran THR Satpam", nominal: 50000, dibayarOleh: "Semua", aktif: true },
+      { id: "evt-2", nama: "Iuran 17 Agustus", nominal: 20000, dibayarOleh: "Semua", aktif: false }
+    ],
+    komponenIPL: [
+      { id: "komp-1", nama: "Satpam 1", nominalTotal: 1750000, isAutoKas: false, dibayarOleh: "Semua", aktif: true },
+      { id: "komp-2", nama: "Kas (Otomatis)", nominalTotal: 0, isAutoKas: true, dibayarOleh: "Semua", aktif: true },
+      { id: "komp-4", nama: "Listrik + Wifi", nominalTotal: 550000, isAutoKas: false, dibayarOleh: "Semua", aktif: true },
+      { id: "komp-5", nama: "Tambahan Developer", nominalTotal: 32000, isAutoKas: false, dibayarOleh: "IPL Developer", aktif: true },
+      { id: "komp-6", nama: "Satpam 2", nominalTotal: 1500000, isAutoKas: false, dibayarOleh: "Semua", aktif: true },
+      { id: "komp-7", nama: "Satpam (Inval)", nominalTotal: 450000, isAutoKas: false, dibayarOleh: "Semua", aktif: true }
+    ],
+    rumah: [],
+    tagihan: [],
+    pengeluaran: [],
+    pemasukanLain: [],
+    grafik6Bulan: [],
+    ringkasanKas: { kasSaatIni: 0, masuk: 0, keluar: 0, selisih: 0 },
+    auditLog: [
+      {
+        id: `LOG-${Date.now()}`,
+        timestamp: new Date().toLocaleString("id-ID"),
+        actor: actorLabel,
+        action: "Reset Data Default",
+        detail: "Admin me-reset seluruh data transaksi ke kondisi default (tagihan, pengeluaran, pemasukan, kas dikosongkan)."
+      }
+    ]
+  };
+
+  appState = freshState;
+  saveState();
+
+  alert(`Seluruh data telah dikosongkan oleh ${actorLabel}.\nTindakan ini tercatat di Log Aktivitas.`);
+  location.reload();
 }
 
 // Modal Helpers
@@ -5498,7 +5588,7 @@ function updateMonitoringNavBadge(count) {
 
 // Cek dan tampilkan pop-up notifikasi tunggakan setelah warga login
 function checkWargaTunggakanAlert(user) {
-  if (!appState || !user || user.role !== "warga" || !user.blokNo || user.blokNo === "-") return;
+  if (!appState || !user || !user.blokNo || user.blokNo === "-") return;
 
   const blok = normalizeBlok(user.blokNo);
   const unpaidBills = (appState.tagihan || []).filter(t =>
@@ -5529,10 +5619,10 @@ function checkWargaTunggakanAlert(user) {
   openModal("modal-tunggakan-alert");
 }
 
-// Render halaman Tagihan Saya untuk warga
+// Render halaman Tagihan Saya untuk pemilik rumah
 function renderTagihanSaya() {
-  if (!currentUser || currentUser.role !== "warga" || !currentUser.blokNo || currentUser.blokNo === "-") {
-    // Jika bukan warga, redirect ke dashboard
+  if (!currentUser || !currentUser.blokNo || currentUser.blokNo === "-") {
+    // Jika tidak terhubung ke rumah, redirect ke dashboard
     showView("dashboard");
     return;
   }
