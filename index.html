@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
@@ -18,7 +18,7 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   
   <!-- App Styles -->
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="styles.css?v=20260924_03">
 
   <!-- PWA & Mobile Meta Tags -->
   <link rel="manifest" href="manifest.json">
@@ -358,7 +358,7 @@
                 <div class="card-header">
                   <div class="card-title">Grafik Pembayaran 6 Bulan Terakhir</div>
                 </div>
-                <div style="height: 250px;">
+                <div style="height: 250px; position: relative; width: 100%; max-width: 100%; min-width: 0; overflow: hidden;">
                   <canvas id="chart-pembayaran-history"></canvas>
                 </div>
               </div>
@@ -388,7 +388,7 @@
                 <div class="card-header">
                   <div class="card-title">Status Tagihan Bulan Ini</div>
                 </div>
-                <div style="height: 220px; position: relative;">
+                <div style="height: 220px; position: relative; width: 100%; max-width: 100%; min-width: 0; overflow: hidden;">
                   <canvas id="chart-status-tagihan"></canvas>
                 </div>
               </div>

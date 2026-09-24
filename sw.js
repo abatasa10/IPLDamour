@@ -1,5 +1,5 @@
 // D'AMOUR IPL - Service Worker
-const CACHE_NAME = 'damour-ipl-v1.0.1';
+const CACHE_NAME = 'damour-ipl-v1.0.2';
 
 const PRECACHE_ASSETS = [
   './',

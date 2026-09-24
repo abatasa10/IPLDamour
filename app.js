@@ -44,6 +44,16 @@ const formatRpDecimal = (num) => {
   }).format(num);
 };
 
+const formatTableDate = (val) => {
+  if (!val || val === "-") return "-";
+  if (typeof val === "string" && val.includes("T")) {
+    const dStr = val.split("T")[0];
+    const parts = dStr.split("-");
+    if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
+  }
+  return val;
+};
+
 // Initialize App
 document.addEventListener("DOMContentLoaded", async () => {
   try {
@@ -2053,8 +2063,8 @@ function renderDashboard() {
             <tr>
               <td><strong>${t.blokNo}</strong> - ${t.pemilik}</td>
               <td><span class="badge ${badgeClass}">${t.status}</span></td>
-              <td>${t.tglBayar}</td>
-              <td style="text-align: right; font-weight: 600;">${formatRp(t.nominal)}</td>
+              <td style="white-space: nowrap;">${formatTableDate(t.tglBayar)}</td>
+              <td style="text-align: right; font-weight: 600; white-space: nowrap;">${formatRp(t.nominal)}</td>
             </tr>
           `;
         })
@@ -2072,9 +2082,9 @@ function renderDashboard() {
         .map(
           (p) => `
           <tr>
-            <td>${p.tanggal}</td>
+            <td style="white-space: nowrap;">${formatTableDate(p.tanggal)}</td>
             <td><strong>${p.kategori}</strong></td>
-            <td style="text-align: right; font-weight: 600;">${formatRp(p.nominal)}</td>
+            <td style="text-align: right; font-weight: 600; white-space: nowrap;">${formatRp(p.nominal)}</td>
           </tr>
         `
         )
