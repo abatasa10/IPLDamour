@@ -1080,7 +1080,14 @@ async function loadAppData() {
   }
 
   if (!appState || !appState.rumah || appState.rumah.length === 0) {
+    // Jangan sampai auditLog (jejak siapa yang reset) ikut hilang saat fallback ke data.json
+    const preservedAudit = (appState && Array.isArray(appState.auditLog) && appState.auditLog.length > 0)
+      ? appState.auditLog
+      : null;
     appState = jsonBackup;
+    if (preservedAudit) {
+      appState.auditLog = preservedAudit;
+    }
   }
 
   // 2. PRIMARY DATA SOURCE: FETCH LIVE FROM GOOGLE SPREADSHEET API FIRST
