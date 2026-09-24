@@ -1882,6 +1882,15 @@ function mergeCloudTagihanIntoLocal(cloudTagihan) {
     const isLocalUnpaid = localStatus === "Menunggu Pembayaran" || localStatus === "Menunggak";
     const hasCloudBukti = !!(cloudT.buktiTransfer && cloudT.buktiTransfer.length > 20 && cloudT.buktiTransfer !== "-" && cloudT.buktiTransfer !== "bukti: foto (ukuran terlalu besar)");
 
+    // Cloud adalah SUMBER UTAMA (PRIMARY): adopsi nilai keuangan dari cloud
+    // agar antar-perangkat (HP vs Web) tidak saling menimpa angka kas.
+    if (cloudT.metode !== undefined && cloudT.metode !== null) out.metode = cloudT.metode;
+    if (cloudT.nominal !== undefined && cloudT.nominal !== null) out.nominal = cloudT.nominal;
+    if (cloudT.jumlahDibayar !== undefined && cloudT.jumlahDibayar !== null && cloudT.jumlahDibayar !== "") out.jumlahDibayar = cloudT.jumlahDibayar;
+    if (cloudT.potonganDeposit !== undefined && cloudT.potonganDeposit !== null) out.potonganDeposit = cloudT.potonganDeposit;
+    if (cloudT.tglBayar !== undefined && cloudT.tglBayar !== null && cloudT.tglBayar !== "") out.tglBayar = cloudT.tglBayar;
+    if (Array.isArray(cloudT.rincianItems)) out.rincianItems = cloudT.rincianItems;
+
     if (cloudStatus === "Menunggu Verifikasi" && isLocalUnpaid) {
       out.status = "Menunggu Verifikasi";
       if (hasCloudBukti) out.buktiTransfer = cloudT.buktiTransfer;
