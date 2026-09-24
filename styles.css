@@ -1226,3 +1226,215 @@ body.sidebar-is-open {
   animation: pulse-danger 1.5s ease infinite;
 }
 
+/* =============================================
+   MONITORING TUNGGAKAN - FILTER & CONTROLS
+   ============================================= */
+.mt-main-card {
+  margin-bottom: 1.25rem;
+}
+
+.mt-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.mt-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.mt-filter-bar {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.mt-search-box {
+  flex: 1.2;
+  min-width: 200px;
+}
+
+.mt-filter-controls {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.75rem;
+  flex: 2;
+}
+
+.mt-select-wrapper {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.mt-select-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  white-space: nowrap;
+}
+
+.mt-select-wrapper select {
+  font-weight: 500;
+  width: 100%;
+}
+
+.mt-progress-wrapper {
+  padding-top: 0.75rem;
+  border-top: 1px dashed var(--border-color);
+}
+
+.mt-progress-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.4rem;
+}
+
+.mt-progress-title {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.mt-progress-label {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--primary);
+}
+
+.mt-progress-track {
+  height: 9px;
+  background: #e2e8f0;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+#mt-progress-bar {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #2563eb, #10b981);
+  border-radius: 999px;
+  transition: width 0.6s ease;
+}
+
+/* Responsive adjustments for Monitoring Tunggakan */
+@media (max-width: 768px) {
+  .mt-card-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.65rem;
+    margin-bottom: 0.75rem;
+    padding-bottom: 0.65rem;
+  }
+
+  .mt-card-header .card-title {
+    font-size: 0.95rem;
+  }
+
+  .mt-header-actions {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+    gap: 0.5rem;
+  }
+
+  .mt-header-actions .btn-group {
+    display: flex;
+    gap: 0.25rem;
+  }
+
+  .mt-header-actions .btn {
+    padding: 0.35rem 0.6rem;
+    font-size: 0.78rem;
+  }
+
+  .mt-filter-bar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.6rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .mt-search-box {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  .mt-search-box input {
+    width: 100% !important;
+    font-size: 0.85rem;
+  }
+
+  .mt-filter-controls {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+    width: 100%;
+  }
+
+  .mt-select-wrapper select {
+    width: 100% !important;
+    font-size: 0.78rem !important;
+    padding: 0.4rem 0.45rem !important;
+    text-overflow: ellipsis;
+  }
+
+  .mt-progress-wrapper {
+    padding-top: 0.6rem;
+  }
+
+  .mt-progress-title,
+  .mt-progress-label {
+    font-size: 0.75rem;
+  }
+
+  /* Neat 2-column grid for block cards on mobile */
+  #mt-grid-container {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 0.65rem !important;
+    margin-bottom: 1.25rem;
+  }
+
+  .mt-block-card {
+    padding: 0.75rem 0.45rem !important;
+    gap: 0.35rem !important;
+    border-radius: var(--radius-md) !important;
+  }
+
+  .mt-block-label {
+    font-size: 1.05rem !important;
+  }
+
+  .mt-block-owner {
+    font-size: 0.7rem !important;
+  }
+
+  .mt-block-nominal {
+    font-size: 0.72rem !important;
+    padding: 0.15rem 0.4rem !important;
+  }
+
+  .mt-block-icon {
+    font-size: 1.25rem !important;
+  }
+
+  .mt-block-months {
+    font-size: 0.65rem !important;
+  }
+}
+

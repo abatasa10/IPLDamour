@@ -18,7 +18,7 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   
   <!-- App Styles -->
-  <link rel="stylesheet" href="styles.css?v=20260924_03">
+  <link rel="stylesheet" href="styles.css?v=20260924_04">
 
   <!-- PWA & Mobile Meta Tags -->
   <link rel="manifest" href="manifest.json">
@@ -1255,41 +1255,56 @@
           </div>
 
           <!-- Filter & Header -->
-          <div class="card" style="margin-bottom: 1.5rem;">
-            <div class="card-header" style="flex-wrap: wrap; gap: 0.75rem;">
+          <div class="card mt-main-card">
+            <div class="card-header mt-card-header">
               <div class="card-title"><i class="ri-alarm-warning-line"></i> Monitoring Tunggakan IPL Per Blok</div>
-              <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center;">
-                <div class="input-search-wrapper" style="max-width: 200px;">
-                  <i class="ri-search-line"></i>
-                  <input type="text" id="mt-search" class="form-control" placeholder="Cari blok / pemilik..." oninput="renderMonitoringTunggakan()">
+              <div class="mt-header-actions">
+                <div class="btn-group" style="display: flex; gap: 0.35rem;">
+                  <button class="btn btn-outline btn-sm" id="mt-view-grid" onclick="setMonitoringView('grid')" title="Tampilan Kotak">
+                    <i class="ri-layout-grid-line"></i> Kotak
+                  </button>
+                  <button class="btn btn-outline btn-sm" id="mt-view-table" onclick="setMonitoringView('table')" title="Tampilan List / Tabel">
+                    <i class="ri-list-check-2"></i> List
+                  </button>
                 </div>
-                <div style="display: flex; align-items: center; gap: 0.4rem;">
-                  <label for="mt-filter-periode" style="margin: 0; font-size: 0.8rem; font-weight: 600; color: var(--text-muted); white-space: nowrap;"><i class="ri-calendar-event-line"></i> Periode Bulan:</label>
-                  <select id="mt-filter-periode" class="form-control" style="width: auto; font-weight: 600;" onchange="renderMonitoringTunggakan()">
+                <button class="btn btn-outline btn-sm" onclick="window.print()" title="Cetak Rekap">
+                  <i class="ri-printer-line"></i> Cetak
+                </button>
+              </div>
+            </div>
+
+            <!-- Filter Controls Bar -->
+            <div class="mt-filter-bar">
+              <div class="input-search-wrapper mt-search-box">
+                <i class="ri-search-line"></i>
+                <input type="text" id="mt-search" class="form-control" placeholder="Cari blok / pemilik..." oninput="renderMonitoringTunggakan()">
+              </div>
+              <div class="mt-filter-controls">
+                <div class="mt-select-wrapper">
+                  <label for="mt-filter-periode" class="mt-select-label"><i class="ri-calendar-event-line"></i> Periode Bulan:</label>
+                  <select id="mt-filter-periode" class="form-control" onchange="renderMonitoringTunggakan()">
                     <option value="semua">Semua Periode (Akumulasi)</option>
                   </select>
                 </div>
-                <select id="mt-filter-status" class="form-control" style="width: auto;" onchange="renderMonitoringTunggakan()">
-                  <option value="semua">Semua Status</option>
-                  <option value="menunggak">Belum Bayar Saja</option>
-                  <option value="lunas">Lunas Saja</option>
-                </select>
-                <div style="display: flex; gap: 0.35rem;">
-                  <button class="btn btn-outline btn-sm" id="mt-view-grid" onclick="setMonitoringView('grid')" title="Tampilan Kotak" style="padding: 0.35rem 0.6rem;"><i class="ri-layout-grid-line"></i> Kotak</button>
-                  <button class="btn btn-outline btn-sm" id="mt-view-table" onclick="setMonitoringView('table')" title="Tampilan List / Tabel" style="padding: 0.35rem 0.6rem;"><i class="ri-list-check-2"></i> List</button>
+                <div class="mt-select-wrapper">
+                  <label for="mt-filter-status" class="mt-select-label"><i class="ri-filter-3-line"></i> Status:</label>
+                  <select id="mt-filter-status" class="form-control" onchange="renderMonitoringTunggakan()">
+                    <option value="semua">Semua Status</option>
+                    <option value="menunggak">Belum Bayar Saja</option>
+                    <option value="lunas">Lunas Saja</option>
+                  </select>
                 </div>
-                <button class="btn btn-outline btn-sm" onclick="window.print()"><i class="ri-printer-line"></i> Cetak</button>
               </div>
             </div>
 
             <!-- Progress Bar -->
-            <div style="padding: 0 1.25rem 1rem;">
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
-                <span style="font-size: 0.8rem; font-weight: 600; color: var(--text-muted);" id="mt-progress-title">Progress Pembayaran Periode</span>
-                <span id="mt-progress-label" style="font-size: 0.8rem; font-weight: 700; color: var(--primary);">0 / 0 unit lunas</span>
+            <div class="mt-progress-wrapper">
+              <div class="mt-progress-header">
+                <span id="mt-progress-title" class="mt-progress-title">Progress Pembayaran Periode</span>
+                <span id="mt-progress-label" class="mt-progress-label">0 / 0 unit lunas</span>
               </div>
-              <div style="height: 10px; background: #e2e8f0; border-radius: 999px; overflow: hidden;">
-                <div id="mt-progress-bar" style="height: 100%; width: 0%; background: linear-gradient(90deg, #2563eb, #10b981); border-radius: 999px; transition: width 0.6s ease;"></div>
+              <div class="mt-progress-track">
+                <div id="mt-progress-bar"></div>
               </div>
             </div>
           </div>
