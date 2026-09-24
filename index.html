@@ -96,13 +96,18 @@
     <!-- Sidebar Navigation -->
     <aside class="sidebar">
       <div class="brand-header">
-        <div class="brand-logo">
-          <i class="ri-home-4-line"></i>
+        <div style="display: flex; align-items: center; gap: 0.75rem;">
+          <div class="brand-logo">
+            <i class="ri-home-4-line"></i>
+          </div>
+          <div>
+            <div class="brand-title">D'AMOUR</div>
+            <div class="brand-subtitle">Sistem IPL</div>
+          </div>
         </div>
-        <div>
-          <div class="brand-title">D'AMOUR</div>
-          <div class="brand-subtitle">Sistem IPL</div>
-        </div>
+        <button class="sidebar-close-btn" onclick="toggleSidebar(false)" aria-label="Tutup Menu">
+          <i class="ri-close-line"></i>
+        </button>
       </div>
       
       <nav class="nav-menu">
@@ -207,17 +212,17 @@
       <!-- Top Navbar -->
       <header class="navbar">
         <div class="nav-left">
-          <button class="toggle-sidebar-btn" id="toggle-sidebar">
+          <button class="toggle-sidebar-btn" id="toggle-sidebar" onclick="toggleSidebar()" aria-label="Buka Menu Navigasi" title="Menu Navigasi">
             <i class="ri-menu-line"></i>
           </button>
           <div class="page-breadcrumb" id="page-title-breadcrumb">Dashboard</div>
-          <div id="gs-storage-badge" style="display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.25rem 0.65rem; background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; border-radius: 20px; font-size: 0.75rem; font-weight: 600; margin-left: 0.75rem;">
-            <i class="ri-google-line"></i> <span id="gs-storage-text">Storage: Google Sheet</span>
+          <div id="gs-storage-badge" class="nav-desktop-only" style="display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.25rem 0.65rem; background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; border-radius: 20px; font-size: 0.75rem; font-weight: 600; margin-left: 0.5rem;">
+            <i class="ri-google-line"></i> <span id="gs-storage-text">Google Sheet</span>
           </div>
-          <button id="btn-sinkron-manual" class="btn btn-outline btn-sm role-admin-only" style="margin-left: 0.5rem; font-size: 0.75rem; padding: 0.2rem 0.65rem; border-radius: 20px; display: inline-flex; align-items: center; gap: 0.3rem;" onclick="manualSyncGoogleSheet()">
-            <i class="ri-refresh-line"></i> Sinkron Manual
+          <button id="btn-sinkron-manual" class="btn btn-outline btn-sm role-admin-only nav-desktop-only" style="margin-left: 0.35rem; font-size: 0.75rem; padding: 0.2rem 0.65rem; border-radius: 20px; display: inline-flex; align-items: center; gap: 0.3rem;" onclick="manualSyncGoogleSheet()">
+            <i class="ri-refresh-line"></i> <span>Sinkron Manual</span>
           </button>
-          <button class="btn btn-sm" style="margin-left: 0.5rem; font-size: 0.75rem; padding: 0.25rem 0.75rem; border-radius: 20px; background: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; display: inline-flex; align-items: center; gap: 0.35rem; font-weight: 600; cursor: pointer;" onclick="showView('monitoring-tunggakan')">
+          <button class="btn btn-sm nav-desktop-only" style="margin-left: 0.35rem; font-size: 0.75rem; padding: 0.25rem 0.75rem; border-radius: 20px; background: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; display: inline-flex; align-items: center; gap: 0.35rem; font-weight: 600; cursor: pointer;" onclick="showView('monitoring-tunggakan')">
             <i class="ri-alarm-warning-line"></i> Monitoring Tunggakan
           </button>
         </div>
@@ -248,7 +253,7 @@
 
           <div class="user-profile" style="position: relative; cursor: pointer;" onclick="toggleUserDropdown(event)">
             <div class="avatar" id="nav-user-avatar">A</div>
-            <div style="display: flex; flex-direction: column;">
+            <div style="display: flex; flex-direction: column;" class="user-profile-info">
               <span style="font-weight: 600; font-size: 0.85rem;" id="nav-user-name">Pak Budi (Admin Warga)</span>
               <span class="badge badge-success" style="font-size: 0.65rem; padding: 0.1rem 0.4rem; width: fit-content;" id="nav-user-role">Admin Pengurus</span>
             </div>
@@ -1913,8 +1918,41 @@
     </div>
   </div>
 
-  <script src="app.js?v=20260913_02"></script>
+  <script src="app.js?v=20260924_01"></script>
   <script>
+    // Global Sidebar Toggle for Mobile & Tablet
+    window.toggleSidebar = function(forceState) {
+      const sidebar = document.querySelector(".sidebar");
+      const backdrop = document.getElementById("sidebar-backdrop");
+      if (!sidebar) return;
+      const willOpen = (typeof forceState === "boolean") ? forceState : !sidebar.classList.contains("open");
+      if (willOpen) {
+        sidebar.classList.add("open");
+        if (backdrop) {
+          backdrop.style.display = "block";
+          setTimeout(() => backdrop.classList.add("active"), 10);
+        }
+        document.body.classList.add("sidebar-is-open");
+      } else {
+        sidebar.classList.remove("open");
+        if (backdrop) {
+          backdrop.classList.remove("active");
+          setTimeout(() => {
+            if (!sidebar.classList.contains("open")) backdrop.style.display = "none";
+          }, 250);
+        }
+        document.body.classList.remove("sidebar-is-open");
+      }
+    };
+
+    // Close sidebar when clicking backdrop
+    window.addEventListener("DOMContentLoaded", () => {
+      const backdrop = document.getElementById("sidebar-backdrop");
+      if (backdrop) {
+        backdrop.addEventListener("click", () => window.toggleSidebar(false));
+      }
+    });
+
     function togglePasswordVisibility() {
       const pwdInp = document.getElementById("login-password");
       const icon = document.getElementById("toggle-pwd-icon");
