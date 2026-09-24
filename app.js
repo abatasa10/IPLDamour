@@ -457,6 +457,7 @@ function updateAdminNotifications() {
         <div style="text-align: center; color: var(--text-muted); padding: 1.25rem 0.5rem; font-size: 0.8rem;">
           <i class="ri-checkbox-circle-line" style="font-size: 1.5rem; color: var(--success); display: block; margin-bottom: 0.25rem;"></i>
           Semua pembayaran telah diverifikasi
+          <button class="btn btn-outline btn-sm" style="font-size: 0.7rem; padding: 0.25rem 0.6rem; margin-top: 0.75rem; width: 100%;" onclick="pullCloudAndNotify()"><i class="ri-refresh-line"></i> Segarkan dari Google Sheet</button>
         </div>`;
     } else {
       notifListContainer.innerHTML = pendingVerifications.map((t) => `
@@ -913,31 +914,8 @@ async function manualSyncGoogleSheet() {
       // 2. MERGE cloud data safely with local state
       if (Array.isArray(cloudData.rumah) && cloudData.rumah.length > 0) appState.rumah = cloudData.rumah;
       if (Array.isArray(cloudData.tagihan)) {
-        cloudData.tagihan.forEach((cloudT) => {
-          if (cloudT && appState && Array.isArray(appState.tagihan)) {
-            const localT = appState.tagihan.find((t) => t.id === cloudT.id);
-            if (localT) {
-              if (cloudT.status === "Menunggu Pembayaran" || !cloudT.buktiTransfer || cloudT.buktiTransfer === "-" || cloudT.buktiTransfer === "") {
-                localT.buktiTransfer = "";
-                localT.status = cloudT.status || "Menunggu Pembayaran";
-                cloudT.buktiTransfer = "";
-              } else if (localT.buktiTransfer && localT.buktiTransfer.startsWith("data:image") && cloudT.status === "Menunggu Verifikasi") {
-                if (!cloudT.buktiTransfer || cloudT.buktiTransfer.startsWith("bukti: foto") || cloudT.buktiTransfer.length < 100) {
-                  cloudT.buktiTransfer = localT.buktiTransfer;
-                }
-              }
-            }
-          }
-          if (cloudT && (cloudT.status === "Menunggu Pembayaran" || !cloudT.buktiTransfer || cloudT.buktiTransfer === "-" || cloudT.buktiTransfer === "")) {
-            cloudT.buktiTransfer = "";
-            if (cloudT.status !== "Lunas" && cloudT.status !== "Menunggak") {
-              cloudT.status = "Menunggu Pembayaran";
-            }
-          } else if (cloudT && cloudT.buktiTransfer && (cloudT.buktiTransfer.startsWith("data:image") || cloudT.buktiTransfer.length > 20) && cloudT.status !== "Lunas" && cloudT.id !== "TAG-2026September-C5") {
-            cloudT.status = "Menunggu Verifikasi";
-          }
-        });
-        appState.tagihan = cloudData.tagihan;
+        // Merge aman dua arah: promosi pembayaran baru dari cloud, tanpa membuang data lokal
+        mergeCloudTagihanIntoLocal(cloudData.tagihan);
         const sepC5 = (appState.tagihan || []).find((t) => t.id === "TAG-2026September-C5");
         if (sepC5 && sepC5.status !== "Lunas") {
           sepC5.status = "Menunggu Pembayaran";
@@ -1114,32 +1092,8 @@ async function loadAppData() {
         // Merge cloud data safely instead of blind total overwrite
         if (Array.isArray(cloudData.rumah) && cloudData.rumah.length > 0) appState.rumah = cloudData.rumah;
         if (Array.isArray(cloudData.tagihan)) {
-          cloudData.tagihan.forEach((cloudT) => {
-            if (cloudT && appState && Array.isArray(appState.tagihan)) {
-              const localT = appState.tagihan.find((t) => t.id === cloudT.id);
-              if (localT) {
-                // If cloud explicitly says Menunggu Pembayaran or empty proof, reset local cache
-                if (cloudT.status === "Menunggu Pembayaran" || !cloudT.buktiTransfer || cloudT.buktiTransfer === "-" || cloudT.buktiTransfer === "") {
-                  localT.buktiTransfer = "";
-                  localT.status = cloudT.status || "Menunggu Pembayaran";
-                  cloudT.buktiTransfer = "";
-                } else if (localT.buktiTransfer && localT.buktiTransfer.startsWith("data:image") && cloudT.status === "Menunggu Verifikasi") {
-                  if (!cloudT.buktiTransfer || cloudT.buktiTransfer.startsWith("bukti: foto") || cloudT.buktiTransfer.length < 100) {
-                    cloudT.buktiTransfer = localT.buktiTransfer;
-                  }
-                }
-              }
-            }
-            if (cloudT && (cloudT.status === "Menunggu Pembayaran" || !cloudT.buktiTransfer || cloudT.buktiTransfer === "-" || cloudT.buktiTransfer === "")) {
-              cloudT.buktiTransfer = "";
-              if (cloudT.status !== "Lunas" && cloudT.status !== "Menunggak") {
-                cloudT.status = "Menunggu Pembayaran";
-              }
-            } else if (cloudT && cloudT.buktiTransfer && (cloudT.buktiTransfer.startsWith("data:image") || cloudT.buktiTransfer.length > 20) && cloudT.status !== "Lunas" && cloudT.id !== "TAG-2026September-C5") {
-              cloudT.status = "Menunggu Verifikasi";
-            }
-          });
-          appState.tagihan = cloudData.tagihan;
+          // Merge aman dua arah: promosi pembayaran baru dari cloud, tanpa membuang data lokal
+          mergeCloudTagihanIntoLocal(cloudData.tagihan);
           const sepC5 = (appState.tagihan || []).find((t) => t.id === "TAG-2026September-C5");
           if (sepC5 && sepC5.status !== "Lunas") {
             sepC5.status = "Menunggu Pembayaran";
@@ -3960,17 +3914,7 @@ function savePengeluaran() {
 
   saveState();
 
-  if (appState.settings && appState.settings.googleSheetApiUrl) {
-    const url = appState.settings.googleSheetApiUrl.trim();
-    if (url && url.startsWith("http") && !url.includes("EXAMPLE")) {
-      fetch(url, {
-        method: "POST",
-        mode: "no-cors",
-        headers: { "Content-Type": "text/plain;charset=utf-8" },
-        body: JSON.stringify(appState)
-      }).catch((e) => console.log("Background sync error:", e));
-    }
-  }
+  autoSyncToGoogleSheet(true);
 
   closeModal("modal-pengeluaran");
   renderPengeluaranTable();
@@ -4042,15 +3986,7 @@ function inputSaldoKasSaatIni() {
 
   // Trigger live background sync to Google Spreadsheet if connected
   if (appState.settings && appState.settings.googleSheetApiUrl) {
-    const url = appState.settings.googleSheetApiUrl.trim();
-    if (url && url.startsWith("http") && !url.includes("EXAMPLE")) {
-      fetch(url, {
-        method: "POST",
-        mode: "no-cors",
-        headers: { "Content-Type": "text/plain;charset=utf-8" },
-        body: JSON.stringify(getCleanPayloadForGoogleSheet(appState))
-      }).catch((e) => console.log("Background sync error:", e));
-    }
+    autoSyncToGoogleSheet(true);
   }
 
   alert(`Berhasil memperbarui Kas Saat Ini menjadi ${formatRp(nom)} dan tersimpan ke Google Spreadsheet!`);
@@ -4061,20 +3997,9 @@ function clearAllPemasukanLain() {
 
   appState.pemasukanLain = [];
   saveState();
+  autoSyncToGoogleSheet(true);
   renderDashboard();
   renderKasArusKasTable();
-
-  if (appState.settings && appState.settings.googleSheetApiUrl) {
-    const url = appState.settings.googleSheetApiUrl.trim();
-    if (url && url.startsWith("http") && !url.includes("EXAMPLE")) {
-      fetch(url, {
-        method: "POST",
-        mode: "no-cors",
-        headers: { "Content-Type": "text/plain;charset=utf-8" },
-        body: JSON.stringify(appState)
-      }).catch((e) => console.log("Background sync error:", e));
-    }
-  }
 
   alert("Seluruh catatan Pemasukan Lain-Lain berhasil dikosongkan!");
 }
@@ -4639,19 +4564,9 @@ async function saveAndSyncGoogleSheet() {
   syncTagihanWithMasterRumah();
   deduplicateAppState();
   saveState();
+  autoSyncToGoogleSheet(true);
 
-  try {
-    await fetch(url, {
-      method: "POST",
-      mode: "no-cors",
-      headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify(appState)
-    });
-    alert("Berhasil membersihkan data dummy dan mengirimkan data resmi 31 rumah ke Google Spreadsheet Anda!");
-  } catch (err) {
-    alert("Data lokal tersimpan dan terkirim ke Google Spreadsheet.");
-    console.log("Sync error or CORS mode:", err);
-  }
+  alert("Berhasil membersihkan data dummy dan mengirimkan data resmi 31 rumah ke Google Spreadsheet Anda!");
 }
 
 function exportDataJSON() {
@@ -5340,21 +5255,10 @@ function resetPembayaranRidwanDanPengeluaran() {
     appState.pengeluaran = [];
 
     getCalculatedKasBalance();
-    saveState();
-
-    if (appState.settings && appState.settings.googleSheetApiUrl) {
-      const url = appState.settings.googleSheetApiUrl.trim();
-      if (url && url.startsWith("http") && !url.includes("EXAMPLE")) {
-        fetch(url, {
-          method: "POST",
-          mode: "no-cors",
-          headers: { "Content-Type": "text/plain;charset=utf-8" },
-          body: JSON.stringify(appState)
-        }).catch((e) => console.log("Background sync error:", e));
-      }
-    }
-
     addAuditLog("Reset Data", "Admin mereset status pembayaran Ridwan (C16) ke Menunggu Pembayaran & menghapus seluruh data pengeluaran");
+    saveState();
+    autoSyncToGoogleSheet(true);
+
     alert("Status pembayaran Ridwan (C16) telah dikembalikan ke Menunggu Pembayaran dan seluruh data pengeluaran telah berhasil dihapus!");
     location.reload();
   }
