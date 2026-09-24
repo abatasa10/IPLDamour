@@ -83,10 +83,31 @@ Aplikasi ini dapat disinkronkan dengan Google Spreadsheet Anda:
 
 ---
 
+## 📱 Progressive Web App (PWA) — Instalasi di HP
+
+Aplikasi ini sudah mendukung **PWA**, sehingga warga dan pengurus perumahan dapat menginstalnya langsung ke layar HP seperti aplikasi native:
+
+### 🤖 Untuk Android:
+1. Buka link web di browser Google Chrome.
+2. Klik tombol **"Pasang Aplikasi ke Layar HP"** atau klik menu titik tiga di browser -> **"Install Aplikasi"** / **"Tambahkan ke Layar Utama"**.
+3. Aplikasi akan langsung terpasang di HP dengan icon D'AMOUR dan berjalan fullscreen tanpa bar browser.
+
+### 🍏 Untuk iPhone (iOS):
+1. Buka link web menggunakan browser bawaan **Safari**.
+2. Klik tombol **Share / Bagikan** (ikon kotak panah ke atas) di menu bawah Safari.
+3. Gulir ke bawah dan pilih **"Tambahkan ke Layar Utama"** (*Add to Home Screen* ➕).
+4. Klik **"Tambah"** di pojok kanan atas.
+
+---
+
 ## 📁 Struktur File
 
-- `index.html` : Halaman tunggal SPA & Layout UI.
-- `styles.css` : Styling sistem UI HSL, Modal, & Responsive Design.
-- `app.js`     : Logika perhitungan IPL, Chart.js, CRUD, & LocalStorage store.
-- `data.json`  : Database awal (31 unit rumah & histori transaksi).
-- `README.md`  : Dokumen panduan ini.
+- `index.html`    : Halaman tunggal SPA & Layout UI.
+- `styles.css`    : Styling sistem UI HSL, Modal, & Responsive Design.
+- `app.js`        : Logika perhitungan IPL, Chart.js, CRUD, & LocalStorage store.
+- `data.json`     : Database awal (31 unit rumah & histori transaksi).
+- `manifest.json` : Konfigurasi PWA (nama, warna tema, icon).
+- `sw.js`         : Service Worker untuk caching offline & update otomatis.
+- `icons/`        : Icon aplikasi berbagai resolusi (192px, 512px, iOS touch icon).
+- `README.md`     : Dokumen panduan ini.
+
