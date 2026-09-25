@@ -1,0 +1,7 @@
+# Firebase Service Account Credentials (Secret - DO NOT COMMIT TO PUBLIC REPO)
+*-firebase-adminsdk-*.json
+*.key.json
+
+# OS files
+.DS_Store
+Thumbs.db

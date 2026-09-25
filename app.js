@@ -161,6 +161,12 @@ function checkAuthSession() {
           checkWargaTunggakanAlert(currentUser);
         }, 1200);
       }
+      if (window.initFCMAfterLogin) {
+        window.initFCMAfterLogin(currentUser);
+      }
+      if (typeof updateNotificationUI === "function") {
+        updateNotificationUI();
+      }
       return;
     } catch (e) {
       console.error("Failed to parse user session", e);
@@ -267,6 +273,8 @@ async function handleLoginSubmit(e) {
     updateNavbarProfile();
     applyRolePermissions();
     startRealTimeCloudPolling();
+    // FCM Push Notification: daftarkan token setelah login sukses
+    if (window.initFCMAfterLogin) window.initFCMAfterLogin(found);
     const savedView = localStorage.getItem("damour_last_view") || "dashboard";
     showView(savedView);
     addAuditLog("Login System", `User ${found.name} (${found.username}) berhasil login`);
@@ -2015,6 +2023,10 @@ function showView(viewId) {
   const activeNav = document.querySelector(`.nav-item[data-view="${viewId}"]`);
   if (activeNav) {
     activeNav.classList.add("active");
+  }
+
+  if (typeof updateNotificationUI === "function") {
+    updateNotificationUI();
   }
 
   const breadcrumb = document.getElementById("page-title-breadcrumb");
@@ -5915,6 +5927,10 @@ function renderTagihanSaya() {
         </div>`).join("");
     }
   }
+
+  if (typeof updateNotificationUI === "function") {
+    updateNotificationUI();
+  }
 }
 
 // Buka form pembayaran rapel
@@ -5999,3 +6015,304 @@ function submitRapelPayment() {
 
   alert(`✅ Berhasil!\n\nBukti pembayaran rapel ${totalBulan} bulan (${formatRp(totalNom)}) telah dikirim.\nAdmin akan segera memverifikasi pembayaran Anda.`);
 }
+
+// ============================================================
+// FCM PUSH NOTIFICATION — Subscribe & Token Management
+// ============================================================
+
+// ================================================================
+// FCM PUSH NOTIFICATION CLIENT (Firebase Web Push)
+// ================================================================
+
+/**
+ * Cek status notifikasi dan perbarui UI (tombol navbar, menu dropdown, banner warga)
+ */
+function updateNotificationUI() {
+  const notifBanner = document.getElementById("warga-notif-banner");
+  const btnQuickNotif = document.getElementById("btn-quick-notif");
+  const quickNotifText = document.getElementById("quick-notif-text");
+  const dropdownNotifLabel = document.getElementById("dropdown-notif-label");
+
+  const hasNotif = "Notification" in window;
+
+  // Jika tidak login, sembunyikan semua kontrol notifikasi
+  if (!currentUser) {
+    if (notifBanner) notifBanner.style.display = "none";
+    if (btnQuickNotif) btnQuickNotif.style.display = "none";
+    return;
+  }
+
+  const perm = hasNotif ? Notification.permission : "unsupported";
+
+  if (perm === "granted") {
+    // Notifikasi sudah aktif
+    if (notifBanner) notifBanner.style.display = "none";
+    if (btnQuickNotif) {
+      btnQuickNotif.style.display = "inline-flex";
+      btnQuickNotif.style.borderColor = "#86efac";
+      btnQuickNotif.style.background = "#f0fdf4";
+      btnQuickNotif.style.color = "#15803d";
+      btnQuickNotif.title = "Notifikasi Pengingat Aktif (Klik untuk Tes Notifikasi)";
+      btnQuickNotif.innerHTML = '<i class="ri-checkbox-circle-fill" style="color: #22c55e;"></i> <span id="quick-notif-text">Notif Aktif</span>';
+    }
+    if (dropdownNotifLabel) dropdownNotifLabel.innerHTML = 'Notifikasi Aktif ✅';
+  } else {
+    // Belum aktif (default, denied, atau unsupported)
+    if (notifBanner) {
+      const isWarga = currentUser && currentUser.role === "warga";
+      const isTagihanView = document.getElementById("view-tagihan-saya")?.classList.contains("active");
+      notifBanner.style.display = (isWarga || isTagihanView) ? "block" : "none";
+    }
+    if (btnQuickNotif) {
+      btnQuickNotif.style.display = "inline-flex";
+      btnQuickNotif.style.borderColor = "#93c5fd";
+      btnQuickNotif.style.background = "#eff6ff";
+      btnQuickNotif.style.color = "#1d4ed8";
+      btnQuickNotif.title = "Klik untuk Mengaktifkan Notifikasi Pengingat";
+      btnQuickNotif.innerHTML = '<i class="ri-notification-3-line"></i> <span id="quick-notif-text">Aktifkan Notif</span>';
+    }
+    if (dropdownNotifLabel) dropdownNotifLabel.innerHTML = 'Aktifkan Notifikasi 🔔';
+  }
+}
+
+/**
+ * Pemicu interaksi pengguna (User Gesture) untuk meminta izin notifikasi FCM.
+ * Memenuhi syarat ketat iOS Safari (harus direct tap/click) & PWA Standalone.
+ */
+window.requestNotificationPermissionWithFeedback = async function() {
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  const isStandalone = window.navigator.standalone === true || window.matchMedia("(display-mode: standalone)").matches;
+
+  // 1. Cek jika iPhone tapi dibuka di Safari biasa (bukan dari Layar Utama)
+  if (isIOS && !isStandalone) {
+    if (typeof openModal === "function") {
+      openModal("modal-pwa-ios-instructions");
+    } else {
+      alert("📱 Khusus Pengguna iPhone (iOS):\n\nUntuk mengaktifkan notifikasi di iPhone, Anda wajib memasang aplikasi ini ke Layar Utama terlebih dahulu:\n\n1. Ketuk ikon Bagikan (Share ⬆️) di bilah bawah Safari.\n2. Pilih 'Tambahkan ke Layar Utama' (Add to Home Screen ➕).\n3. Buka aplikasi D'AMOUR dari Layar Utama, lalu ketuk tombol ini lagi.");
+    }
+    return;
+  }
+
+  // 2. Cek dukungan Web Push Notification
+  if (!("Notification" in window)) {
+    alert("Browser pada perangkat ini belum mendukung Web Push Notification.\n\nPastikan iOS Anda minimal versi 16.4+ dan aplikasi dibuka dari Layar Utama (Home Screen).");
+    return;
+  }
+
+  // 3. Jika sudah diizinkan sebelumnya
+  if (Notification.permission === "granted") {
+    const wantTest = confirm("✅ Notifikasi sudah aktif di perangkat ini!\n\nApakah Anda ingin mengirim notifikasi tes sekarang untuk memeriksa di HP Anda?");
+    if (wantTest) {
+      triggerLocalTestNotification();
+    }
+    if (currentUser) {
+      await setupFCMSubscription(currentUser);
+    }
+    updateNotificationUI();
+    return;
+  }
+
+  // 4. Jika izin sebelumnya ditolak/diblokir di pengaturan browser
+  if (Notification.permission === "denied") {
+    alert("⚠️ Izin notifikasi sebelumnya dinonaktifkan.\n\nSilakan buka Pengaturan HP Anda:\nPengaturan > Safari / D'AMOUR > Notifikasi > Izinkan Notifikasi.");
+    return;
+  }
+
+  // 5. Minta izin langsung (Direct User Gesture) - Dialog native Apple / Android akan muncul!
+  try {
+    const perm = await Notification.requestPermission();
+    if (perm === "granted") {
+      if (window.showIPLToast) {
+        window.showIPLToast("🎉 Notifikasi diizinkan! Menyimpan token ke server...");
+      }
+      if (currentUser) {
+        await setupFCMSubscription(currentUser);
+      }
+      updateNotificationUI();
+      triggerLocalTestNotification();
+      alert("🎉 Sukses! Notifikasi pengingat IPL berhasil diaktifkan di HP Anda.\n\nPengingat otomatis akan muncul setiap tanggal 25 & 30. 🏡");
+    } else {
+      alert("Izin notifikasi tidak diberikan.");
+      updateNotificationUI();
+    }
+  } catch (err) {
+    console.error("[FCM] Error requesting permission:", err);
+    alert("Gagal memproses izin notifikasi: " + (err.message || err));
+  }
+};
+
+/**
+ * Trigger local notification untuk tes langsung di perangkat
+ */
+async function triggerLocalTestNotification() {
+  try {
+    if ("serviceWorker" in navigator) {
+      const reg = await navigator.serviceWorker.ready;
+      if (reg && reg.showNotification) {
+        reg.showNotification("📢 D'AMOUR IPL — Notifikasi Aktif", {
+          body: "Sistem pengingat IPL di HP Anda siap menerima notifikasi! 🏡🎉",
+          icon: "icons/icon-192.png",
+          badge: "icons/favicon-32x32.png",
+          vibrate: [200, 100, 200],
+          data: { url: "./" }
+        });
+        return;
+      }
+    }
+    if ("Notification" in window && Notification.permission === "granted") {
+      new Notification("📢 D'AMOUR IPL — Notifikasi Aktif", {
+        body: "Sistem pengingat IPL di HP Anda siap menerima notifikasi! 🏡🎉",
+        icon: "icons/icon-192.png",
+        badge: "icons/favicon-32x32.png"
+      });
+    }
+  } catch (e) {
+    console.warn("[FCM] Local test notif error:", e);
+  }
+}
+
+/**
+ * Minta izin notifikasi dan daftarkan FCM token ke Google Sheet.
+ * Dipanggil saat warga login dan setelah Service Worker aktif.
+ */
+async function setupFCMSubscription(user) {
+  if (!('serviceWorker' in navigator) || !('Notification' in window)) {
+    return;
+  }
+
+  // Hanya ambil token jika izin sudah diberikan (hindari popup otomatis tanpa user gesture)
+  if (Notification.permission !== 'granted') {
+    updateNotificationUI();
+    return;
+  }
+
+  // Tunggu Firebase siap (lazy-loaded di index.html)
+  if (!window.__FCM_MESSAGING__) {
+    console.info('[FCM] Firebase belum siap — skip subscription.');
+    return;
+  }
+
+  try {
+    // Import getToken dari modul Firebase
+    const { getToken } = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging.js');
+
+    const sw = await navigator.serviceWorker.ready;
+    const token = await getToken(window.__FCM_MESSAGING__, {
+      vapidKey: window.__FCM_VAPID_KEY__,
+      serviceWorkerRegistration: sw
+    });
+
+    if (!token) {
+      console.warn('[FCM] Token tidak berhasil didapat.');
+      return;
+    }
+
+    console.log('[FCM] Token didapat, menyimpan ke GAS...');
+    await saveFCMTokenToGAS(token, user);
+    updateNotificationUI();
+
+  } catch (err) {
+    console.warn('[FCM] Setup subscription error:', err);
+  }
+}
+
+/**
+ * Simpan FCM token ke Google Sheet (sheet "PushTokens") via GAS.
+ */
+async function saveFCMTokenToGAS(token, user) {
+  const gasUrl = window.__GAS_URL_FOR_FCM__ || DEFAULT_GOOGLE_SHEET_URL;
+  if (!gasUrl || gasUrl.includes('EXAMPLE')) {
+    console.warn('[FCM] GAS URL belum dikonfigurasi.');
+    return;
+  }
+
+  try {
+    const payload = {
+      pushToken: {
+        token: token,
+        username: user ? user.username : 'unknown',
+        blokNo: user ? (user.blokNo || '-') : '-',
+        name: user ? (user.name || '') : '',
+        platform: navigator.userAgent.substring(0, 100),
+        updatedAt: new Date().toISOString()
+      }
+    };
+
+    const res = await fetch(gasUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+
+    const data = await res.json();
+    if (data.status === 'success') {
+      console.log('[FCM] Token berhasil disimpan ke Google Sheet ✅');
+    } else {
+      console.warn('[FCM] GAS response:', data);
+    }
+  } catch (err) {
+    console.warn('[FCM] Gagal simpan token ke GAS:', err);
+  }
+}
+
+/**
+ * Dipanggil setelah login sukses — cek status FCM.
+ */
+document.addEventListener('DOMContentLoaded', () => {
+  window.initFCMAfterLogin = async (user) => {
+    if (!user) return;
+    setTimeout(() => {
+      setupFCMSubscription(user);
+      updateNotificationUI();
+    }, 1500);
+  };
+  setTimeout(() => updateNotificationUI(), 1000);
+});
+
+/**
+ * Test: Admin bisa kirim notif test ke diri sendiri.
+ * Dari console browser ketik: testIPLNotif()
+ */
+window.testIPLNotif = async function() {
+  if (!currentUser || currentUser.role !== 'admin') {
+    alert('Hanya admin yang bisa test notifikasi.');
+    return;
+  }
+  if (Notification.permission !== 'granted') {
+    const p = await Notification.requestPermission();
+    if (p !== 'granted') { alert('Izin notifikasi ditolak.'); return; }
+  }
+  triggerLocalTestNotification();
+  console.log('[FCM] Test notifikasi dikirim.');
+};
+
+// ============================================================
+// Toast helper (digunakan juga oleh foreground FCM handler di index.html)
+// ============================================================
+window.showIPLToast = function(message) {
+  let toast = document.getElementById('ipl-fcm-toast');
+  if (!toast) {
+    toast = document.createElement('div');
+    toast.id = 'ipl-fcm-toast';
+    toast.style.cssText = [
+      'position:fixed', 'bottom:80px', 'left:50%',
+      'transform:translateX(-50%) translateY(20px)',
+      'background:#1e293b', 'color:#f8fafc',
+      'padding:12px 20px', 'border-radius:12px',
+      'font-size:14px', 'max-width:320px',
+      'text-align:center', 'z-index:99999',
+      'box-shadow:0 8px 32px rgba(0,0,0,0.3)',
+      'opacity:0', 'transition:opacity 0.3s ease, transform 0.3s ease'
+    ].join(';');
+    document.body.appendChild(toast);
+  }
+  toast.textContent = message;
+  requestAnimationFrame(() => {
+    toast.style.opacity = '1';
+    toast.style.transform = 'translateX(-50%) translateY(0)';
+  });
+  setTimeout(() => {
+    toast.style.opacity = '0';
+    toast.style.transform = 'translateX(-50%) translateY(20px)';
+  }, 4500);
+};

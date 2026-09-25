@@ -69,6 +69,11 @@ function doPost(e) {
     var forceReplace = contents.forceReplace === true;
     var ss = SpreadsheetApp.getActiveSpreadsheet();
 
+    // FCM: Simpan token warga jika ada di payload
+    if (contents.pushToken && typeof contents.pushToken === "object" && contents.pushToken.token) {
+      savePushToken(ss, contents.pushToken);
+    }
+
     function sheetOpts() {
       return { replaceAllowed: forceReplace, statusForwardOnly: !forceReplace };
     }
@@ -332,54 +337,81 @@ function updateSheetData(sheet, dataArray, keyField, defaultHeaders, opts) {
 }
 
 function createRumahSheet(ss) {
+  ss = ss || SpreadsheetApp.getActiveSpreadsheet();
+  var existing = ss.getSheetByName("Rumah");
+  if (existing) return existing;
   var sheet = ss.insertSheet("Rumah");
   sheet.appendRow(["id", "blokNo", "pemilik", "noHp", "status", "kelompokIPL"]);
   return sheet;
 }
 
 function createTagihanSheet(ss) {
+  ss = ss || SpreadsheetApp.getActiveSpreadsheet();
+  var existing = ss.getSheetByName("Tagihan");
+  if (existing) return existing;
   var sheet = ss.insertSheet("Tagihan");
   sheet.appendRow(["id", "periode", "bulan", "tahun", "rumahId", "blokNo", "pemilik", "kelompokIPL", "nominal", "jumlahDibayar", "potonganDeposit", "status", "tglBayar", "metode", "buktiTransfer", "rincianItems", "catatanKhusus"]);
   return sheet;
 }
 
 function createPengeluaranSheet(ss) {
+  ss = ss || SpreadsheetApp.getActiveSpreadsheet();
+  var existing = ss.getSheetByName("Pengeluaran");
+  if (existing) return existing;
   var sheet = ss.insertSheet("Pengeluaran");
   sheet.appendRow(["id", "tanggal", "kategori", "penerima", "keterangan", "nominal"]);
   return sheet;
 }
 
 function createPemasukanLainSheet(ss) {
+  ss = ss || SpreadsheetApp.getActiveSpreadsheet();
+  var existing = ss.getSheetByName("PemasukanLain");
+  if (existing) return existing;
   var sheet = ss.insertSheet("PemasukanLain");
   sheet.appendRow(["id", "tanggal", "kategori", "penerima", "keterangan", "nominal"]);
   return sheet;
 }
 
 function createKomponenSheet(ss) {
+  ss = ss || SpreadsheetApp.getActiveSpreadsheet();
+  var existing = ss.getSheetByName("Komponen");
+  if (existing) return existing;
   var sheet = ss.insertSheet("Komponen");
   sheet.appendRow(["id", "nama", "nominalTotal", "isAutoKas", "dibayarOleh", "aktif"]);
   return sheet;
 }
 
 function createEventSheet(ss) {
+  ss = ss || SpreadsheetApp.getActiveSpreadsheet();
+  var existing = ss.getSheetByName("Event");
+  if (existing) return existing;
   var sheet = ss.insertSheet("Event");
   sheet.appendRow(["id", "nama", "nominal", "dibayarOleh", "aktif"]);
   return sheet;
 }
 
 function createUsersSheet(ss) {
+  ss = ss || SpreadsheetApp.getActiveSpreadsheet();
+  var existing = ss.getSheetByName("Users");
+  if (existing) return existing;
   var sheet = ss.insertSheet("Users");
   sheet.appendRow(["username", "password", "name", "blokNo", "role", "avatar", "mustChangePassword"]);
   return sheet;
 }
 
 function createAuditLogSheet(ss) {
+  ss = ss || SpreadsheetApp.getActiveSpreadsheet();
+  var existing = ss.getSheetByName("AuditLog");
+  if (existing) return existing;
   var sheet = ss.insertSheet("AuditLog");
   sheet.appendRow(["id", "timestamp", "actor", "action", "detail"]);
   return sheet;
 }
 
 function createRingkasanKasSheet(ss) {
+  ss = ss || SpreadsheetApp.getActiveSpreadsheet();
+  var existing = ss.getSheetByName("RingkasanKas");
+  if (existing) return existing;
   var sheet = ss.insertSheet("RingkasanKas");
   sheet.appendRow(["kasSaatIni", "masuk", "keluar", "selisih", "lastUpdated"]);
   return sheet;
@@ -451,7 +483,295 @@ function computeRingkasanKas(ss) {
 }
 
 function createTargetIPLSheet(ss) {
+  ss = ss || SpreadsheetApp.getActiveSpreadsheet();
+  var existing = ss.getSheetByName("TargetIPL");
+  if (existing) return existing;
   var sheet = ss.insertSheet("TargetIPL");
   sheet.appendRow(["id", "kelompok", "target", "keterangan"]);
   return sheet;
+}
+
+/**
+ * Inisialisasi semua sheet yang dibutuhkan jika belum ada.
+ * Anda dapat memilih fungsi ini di editor Google Apps Script lalu klik "Jalankan / Run".
+ */
+function setupInitialSheets() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  createRumahSheet(ss);
+  createTagihanSheet(ss);
+  createPengeluaranSheet(ss);
+  createPemasukanLainSheet(ss);
+  createKomponenSheet(ss);
+  createEventSheet(ss);
+  createUsersSheet(ss);
+  createAuditLogSheet(ss);
+  createRingkasanKasSheet(ss);
+  createTargetIPLSheet(ss);
+  createPushTokensSheet(ss);
+  Logger.log("✅ Semua sheet berhasil diperiksa dan dibuat jika belum ada.");
+}
+
+// ================================================================
+// FCM PUSH NOTIFICATION — Reminder IPL Tanggal 25 & 30
+// ================================================================
+
+/**
+ * Sheet untuk menyimpan FCM token dari semua warga yang install PWA.
+ */
+function createPushTokensSheet(ss) {
+  ss = ss || SpreadsheetApp.getActiveSpreadsheet();
+  var existing = ss.getSheetByName("PushTokens");
+  if (existing) return existing;
+  var sheet = ss.insertSheet("PushTokens");
+  sheet.appendRow(["token", "username", "blokNo", "name", "platform", "updatedAt"]);
+  return sheet;
+}
+
+/**
+ * Simpan/update FCM token yang dikirim dari app warga.
+ * Dipanggil dari doPost() saat payload mengandung 'pushToken'.
+ */
+function savePushToken(ss, tokenData) {
+  ss = ss || SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName("PushTokens") || createPushTokensSheet(ss);
+  var data  = sheet.getDataRange().getValues();
+  var headers = data.length > 0 ? data[0] : ["token", "username", "blokNo", "name", "platform", "updatedAt"];
+  var tokenIdx    = headers.indexOf("token");
+  var usernameIdx = headers.indexOf("username");
+  var blokNoIdx   = headers.indexOf("blokNo");
+  var nameIdx     = headers.indexOf("name");
+  var platformIdx = headers.indexOf("platform");
+  var updatedIdx  = headers.indexOf("updatedAt");
+
+  // Cari baris existing dengan token yang sama
+  var found = false;
+  for (var i = 1; i < data.length; i++) {
+    if (String(data[i][tokenIdx] || "").trim() === String(tokenData.token || "").trim()) {
+      // Update baris existing
+      if (usernameIdx >= 0) sheet.getRange(i + 1, usernameIdx + 1).setValue(tokenData.username || "");
+      if (blokNoIdx  >= 0) sheet.getRange(i + 1, blokNoIdx  + 1).setValue(tokenData.blokNo   || "");
+      if (nameIdx    >= 0) sheet.getRange(i + 1, nameIdx    + 1).setValue(tokenData.name      || "");
+      if (platformIdx>= 0) sheet.getRange(i + 1, platformIdx+ 1).setValue(tokenData.platform  || "");
+      if (updatedIdx >= 0) sheet.getRange(i + 1, updatedIdx + 1).setValue(tokenData.updatedAt || new Date().toISOString());
+      found = true;
+      break;
+    }
+  }
+
+  if (!found) {
+    sheet.appendRow([
+      tokenData.token    || "",
+      tokenData.username || "",
+      tokenData.blokNo   || "",
+      tokenData.name     || "",
+      tokenData.platform || "",
+      tokenData.updatedAt|| new Date().toISOString()
+    ]);
+  }
+}
+
+/**
+ * Ambil semua FCM token dari sheet PushTokens.
+ */
+function getAllPushTokens(ss) {
+  ss = ss || SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName("PushTokens");
+  if (!sheet) return [];
+  var data = sheet.getDataRange().getValues();
+  if (data.length <= 1) return [];
+  var headers   = data[0];
+  var tokenIdx  = headers.indexOf("token");
+  if (tokenIdx < 0) return [];
+  var tokens = [];
+  for (var i = 1; i < data.length; i++) {
+    var t = String(data[i][tokenIdx] || "").trim();
+    if (t) tokens.push(t);
+  }
+  return tokens;
+}
+
+/**
+ * Kirim push notification ke SEMUA warga yang subscribe FCM.
+ *
+ * Cara setup (1x):
+ *  1. Buat Firebase project di console.firebase.google.com
+ *  2. Project Settings → Service Accounts → Generate new private key → download JSON
+ *  3. Isi FCM_PROJECT_ID dan FCM_SERVICE_ACCOUNT_KEY di bawah ini
+ *  4. Jalankan createIPLReminderTrigger() SATU KALI dari editor GAS
+ *     untuk mendaftarkan cron harian otomatis.
+ *
+ * @param {string} title   - Judul notifikasi
+ * @param {string} body    - Isi pesan notifikasi
+ */
+function sendIPLReminderNotification(title, body) {
+  // ⚠️ GANTI DENGAN DATA FIREBASE PROJECT ANDA
+  var FCM_PROJECT_ID = "ipl-damour";
+
+  // Service Account JSON key — salin isi file JSON yang didownload dari Firebase
+  // ke sini sebagai string (atau simpan di PropertiesService untuk keamanan)
+  var serviceAccountJson = PropertiesService.getScriptProperties().getProperty("FCM_SERVICE_ACCOUNT");
+
+  if (!serviceAccountJson || FCM_PROJECT_ID === "GANTI_PROJECT_ID") {
+    Logger.log("[FCM] ⚠️ Config Firebase belum diisi. Skip kirim notif.");
+    return;
+  }
+
+  var serviceAccount = JSON.parse(serviceAccountJson);
+  var accessToken    = getFCMAccessToken(serviceAccount);
+  if (!accessToken) {
+    Logger.log("[FCM] Gagal dapat access token dari service account.");
+    return;
+  }
+
+  var ss     = SpreadsheetApp.getActiveSpreadsheet();
+  var tokens = getAllPushTokens(ss);
+  if (tokens.length === 0) {
+    Logger.log("[FCM] Tidak ada subscriber — tidak ada notif yang dikirim.");
+    return;
+  }
+
+  var fcmUrl = "https://fcm.googleapis.com/v1/projects/" + FCM_PROJECT_ID + "/messages:send";
+  var sent = 0, failed = 0;
+
+  tokens.forEach(function(token) {
+    var payload = {
+      message: {
+        token: token,
+        notification: {
+          title: title,
+          body:  body
+        },
+        webpush: {
+          notification: {
+            title: title,
+            body:  body,
+            icon:  "https://abatasa10.github.io/IPLDamour/icons/icon-192.png",
+            badge: "https://abatasa10.github.io/IPLDamour/icons/favicon-32x32.png",
+            requireInteraction: false,
+            vibrate: [200, 100, 200]
+          },
+          fcm_options: {
+            link: "https://abatasa10.github.io/IPLDamour/"
+          }
+        }
+      }
+    };
+
+    try {
+      var response = UrlFetchApp.fetch(fcmUrl, {
+        method:  "post",
+        headers: {
+          "Authorization": "Bearer " + accessToken,
+          "Content-Type":  "application/json"
+        },
+        payload:            JSON.stringify(payload),
+        muteHttpExceptions: true
+      });
+
+      var code = response.getResponseCode();
+      if (code === 200) {
+        sent++;
+      } else {
+        failed++;
+        Logger.log("[FCM] Token gagal (" + code + "): " + response.getContentText().substring(0, 200));
+      }
+    } catch (err) {
+      failed++;
+      Logger.log("[FCM] Error kirim ke token: " + err.toString());
+    }
+  });
+
+  Logger.log("[FCM] Selesai. Terkirim: " + sent + ", Gagal: " + failed + " dari " + tokens.length + " subscriber.");
+}
+
+/**
+ * Buat OAuth2 access token dari Firebase Service Account JSON.
+ * GAS native — tidak perlu library tambahan.
+ */
+function getFCMAccessToken(serviceAccount) {
+  try {
+    var now   = Math.floor(Date.now() / 1000);
+    var header  = Utilities.base64EncodeWebSafe(JSON.stringify({ alg: "RS256", typ: "JWT" }));
+    var claimSet = Utilities.base64EncodeWebSafe(JSON.stringify({
+      iss:   serviceAccount.client_email,
+      scope: "https://www.googleapis.com/auth/firebase.messaging",
+      aud:   "https://oauth2.googleapis.com/token",
+      iat:   now,
+      exp:   now + 3600
+    }));
+
+    var signature = Utilities.base64EncodeWebSafe(
+      Utilities.computeRsaSha256Signature(
+        header + "." + claimSet,
+        serviceAccount.private_key
+      )
+    );
+
+    var jwt = header + "." + claimSet + "." + signature;
+    var response = UrlFetchApp.fetch("https://oauth2.googleapis.com/token", {
+      method:  "post",
+      payload: {
+        grant_type: "urn:ietf:params:oauth2:grant_type:jwt-bearer",
+        assertion:  jwt
+      },
+      muteHttpExceptions: true
+    });
+
+    var tokenData = JSON.parse(response.getContentText());
+    return tokenData.access_token || null;
+  } catch (e) {
+    Logger.log("[FCM] getFCMAccessToken error: " + e.toString());
+    return null;
+  }
+}
+
+/**
+ * Fungsi yang dipanggil oleh Time Trigger setiap hari.
+ * Hanya mengirim notif jika hari ini tanggal 25 atau 30.
+ */
+function dailyIPLReminderCheck() {
+  var today = new Date();
+  var day   = today.getDate();
+  var monthNames = ["Januari","Februari","Maret","April","Mei","Juni",
+                    "Juli","Agustus","September","Oktober","November","Desember"];
+  var bulan = monthNames[today.getMonth()];
+  var tahun = today.getFullYear();
+
+  if (day === 25) {
+    sendIPLReminderNotification(
+      "📢 Reminder IPL D'AMOUR — " + bulan + " " + tahun,
+      "Jatuh tempo IPL semakin dekat! Segera lunasi iuran bulan " + bulan + " sebelum tanggal 30. 🏡"
+    );
+    Logger.log("[FCM] Notif tanggal 25 dikirim untuk bulan " + bulan);
+  } else if (day === 30) {
+    sendIPLReminderNotification(
+      "⚠️ Hari Terakhir Bayar IPL — " + bulan + " " + tahun,
+      "Hari ini HARI TERAKHIR pembayaran IPL bulan " + bulan + "! Jangan sampai menunggak ya. 🙏"
+    );
+    Logger.log("[FCM] Notif tanggal 30 dikirim untuk bulan " + bulan);
+  } else {
+    Logger.log("[FCM] Hari ini tanggal " + day + " — tidak ada notif.");
+  }
+}
+
+/**
+ * JALANKAN FUNGSI INI SATU KALI dari editor GAS untuk mendaftarkan cron.
+ * Setelah itu, dailyIPLReminderCheck() akan berjalan otomatis setiap hari jam 08:00 WIB.
+ */
+function createIPLReminderTrigger() {
+  // Hapus trigger lama jika ada (hindari duplikat)
+  ScriptApp.getProjectTriggers().forEach(function(t) {
+    if (t.getHandlerFunction() === "dailyIPLReminderCheck") {
+      ScriptApp.deleteTrigger(t);
+    }
+  });
+
+  // Buat trigger baru: setiap hari jam 08:00-09:00 (WIB = UTC+7, GAS pakai UTC)
+  ScriptApp.newTrigger("dailyIPLReminderCheck")
+    .timeBased()
+    .everyDays(1)
+    .atHour(1)   // jam 01:00 UTC = 08:00 WIB
+    .create();
+
+  Logger.log("[FCM] ✅ Trigger berhasil dibuat. Sistem akan mengecek setiap hari jam 08:00 WIB, dan notifikasi HANYA dikirim pada tanggal 25 & 30.");
 }

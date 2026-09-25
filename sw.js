@@ -1,5 +1,4 @@
-// D'AMOUR IPL - Service Worker
-const CACHE_NAME = 'damour-ipl-v1.0.9';
+const CACHE_NAME = 'damour-ipl-v1.2.0'; // bumped for iOS PWA notification activation button
 
 const PRECACHE_ASSETS = [
   './',
@@ -88,5 +87,70 @@ self.addEventListener('fetch', (event) => {
           }
         });
       })
+  );
+});
+
+// =============================================
+// FCM PUSH NOTIFICATION HANDLER
+// Dipanggil saat Google Apps Script mengirim push via FCM
+// =============================================
+self.addEventListener('push', (event) => {
+  let data = {
+    title: "📢 Reminder IPL D'AMOUR",
+    body: "Jangan lupa bayar IPL bulan ini ya! 🏡",
+    icon: './icons/icon-192.png',
+    badge: './icons/favicon-32x32.png',
+    tag: 'ipl-reminder',
+    data: { url: './' }
+  };
+
+  if (event.data) {
+    try {
+      const payload = event.data.json();
+      if (payload.notification) {
+        data = { ...data, ...payload.notification };
+      }
+      if (payload.data) {
+        data.data = { ...data.data, ...payload.data };
+      }
+    } catch (e) {
+      console.warn('[SW] Push data parse error:', e);
+    }
+  }
+
+  event.waitUntil(
+    self.registration.showNotification(data.title, {
+      body: data.body,
+      icon: data.icon,
+      badge: data.badge,
+      tag: data.tag,
+      renotify: true,
+      requireInteraction: false,
+      vibrate: [200, 100, 200],
+      data: data.data
+    })
+  );
+});
+
+// Saat warga tap notif → buka/fokuskan app
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const targetUrl = (event.notification.data && event.notification.data.url)
+    ? event.notification.data.url
+    : './';
+
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      // Jika app sudah terbuka, fokuskan
+      for (const client of clientList) {
+        if (client.url.includes(self.location.origin) && 'focus' in client) {
+          return client.focus();
+        }
+      }
+      // Jika belum terbuka, buka baru
+      if (clients.openWindow) {
+        return clients.openWindow(targetUrl);
+      }
+    })
   );
 });

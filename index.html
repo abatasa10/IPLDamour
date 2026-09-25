@@ -72,6 +72,66 @@
       }
     };
   </script>
+  <!-- ================================================ -->
+  <!-- FIREBASE / FCM - Push Notification Support       -->
+  <!-- Isi firebaseConfig di bawah setelah setup        -->
+  <!-- console.firebase.google.com                      -->
+  <!-- ================================================ -->
+  <script type="module">
+    // ⚠️ GANTI NILAI DI BAWAH INI SETELAH BUAT FIREBASE PROJECT
+    // Cara dapat config: Firebase Console → Project Settings → Your Apps → Web App → SDK setup
+    const firebaseConfig = {
+      apiKey:            "AIzaSyDWBmQkUbRM_UIknMeURzxzZCE4tJoz4YE",
+      authDomain:        "ipl-damour.firebaseapp.com",
+      projectId:         "ipl-damour",
+      storageBucket:     "ipl-damour.firebasestorage.app",
+      messagingSenderId: "500830259673",
+      appId:             "1:500830259673:web:429438f59903057228b1c8"
+    };
+
+    // VAPID Key dari Firebase Console → Cloud Messaging → Web Push Certificates
+    const VAPID_KEY = "BCVNH4J7S8wUorgGBPenQF7V4BvWmVNuFikJiGfehf_Km0rDRTCqsc0sXLpvJMZU9rrUkXthwBn7aUxrtIaC1IU";
+
+    // GAS URL (harus sama dengan DEFAULT_GOOGLE_SHEET_URL di app.js)
+    const GAS_URL = "https://script.google.com/macros/s/AKfycbyqvCo-t2FlFd49Kh2Cr3QeXj9YXvETX-33Z7Xiqs3KUcptd_xE1wT_Pfb_QTSkDdQ6yQ/exec";
+
+    window.__FIREBASE_CONFIG__  = firebaseConfig;
+    window.__VAPID_KEY__        = VAPID_KEY;
+    window.__GAS_URL_FOR_FCM__  = GAS_URL;
+
+    // Lazy-load Firebase hanya jika config sudah diisi
+    if (firebaseConfig.apiKey !== "GANTI_API_KEY") {
+      const { initializeApp }    = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js");
+      const { getMessaging, getToken, onMessage } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging.js");
+
+      try {
+        const app       = initializeApp(firebaseConfig);
+        const messaging = getMessaging(app);
+        window.__FCM_MESSAGING__ = messaging;
+        window.__FCM_VAPID_KEY__ = VAPID_KEY;
+        console.log('[FCM] Firebase Messaging siap.');
+
+        // Tangani notif saat app sedang terbuka (foreground)
+        onMessage(messaging, (payload) => {
+          console.log('[FCM] Pesan foreground diterima:', payload);
+          const notif = payload.notification || {};
+          const title = notif.title || "📢 Reminder IPL D'AMOUR";
+          const body  = notif.body  || "Jangan lupa bayar IPL bulan ini! 🏡";
+
+          // Tampilkan sebagai in-app toast atau native notif jika diizinkan
+          if (Notification.permission === 'granted') {
+            new Notification(title, { body, icon: 'icons/icon-192.png' });
+          } else if (window.showIPLToast) {
+            window.showIPLToast(title + ' — ' + body);
+          }
+        });
+      } catch (err) {
+        console.warn('[FCM] Inisialisasi Firebase gagal:', err);
+      }
+    } else {
+      console.info('[FCM] Config Firebase belum diisi — fitur push notification nonaktif.');
+    }
+  </script>
 </head>
 <body>
 
@@ -282,6 +342,11 @@
             <i class="ri-download-cloud-2-line"></i> <span>Install App</span>
           </button>
 
+          <!-- Tombol Notifikasi HP (Mobile/iOS Activation) -->
+          <button id="btn-quick-notif" class="btn btn-sm" onclick="window.requestNotificationPermissionWithFeedback()" style="display: none; align-items: center; gap: 0.35rem; font-size: 0.75rem; padding: 0.28rem 0.75rem; border-radius: 20px; border: 1px solid #93c5fd; background: #eff6ff; color: #1d4ed8; font-weight: 600; cursor: pointer; transition: all 0.2s;" title="Pengaturan Notifikasi Pengingat HP">
+            <i class="ri-notification-3-line"></i> <span id="quick-notif-text">Aktifkan Notif</span>
+          </button>
+
           <!-- Notification Bell for Admin -->
           <div id="admin-notif-wrapper" class="role-admin-only" style="position: relative;">
             <button class="btn btn-outline btn-sm" id="btn-notif-bell" onclick="toggleNotifDropdown(event)" style="border-radius: 50%; width: 36px; height: 36px; padding: 0; display: flex; align-items: center; justify-content: center; position: relative;" title="Notifikasi Pembayaran">
@@ -315,6 +380,9 @@
             <div id="user-dropdown-menu" style="display: none; position: absolute; top: 110%; right: 0; background: white; border: 1px solid var(--border-color); border-radius: 8px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); width: 180px; z-index: 100; padding: 0.5rem 0;">
               <button onclick="openChangePasswordModal(false)" style="width: 100%; text-align: left; padding: 0.5rem 1rem; background: none; border: none; font-size: 0.85rem; color: var(--text-main); cursor: pointer; display: flex; align-items: center; gap: 0.5rem;">
                 <i class="ri-key-2-line"></i> Ubah Password
+              </button>
+              <button onclick="window.requestNotificationPermissionWithFeedback()" style="width: 100%; text-align: left; padding: 0.5rem 1rem; background: none; border: none; font-size: 0.85rem; color: var(--text-main); cursor: pointer; display: flex; align-items: center; gap: 0.5rem;" id="dropdown-btn-notif">
+                <i class="ri-notification-3-line"></i> <span id="dropdown-notif-label">Notifikasi HP 🔔</span>
               </button>
               <hr style="margin: 0.25rem 0; border: none; border-top: 1px solid var(--border-color);">
               <button onclick="handleLogout()" style="width: 100%; text-align: left; padding: 0.5rem 1rem; background: none; border: none; font-size: 0.85rem; color: var(--danger); cursor: pointer; display: flex; align-items: center; gap: 0.5rem;">
@@ -1567,6 +1635,24 @@
             </div>
           </div>
 
+          <!-- Notification Activation Banner (Khusus HP / iOS) -->
+          <div id="warga-notif-banner" style="display: none; margin-bottom: 1.25rem; background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%); border: 1.5px solid #93c5fd; border-radius: 14px; padding: 0.9rem 1.1rem; box-shadow: 0 4px 12px rgba(37,99,235,0.08);">
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; flex-wrap: wrap;">
+              <div style="display: flex; align-items: center; gap: 0.75rem; min-width: 220px; flex: 1;">
+                <div style="width: 40px; height: 40px; border-radius: 10px; background: #2563eb; color: white; display: flex; align-items: center; justify-content: center; font-size: 1.25rem; flex-shrink: 0;">
+                  <i class="ri-notification-3-line"></i>
+                </div>
+                <div>
+                  <div style="font-weight: 700; color: #1e3a8a; font-size: 0.9rem;">Aktifkan Notifikasi Pengingat IPL</div>
+                  <div style="font-size: 0.78rem; color: #3b82f6;">Dapatkan pengingat otomatis tiap tgl 25 & 30 langsung di layar HP Anda.</div>
+                </div>
+              </div>
+              <button type="button" id="btn-enable-notif-warga" onclick="window.requestNotificationPermissionWithFeedback()" class="btn btn-primary btn-sm" style="border-radius: 20px; padding: 0.5rem 1.1rem; font-weight: 600; display: inline-flex; align-items: center; gap: 0.4rem; white-space: nowrap; box-shadow: 0 2px 6px rgba(37,99,235,0.25);">
+                <i class="ri-notification-line"></i> <span>Aktifkan Notifikasi</span>
+              </button>
+            </div>
+          </div>
+
           <!-- Status Alert -->
           <div id="ts-status-alert" class="ts-alert ts-alert-success" style="display:none;">
             <i class="ri-checkbox-circle-line"></i>
@@ -2173,7 +2259,7 @@
     </div>
   </div>
 
-  <script src="app.js?v=20260924_04"></script>
+  <script src="app.js?v=20260925_01"></script>
   <script>
     function togglePasswordVisibility() {
       const pwdInp = document.getElementById("login-password");
