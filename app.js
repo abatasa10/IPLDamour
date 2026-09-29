@@ -120,6 +120,25 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
       }
     }
+
+    // PATCH: Koreksi blokNo sesi tersimpan untuk akun admin/ridwan/jamal
+    const rawUser = localStorage.getItem("damour_ipl_user");
+    if (rawUser) {
+      try {
+        const uObj = JSON.parse(rawUser);
+        const u = (uObj.username || "").toLowerCase().trim().replace(/[^a-z0-9]/g, "");
+        const b = (uObj.blokNo || "").toUpperCase().trim();
+        if (u === "ridwan" || b === "RIDWAN" || (u === "admin" && (!b || b === "-" || b === "ADMIN"))) {
+          uObj.blokNo = "C16";
+          if (!uObj.name || uObj.name.toUpperCase() === "RIDWAN") uObj.name = "Ridwan";
+          localStorage.setItem("damour_ipl_user", JSON.stringify(uObj));
+        } else if (u === "jamal" || b === "JAMAL") {
+          uObj.blokNo = "C14";
+          if (!uObj.name || uObj.name.toUpperCase() === "JAMAL") uObj.name = "Jamal";
+          localStorage.setItem("damour_ipl_user", JSON.stringify(uObj));
+        }
+      } catch (e) {}
+    }
   } catch (e) {}
 
   setupEventListeners();
@@ -143,6 +162,45 @@ document.addEventListener("DOMContentLoaded", async () => {
 });
 
 // Authentication & Role Management
+function sanitizeCurrentUser(user) {
+  if (!user) return user;
+  const u = (user.username || "").toLowerCase().trim().replace(/[^a-z0-9]/g, "");
+  const b = (user.blokNo || "").toUpperCase().trim();
+
+  // Akun utama pengurus / developer mapping
+  if (u === "ridwan" || b === "RIDWAN" || (u === "admin" && (!b || b === "-" || b === "ADMIN"))) {
+    user.blokNo = "C16";
+    if (!user.name || user.name.toUpperCase() === "RIDWAN") user.name = "Ridwan";
+  } else if (u === "jamal" || b === "JAMAL") {
+    user.blokNo = "C14";
+    if (!user.name || user.name.toUpperCase() === "JAMAL") user.name = "Jamal";
+  } else if (b && b !== "-") {
+    user.blokNo = normalizeBlok(b);
+  }
+
+  // Cross-check dengan appState.users atau DEFAULT_USERS jika blokNo belum terdaftar di rumah
+  if (typeof appState !== "undefined" && appState && Array.isArray(appState.users)) {
+    const matched = appState.users.find(x => (x.username || "").toLowerCase().trim().replace(/[^a-z0-9]/g, "") === u);
+    if (matched && matched.blokNo && matched.blokNo !== "-" && (!user.blokNo || user.blokNo === "-" || user.blokNo.toUpperCase() === u.toUpperCase())) {
+      user.blokNo = normalizeBlok(matched.blokNo);
+    }
+  }
+
+  // Fallback: Cocokkan dengan pemilik rumah jika blokNo belum valid di appState.rumah
+  if (typeof appState !== "undefined" && appState && Array.isArray(appState.rumah) && user.blokNo && user.blokNo !== "-") {
+    const cleanBlok = normalizeBlok(user.blokNo);
+    const houseExists = appState.rumah.some(r => normalizeBlok(r.blokNo) === cleanBlok);
+    if (!houseExists && user.name) {
+      const houseByOwner = appState.rumah.find(r => (r.pemilik || "").toLowerCase().trim() === user.name.toLowerCase().trim());
+      if (houseByOwner) {
+        user.blokNo = normalizeBlok(houseByOwner.blokNo);
+      }
+    }
+  }
+
+  return user;
+}
+
 function checkAuthSession() {
   const savedUser = localStorage.getItem("damour_ipl_user");
   const loginOverlay = document.getElementById("login-overlay");
@@ -150,6 +208,10 @@ function checkAuthSession() {
   if (savedUser) {
     try {
       currentUser = JSON.parse(savedUser);
+      if (currentUser) {
+        sanitizeCurrentUser(currentUser);
+        localStorage.setItem("damour_ipl_user", JSON.stringify(currentUser));
+      }
       if (loginOverlay) loginOverlay.classList.remove("active");
       updateNavbarProfile();
       applyRolePermissions();
@@ -245,15 +307,25 @@ async function handleLoginSubmit(e) {
       userName = existingHouse.pemilik;
     }
 
+    let userBlok = formattedBlok;
+    if (uClean === "admin" || uClean === "ridwan" || formattedBlok === "ADMIN" || formattedBlok === "RIDWAN") {
+      userBlok = "C16";
+    } else if (uClean === "jamal" || formattedBlok === "JAMAL") {
+      userBlok = "C14";
+    } else if (formattedBlok.includes("ADMIN")) {
+      userBlok = "C16";
+    }
+
     found = {
       username: uClean,
       password: rawPass,
       name: userName,
-      blokNo: formattedBlok.includes("ADMIN") ? "C16" : formattedBlok,
+      blokNo: userBlok,
       role: userRole,
       avatar: userName.charAt(0).toUpperCase(),
       mustChangePassword: false
     };
+    sanitizeCurrentUser(found);
 
     if (!appState.users) appState.users = [];
     const existingUserIdx = appState.users.findIndex((u) => u.username.toLowerCase() === uClean);
@@ -266,6 +338,7 @@ async function handleLoginSubmit(e) {
   }
 
   if (found) {
+    sanitizeCurrentUser(found);
     currentUser = found;
     localStorage.setItem("damour_ipl_user", JSON.stringify(currentUser));
     document.getElementById("login-overlay").classList.remove("active");
@@ -1279,6 +1352,11 @@ async function loadAppData() {
     localStorage.setItem("damour_ipl_db", JSON.stringify(appState));
     localStorage.setItem("damour_ipl_db_backup", JSON.stringify(appState));
   }
+  if (currentUser) {
+    sanitizeCurrentUser(currentUser);
+    localStorage.setItem("damour_ipl_user", JSON.stringify(currentUser));
+    updateNavbarProfile();
+  }
 }
 
 function syncTagihanWithMasterRumah() {
@@ -1448,12 +1526,19 @@ function deduplicateAppState() {
     const seenUsers = new Set();
     appState.users = appState.users.filter((u) => {
       if (!u || !u.username) return false;
-      const cleanU = normalizeBlok(u.username).toLowerCase();
+      const cleanU = (u.username || "").toLowerCase().trim().replace(/[^a-z0-9]/g, "");
       if (seenUsers.has(cleanU)) {
         return false;
       }
       seenUsers.add(cleanU);
-      if (u.blokNo && u.blokNo !== "-") {
+      const bClean = (u.blokNo || "").toUpperCase().trim();
+      if (cleanU === "ridwan" || bClean === "RIDWAN" || (cleanU === "admin" && (!bClean || bClean === "-" || bClean === "ADMIN"))) {
+        u.blokNo = "C16";
+        if (!u.name || u.name.toUpperCase() === "RIDWAN") u.name = "Ridwan";
+      } else if (cleanU === "jamal" || bClean === "JAMAL") {
+        u.blokNo = "C14";
+        if (!u.name || u.name.toUpperCase() === "JAMAL") u.name = "Jamal";
+      } else if (u.blokNo && u.blokNo !== "-") {
         u.blokNo = normalizeBlok(u.blokNo);
       }
       return true;
@@ -1654,7 +1739,15 @@ function ensureMasterRumahState() {
     });
 
     appState.users.forEach((u) => {
-      if (u.blokNo && u.blokNo !== "-") {
+      const uClean = (u.username || "").toLowerCase().trim().replace(/[^a-z0-9]/g, "");
+      const bClean = (u.blokNo || "").toUpperCase().trim();
+      if (uClean === "ridwan" || bClean === "RIDWAN" || (uClean === "admin" && (!bClean || bClean === "-" || bClean === "ADMIN"))) {
+        u.blokNo = "C16";
+        if (!u.name || u.name.toUpperCase() === "RIDWAN") u.name = "Ridwan";
+      } else if (uClean === "jamal" || bClean === "JAMAL") {
+        u.blokNo = "C14";
+        if (!u.name || u.name.toUpperCase() === "JAMAL") u.name = "Jamal";
+      } else if (u.blokNo && u.blokNo !== "-") {
         const cleanUBlok = normalizeBlok(u.blokNo);
         const matchHouse = appState.rumah.find((r) => normalizeBlok(r.blokNo) === cleanUBlok);
         if (matchHouse) {
@@ -1992,6 +2085,12 @@ async function pullCloudAndNotify() {
 
     // Simpan ke cache lokal TANPA memicu loop posting ke cloud
     localStorage.setItem("damour_ipl_db", JSON.stringify(appState));
+
+    if (currentUser) {
+      sanitizeCurrentUser(currentUser);
+      localStorage.setItem("damour_ipl_user", JSON.stringify(currentUser));
+      updateNavbarProfile();
+    }
 
     updateAdminNotifications();
 
@@ -6322,11 +6421,18 @@ function checkWargaTunggakanAlert(user) {
 
 // Render halaman Tagihan Saya untuk pemilik rumah
 function renderTagihanSaya() {
+  if (currentUser) {
+    sanitizeCurrentUser(currentUser);
+    localStorage.setItem("damour_ipl_user", JSON.stringify(currentUser));
+  }
+
   if (!currentUser || !currentUser.blokNo || currentUser.blokNo === "-") {
     // Jika tidak terhubung ke rumah, redirect ke dashboard
     showView("dashboard");
     return;
   }
+
+  updateNavbarProfile();
 
   const blok = normalizeBlok(currentUser.blokNo);
   const allBills = (appState && appState.tagihan || []).filter(t =>
@@ -6369,18 +6475,24 @@ function renderTagihanSaya() {
   const alertEl = document.getElementById("ts-status-alert");
   const alertMsg = document.getElementById("ts-status-msg");
   const tunggakanSection = document.getElementById("ts-tunggakan-section");
+  const tsBadgeTunggak = document.getElementById("ts-badge-tunggak");
+
+  const pendingVerif = unpaidBills.filter(t => t.status === "Menunggu Verifikasi");
+  const trulyUnpaid = unpaidBills.filter(t => t.status !== "Menunggu Verifikasi");
 
   if (unpaidBills.length === 0) {
     if (alertEl) { alertEl.style.display = "flex"; alertEl.className = "ts-alert ts-alert-success"; }
     if (alertMsg) alertMsg.textContent = `Selamat! Semua tagihan Blok ${currentUser.blokNo} sudah lunas. Terima kasih atas ketepatan pembayaran Anda! 🎉`;
     if (tunggakanSection) tunggakanSection.style.display = "none";
+  } else if (trulyUnpaid.length === 0 && pendingVerif.length > 0) {
+    if (alertEl) { alertEl.style.display = "flex"; alertEl.className = "ts-alert ts-alert-info"; }
+    if (alertMsg) alertMsg.textContent = `⏳ Ada ${pendingVerif.length} pembayaran Anda yang sedang menunggu verifikasi oleh Pengurus.`;
+    if (tunggakanSection) tunggakanSection.style.display = "block";
+    if (tsBadgeTunggak) tsBadgeTunggak.textContent = `${pendingVerif.length} Menunggu Verifikasi`;
   } else {
     if (alertEl) { alertEl.style.display = "flex"; alertEl.className = "ts-alert ts-alert-danger"; }
     if (alertMsg) alertMsg.textContent = `⚠ Anda memiliki ${unpaidBills.length} tagihan belum lunas. Silakan segera selesaikan.`;
     if (tunggakanSection) tunggakanSection.style.display = "block";
-
-    // Badge
-    const tsBadgeTunggak = document.getElementById("ts-badge-tunggak");
     if (tsBadgeTunggak) tsBadgeTunggak.textContent = `${unpaidBills.length} Tagihan`;
   }
 
@@ -6392,11 +6504,17 @@ function renderTagihanSaya() {
     } else {
       unpaidList.innerHTML = unpaidBills.map(t => {
         const sisa = Math.max(0, (parseFloat(t.nominal) || 0) - (parseFloat(t.jumlahDibayar) || 0));
+        let statusBadge = `<span class="badge badge-warning">${t.status}</span>`;
+        if (t.status === "Menunggu Verifikasi") {
+          statusBadge = `<span class="badge badge-info"><i class="ri-time-line"></i> Menunggu Verifikasi</span>`;
+        } else if (t.status === "Menunggak") {
+          statusBadge = `<span class="badge badge-danger"><i class="ri-error-warning-line"></i> Menunggak</span>`;
+        }
         return `
           <div class="ts-bill-item">
             <div class="ts-bill-meta">
               <div class="ts-bill-period"><i class="ri-calendar-line" style="color: var(--danger);"></i> ${t.bulan || ""} ${t.tahun || ""}</div>
-              <div class="ts-bill-type">${t.kelompokIPL || "IPL"} &bull; ${t.status}</div>
+              <div class="ts-bill-type">${t.kelompokIPL || "IPL"} &bull; ${statusBadge}</div>
             </div>
             <div class="ts-bill-right">
               <div class="ts-bill-amount">${formatRp(sisa)}</div>
@@ -6411,11 +6529,17 @@ function renderTagihanSaya() {
   const rapelBox = document.getElementById("ts-rapel-box");
   const rapelMonths = document.getElementById("ts-rapel-months");
   const rapelAmount = document.getElementById("ts-rapel-amount");
+  const rapelBtn = document.querySelector(".ts-rapel-btn");
   if (rapelBox) {
     if (unpaidBills.length > 0) {
       rapelBox.style.display = "flex";
-      if (rapelMonths) rapelMonths.textContent = `${unpaidBills.length} bulan tunggakan`;
+      if (rapelMonths) rapelMonths.textContent = `${unpaidBills.length} bulan tagihan`;
       if (rapelAmount) rapelAmount.textContent = formatRp(totalTunggakan);
+      if (rapelBtn) {
+        rapelBtn.innerHTML = unpaidBills.length > 1
+          ? `<i class="ri-bank-card-line"></i> Bayar Sekarang (Rapel ${unpaidBills.length} Bulan)`
+          : `<i class="ri-bank-card-line"></i> Bayar Tagihan Sekarang`;
+      }
     } else {
       rapelBox.style.display = "none";
     }
@@ -6452,6 +6576,7 @@ function renderTagihanSaya() {
 // Buka form pembayaran rapel
 function openRapelPayment() {
   if (!currentUser || !appState) return;
+  sanitizeCurrentUser(currentUser);
 
   const blok = normalizeBlok(currentUser.blokNo);
   const unpaidBills = (appState.tagihan || []).filter(t =>
@@ -6489,6 +6614,7 @@ function openRapelPayment() {
 // Submit pembayaran rapel: tandai semua sebagai "Menunggu Verifikasi"
 function submitRapelPayment() {
   if (!currentUser || !appState) return;
+  sanitizeCurrentUser(currentUser);
 
   const tglBayar = document.getElementById("rapel-tgl-bayar")?.value;
   const metode = document.getElementById("rapel-metode")?.value || "Transfer";

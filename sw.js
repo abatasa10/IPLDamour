@@ -1,4 +1,4 @@
-const CACHE_NAME = 'damour-ipl-v1.3.2'; // bumped for C12 reset & live Google Sheet sync
+const CACHE_NAME = 'damour-ipl-v1.3.3'; // bumped for Ridwan C16 user blok mapping fix
 
 const PRECACHE_ASSETS = [
   './',
