@@ -488,17 +488,29 @@ function updateAdminNotifications() {
           <button class="btn btn-outline btn-sm" style="font-size: 0.7rem; padding: 0.25rem 0.6rem; margin-top: 0.75rem; width: 100%;" onclick="pullCloudAndNotify()"><i class="ri-refresh-line"></i> Segarkan dari Google Sheet</button>
         </div>`;
     } else {
-      notifListContainer.innerHTML = pendingVerifications.map((t) => `
-        <div style="background: #f8fafc; border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 0.6rem 0.75rem; display: flex; justify-content: space-between; align-items: center; gap: 0.5rem;">
-          <div>
-            <div style="font-weight: 700; font-size: 0.85rem; color: var(--text-main);">${t.blokNo} - ${t.pemilik}</div>
-            <div style="font-size: 0.75rem; color: var(--text-muted);">${t.bulan || ""} ${t.tahun || ""} • ${formatRp(t.nominal)}</div>
+      notifListContainer.innerHTML = pendingVerifications.map((t) => {
+        const nomBill = parseFloat(t.nominal) || 0;
+        const nomPaid = parseFloat(t.jumlahDibayar) || nomBill;
+        const isDiff = nomPaid !== nomBill && nomPaid > 0;
+        let amountText = `${formatRp(nomBill)}`;
+        if (isDiff) {
+          amountText = `<span style="text-decoration: line-through; color: var(--text-muted); font-size: 0.72rem;">${formatRp(nomBill)}</span> <span style="font-weight: 700; color: #2563eb;">${formatRp(nomPaid)}</span>`;
+        } else if (nomPaid > 0) {
+          amountText = `<span style="font-weight: 700; color: #2563eb;">${formatRp(nomPaid)}</span>`;
+        }
+
+        return `
+          <div style="background: #f8fafc; border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 0.6rem 0.75rem; display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; transition: background 0.15s;">
+            <div style="cursor: pointer; flex-grow: 1;" onclick="openVerifikasiModal('${t.id}')" title="Klik untuk cek bukti & verifikasi">
+              <div style="font-weight: 700; font-size: 0.85rem; color: var(--text-main);">${t.blokNo} - ${t.pemilik}</div>
+              <div style="font-size: 0.75rem; color: var(--text-muted);">${t.bulan || ""} ${t.tahun || ""} • ${amountText}</div>
+            </div>
+            <button class="btn btn-success btn-sm" style="font-size: 0.7rem; padding: 0.25rem 0.6rem; flex-shrink: 0;" onclick="openVerifikasiModal('${t.id}')" title="Verifikasi Pembayaran">
+              <i class="ri-check-double-line"></i> Verifikasi
+            </button>
           </div>
-          <button class="btn btn-success btn-sm" style="font-size: 0.7rem; padding: 0.25rem 0.6rem; flex-shrink: 0;" onclick="verifikasiLunasTagihan('${t.id}')">
-            <i class="ri-check-double-line"></i> Verifikasi
-          </button>
-        </div>
-      `).join("");
+        `;
+      }).join("");
     }
   }
 
@@ -1785,6 +1797,7 @@ function getCleanPayloadForGoogleSheet(state, opts) {
     // ("Simpan & Sinkronkan Sekarang" / reset). Auto-sync biasa tetap merge-only
     // di sisi server (tidak hapus baris, status tidak bisa mundur).
     stateCopy.forceReplace = !!(opts && opts.forceReplace);
+    stateCopy.adminAction = !!(opts && (opts.adminAction || opts.forceReplace));
 
     if (stateCopy.tagihan && Array.isArray(stateCopy.tagihan)) {
       stateCopy.tagihan.forEach((t) => {
@@ -1825,18 +1838,21 @@ function autoSyncToGoogleSheet(immediate = false, opts = {}) {
     updateStorageBadge("syncing", "Menyimpan ke Google Sheet...");
 
     // AMAN (pengaman data uang): tarik & gabungkan state cloud terbaru dulu
-    // sebelum POST, agar posting data admin tidak menimpa pembayaran warga
-    // yang baru diunggah dari perangkat lain.
-    try {
-      const cloudRes = await fetch(activeUrl);
-      if (cloudRes && cloudRes.ok) {
-        const cloudData = await cloudRes.json();
-        if (cloudData && cloudData.status === "success" && Array.isArray(cloudData.tagihan)) {
-          mergeCloudTagihanIntoLocal(cloudData.tagihan);
+    // sebelum POST, HANYA jika BUKAN aksi eksplisit admin (adminAction/forceReplace/skipPreMerge)
+    // agar data reset/verifikasi yang baru diubah admin tidak tertimpa kembali oleh cloud lama.
+    const skipMerge = !!(opts && (opts.skipPreMerge || opts.adminAction || opts.forceReplace));
+    if (!skipMerge) {
+      try {
+        const cloudRes = await fetch(activeUrl);
+        if (cloudRes && cloudRes.ok) {
+          const cloudData = await cloudRes.json();
+          if (cloudData && cloudData.status === "success" && Array.isArray(cloudData.tagihan)) {
+            mergeCloudTagihanIntoLocal(cloudData.tagihan);
+          }
         }
+      } catch (mergeErr) {
+        console.log("Pre-POST merge skipped:", mergeErr);
       }
-    } catch (mergeErr) {
-      console.log("Pre-POST merge skipped:", mergeErr);
     }
 
     const payload = getCleanPayloadForGoogleSheet(appState, opts);
@@ -1915,29 +1931,30 @@ function mergeCloudTagihanIntoLocal(cloudTagihan) {
     const isLocalUnpaid = localStatus === "Menunggu Pembayaran" || localStatus === "Menunggak";
     const hasCloudBukti = !!(cloudT.buktiTransfer && cloudT.buktiTransfer.length > 20 && cloudT.buktiTransfer !== "-" && cloudT.buktiTransfer !== "bukti: foto (ukuran terlalu besar)");
 
-    // Cloud adalah SUMBER UTAMA (PRIMARY): adopsi nilai keuangan dari cloud
-    // agar antar-perangkat (HP vs Web) tidak saling menimpa angka kas.
-    if (cloudT.metode !== undefined && cloudT.metode !== null) out.metode = cloudT.metode;
-    if (cloudT.nominal !== undefined && cloudT.nominal !== null) out.nominal = cloudT.nominal;
-    if (cloudT.jumlahDibayar !== undefined && cloudT.jumlahDibayar !== null && cloudT.jumlahDibayar !== "") out.jumlahDibayar = cloudT.jumlahDibayar;
+    // Adopsi rincian & nilai dari cloud
+    if (cloudT.metode !== undefined && cloudT.metode !== null && cloudT.metode !== "-") out.metode = cloudT.metode;
+    if (cloudT.nominal !== undefined && cloudT.nominal !== null && parseFloat(cloudT.nominal) > 0) out.nominal = cloudT.nominal;
     if (cloudT.potonganDeposit !== undefined && cloudT.potonganDeposit !== null) out.potonganDeposit = cloudT.potonganDeposit;
-    if (cloudT.tglBayar !== undefined && cloudT.tglBayar !== null && cloudT.tglBayar !== "") out.tglBayar = cloudT.tglBayar;
-    if (Array.isArray(cloudT.rincianItems)) out.rincianItems = cloudT.rincianItems;
+    if (Array.isArray(cloudT.rincianItems) && cloudT.rincianItems.length > 0) out.rincianItems = cloudT.rincianItems;
 
-    if (cloudStatus === "Menunggu Verifikasi" && isLocalUnpaid) {
+    if (cloudStatus === "Menunggu Verifikasi") {
       out.status = "Menunggu Verifikasi";
       if (hasCloudBukti) out.buktiTransfer = cloudT.buktiTransfer;
-      if (cloudT.jumlahDibayar) out.jumlahDibayar = cloudT.jumlahDibayar;
+      if (cloudT.jumlahDibayar !== undefined && cloudT.jumlahDibayar !== null && cloudT.jumlahDibayar !== "") out.jumlahDibayar = cloudT.jumlahDibayar;
       if (cloudT.tglBayar && cloudT.tglBayar !== "-") out.tglBayar = cloudT.tglBayar;
       if (cloudT.metode && cloudT.metode !== "-") out.metode = cloudT.metode;
-    } else if (cloudStatus === "Lunas" && localStatus !== "Lunas") {
+    } else if (cloudStatus === "Lunas") {
       out.status = "Lunas";
-      out.buktiTransfer = cloudT.buktiTransfer || "";
+      if (hasCloudBukti) out.buktiTransfer = cloudT.buktiTransfer;
       if (cloudT.tglBayar && cloudT.tglBayar !== "-") out.tglBayar = cloudT.tglBayar;
-      if (cloudT.jumlahDibayar) out.jumlahDibayar = cloudT.jumlahDibayar;
-    } else if (cloudStatus === "Menunggu Pembayaran" && isLocalUnpaid) {
-      out.status = cloudT.status;
-      out.buktiTransfer = "";
+      if (cloudT.jumlahDibayar !== undefined && cloudT.jumlahDibayar !== null && cloudT.jumlahDibayar !== "") out.jumlahDibayar = cloudT.jumlahDibayar;
+    } else if (cloudStatus === "Menunggu Pembayaran" || cloudStatus === "Menunggak") {
+      out.status = cloudStatus;
+      if (!hasCloudBukti) {
+        out.buktiTransfer = "";
+        out.jumlahDibayar = 0;
+        out.tglBayar = "-";
+      }
     }
     return out;
   });
@@ -3148,7 +3165,12 @@ function renderDaftarTagihan() {
                 }
                 ${
                   t.status !== "Lunas" && isAdmin
-                    ? `<button class="btn btn-success btn-sm" onclick="verifikasiLunasTagihan('${t.id}')" title="Verifikasi LUNAS & Masuk Kas"><i class="ri-check-double-line"></i> Verifikasi</button>`
+                    ? `<button class="btn btn-success btn-sm" onclick="openVerifikasiModal('${t.id}')" title="Verifikasi LUNAS & Masuk Kas"><i class="ri-check-double-line"></i> Verifikasi</button>`
+                    : ""
+                }
+                ${
+                  isAdmin && (displayStatus === "Lunas" || displayStatus === "Menunggu Verifikasi" || (t.buktiTransfer && t.buktiTransfer.length > 20))
+                    ? `<button class="btn btn-outline btn-sm" style="color: #ef4444; border-color: #ef4444;" onclick="resetTagihanMenungguPembayaran('${t.id}')" title="Reset ke Belum Bayar (Hapus Bukti)"><i class="ri-refresh-line"></i></button>`
                     : ""
                 }
               </td>
@@ -3216,6 +3238,7 @@ function saveEditTagihanNominal() {
     }
 
     saveState();
+    autoSyncToGoogleSheet(true, { adminAction: true, forceReplace: true, skipPreMerge: true });
     closeModal("modal-edit-tagihan");
     renderDaftarTagihan();
     renderDashboard();
@@ -3600,7 +3623,28 @@ function applyOverpaymentToNextMonth(blokNo, currentMonth, currentYear, kelebiha
   }
 }
 
-function verifikasiLunasTagihan(id) {
+function parseRupiahInput(val) {
+  if (typeof val === "number") return val;
+  if (!val) return 0;
+  const str = String(val).trim();
+  let cleaned = str.replace(/[^0-9,\.]/g, "");
+  if (cleaned.includes(".") && !cleaned.includes(",")) {
+    if ((cleaned.match(/\./g) || []).length > 1 || /\.\d{3}$/.test(cleaned)) {
+      cleaned = cleaned.replace(/\./g, "");
+    }
+  } else if (cleaned.includes(",") && !cleaned.includes(".")) {
+    if ((cleaned.match(/,/g) || []).length > 1 || /,\d{3}$/.test(cleaned)) {
+      cleaned = cleaned.replace(/,/g, "");
+    } else {
+      cleaned = cleaned.replace(",", ".");
+    }
+  } else if (cleaned.includes(".") && cleaned.includes(",")) {
+    cleaned = cleaned.replace(/\./g, "").replace(",", ".");
+  }
+  return parseFloat(cleaned) || 0;
+}
+
+function openVerifikasiModal(id) {
   const isAdmin = currentUser && currentUser.role === "admin";
   if (!isAdmin) {
     alert("Hanya Admin yang berhak memverifikasi pembayaran.");
@@ -3610,27 +3654,136 @@ function verifikasiLunasTagihan(id) {
   const t = appState.tagihan.find((item) => item.id === id);
   if (!t) return;
 
-  const defaultNominal = parseFloat(t.jumlahDibayar) || parseFloat(t.nominal) || 0;
-  const inputPrompt = prompt(
-    `Verifikasi pembayaran LUNAS untuk rumah ${t.blokNo} - ${t.pemilik}:\n` +
-    `Nominal Tagihan: Rp ${t.nominal.toLocaleString("id-ID")}\n\n` +
-    `Masukkan Jumlah yang Dibayarkan / Ditransfer Warga (Rp):`,
-    defaultNominal
-  );
-
-  if (inputPrompt === null) return; // User clicked Cancel
-
-  const actualPaid = parseFloat(inputPrompt) || defaultNominal;
-  if (actualPaid <= 0) {
-    alert("Jumlah pembayaran harus lebih dari 0.");
+  const idInput = document.getElementById("verif-tagihan-id");
+  if (!idInput) {
     return;
   }
 
+  idInput.value = t.id;
+  document.getElementById("verif-warga-nama").textContent = `${t.blokNo} - ${t.pemilik} (${t.kelompokIPL || "IPL"})`;
+  document.getElementById("verif-periode-info").textContent = `Periode: ${t.bulan || ""} ${t.tahun || ""} • Status: ${t.status}`;
+  
+  const statusBadge = document.getElementById("verif-status-badge");
+  if (statusBadge) {
+    statusBadge.textContent = t.status || "Menunggu Verifikasi";
+    statusBadge.className = `badge ${t.status === "Lunas" ? "badge-success" : t.status === "Menunggu Verifikasi" ? "badge-info" : "badge-warning"}`;
+  }
+
+  // Bukti Transfer
+  const buktiImg = document.getElementById("verif-bukti-img");
+  const buktiLink = document.getElementById("verif-bukti-link");
+  const buktiEmpty = document.getElementById("verif-bukti-empty");
+
+  const hasBukti = !!(t.buktiTransfer && t.buktiTransfer.length > 20 && t.buktiTransfer !== "-");
+  if (hasBukti) {
+    if (buktiImg) { buktiImg.src = t.buktiTransfer; buktiImg.style.display = "inline-block"; }
+    if (buktiLink) { buktiLink.href = t.buktiTransfer; buktiLink.style.display = "inline"; }
+    if (buktiEmpty) buktiEmpty.style.display = "none";
+  } else {
+    if (buktiImg) { buktiImg.src = ""; buktiImg.style.display = "none"; }
+    if (buktiLink) buktiLink.style.display = "none";
+    if (buktiEmpty) buktiEmpty.style.display = "block";
+  }
+
+  // Nominal Tagihan & Nominal Ditransfer
+  document.getElementById("verif-nominal-tagihan").value = formatRp(t.nominal);
+  
+  const defaultPaid = parseFloat(t.jumlahDibayar) || parseFloat(t.nominal) || 0;
+  const bayarInput = document.getElementById("verif-nominal-bayar");
+  if (bayarInput) {
+    bayarInput.value = defaultPaid;
+  }
+
+  // Tanggal Bayar
+  const tglInput = document.getElementById("verif-tanggal-bayar");
+  if (tglInput) {
+    if (t.tglBayar && t.tglBayar !== "-" && !t.tglBayar.includes("Sudah") && !t.tglBayar.includes("Lebih")) {
+      const parts = t.tglBayar.split(/[\/\-]/);
+      if (parts.length === 3 && parts[2].length === 4) {
+        tglInput.value = `${parts[2]}-${parts[1].padStart(2, "0")}-${parts[0].padStart(2, "0")}`;
+      } else {
+        tglInput.value = new Date().toISOString().split("T")[0];
+      }
+    } else {
+      tglInput.value = new Date().toISOString().split("T")[0];
+    }
+  }
+
+  // Metode
+  const metodeSelect = document.getElementById("verif-metode-bayar");
+  if (metodeSelect) {
+    metodeSelect.value = t.metode && t.metode !== "-" ? t.metode : "Transfer";
+  }
+
+  // Catatan
+  const catatanInput = document.getElementById("verif-catatan");
+  if (catatanInput) {
+    catatanInput.value = t.catatanKhusus || "";
+  }
+
+  onVerifNominalInput(defaultPaid);
+  openModal("modal-verifikasi-tagihan");
+}
+
+function onVerifNominalInput(val) {
+  const id = document.getElementById("verif-tagihan-id")?.value;
+  const t = appState.tagihan.find((item) => item.id === id);
+  if (!t) return;
+
+  const diffBox = document.getElementById("verif-diff-box");
+  if (!diffBox) return;
+
+  const currentPaid = parseRupiahInput(val);
+  const billNominal = parseFloat(t.nominal) || 0;
+
+  if (currentPaid <= 0) {
+    diffBox.style.display = "none";
+    return;
+  }
+
+  diffBox.style.display = "block";
+  if (currentPaid > billNominal) {
+    const diff = currentPaid - billNominal;
+    diffBox.style.background = "#ecfdf5";
+    diffBox.style.color = "#065f46";
+    diffBox.style.border = "1px solid #a7f3d0";
+    diffBox.innerHTML = `<i class="ri-arrow-right-up-line" style="font-weight:700;"></i> <strong>Lebih Bayar ${formatRp(diff)}</strong>: Kelebihan ini otomatis dialokasikan sebagai potongan tagihan bulan berikutnya.`;
+  } else if (currentPaid < billNominal) {
+    const diff = billNominal - currentPaid;
+    diffBox.style.background = "#fffbeb";
+    diffBox.style.color = "#92400e";
+    diffBox.style.border = "1px solid #fde68a";
+    diffBox.innerHTML = `<i class="ri-alert-line" style="font-weight:700;"></i> <strong>Kurang Bayar ${formatRp(diff)}</strong>: Tagihan akan diverifikasi dengan nominal masuk Kas sebesar ${formatRp(currentPaid)}.`;
+  } else {
+    diffBox.style.background = "#eff6ff";
+    diffBox.style.color = "#1e40af";
+    diffBox.style.border = "1px solid #bfdbfe";
+    diffBox.innerHTML = `<i class="ri-checkbox-circle-line" style="font-weight:700;"></i> <strong>Sesuai</strong>: Pembayaran pas sebesar ${formatRp(currentPaid)}.`;
+  }
+}
+
+function submitVerifikasiTagihan() {
+  const id = document.getElementById("verif-tagihan-id")?.value;
+  const t = appState.tagihan.find((item) => item.id === id);
+  if (!t) return;
+
+  const rawPaid = document.getElementById("verif-nominal-bayar")?.value;
+  const actualPaid = parseRupiahInput(rawPaid);
+  if (actualPaid <= 0) {
+    alert("Nominal pembayaran harus lebih dari 0.");
+    return;
+  }
+
+  const rawTgl = document.getElementById("verif-tanggal-bayar")?.value;
+  const tglBayarFormatted = rawTgl ? rawTgl.split("-").reverse().join("/") : new Date().toLocaleDateString("id-ID");
+  const metode = document.getElementById("verif-metode-bayar")?.value || "Transfer";
+  const catatan = document.getElementById("verif-catatan")?.value.trim() || "";
+
   t.status = "Lunas";
   t.jumlahDibayar = actualPaid;
-  if (!t.tglBayar || t.tglBayar === "-") {
-    t.tglBayar = new Date().toLocaleDateString("id-ID");
-  }
+  t.tglBayar = tglBayarFormatted;
+  t.metode = metode;
+  if (catatan) t.catatanKhusus = catatan;
 
   let extraInfo = "";
   if (actualPaid > t.nominal) {
@@ -3641,14 +3794,24 @@ function verifikasiLunasTagihan(id) {
 
   getCalculatedKasBalance();
   saveState();
-  autoSyncToGoogleSheet(true);
+  autoSyncToGoogleSheet(true, { adminAction: true, forceReplace: true, skipPreMerge: true });
   addAuditLog("Verifikasi Pembayaran", `Pembayaran rumah ${t.blokNo} (${t.pemilik}) diverifikasi LUNAS (Tagihan: ${formatRp(t.nominal)}, Dibayar: ${formatRp(actualPaid)})`);
 
   renderDaftarTagihan();
   renderDashboard();
   renderKasArusKasTable();
+  updateAdminNotifications();
+  closeModal("modal-verifikasi-tagihan");
+
+  if (typeof currentDetailTagihanId !== "undefined" && currentDetailTagihanId === id) {
+    viewDetailTagihan(id);
+  }
 
   alert(`Pembayaran rumah ${t.blokNo} (${t.pemilik}) berhasil diverifikasi LUNAS sebesar ${formatRp(actualPaid)} masuk ke Kas!${extraInfo}`);
+}
+
+function verifikasiLunasTagihan(id) {
+  openVerifikasiModal(id);
 }
 
 function parseDateToTimestamp(dateStr) {
@@ -4839,13 +5002,41 @@ function tandaiLunasSebelumSistem(id) {
     
     getCalculatedKasBalance();
     saveState();
-    autoSyncToGoogleSheet(true);
+    autoSyncToGoogleSheet(true, { adminAction: true, forceReplace: true, skipPreMerge: true });
     addAuditLog("Pelunasan Khusus", `Tagihan ${t.blokNo} (${t.pemilik}) ditandai LUNAS sebelum sistem tanpa merubah kas.`);
     renderDaftarTagihan();
     renderDashboard();
     renderKasArusKasTable();
     closeModal("modal-edit-tagihan");
     alert(`Status rumah ${t.blokNo} (${t.pemilik}) berhasil diubah menjadi LUNAS (tanpa merubah Kas).`);
+  }
+}
+
+function revertOverpaymentFromNextMonth(blokNo, currentMonth, currentYear, kelebihan) {
+  if (!appState || !appState.tagihan || kelebihan <= 0) return;
+  const currentMonthIdx = MONTH_NAMES.indexOf(currentMonth);
+  if (currentMonthIdx === -1) return;
+  const nextMonthIdx = (currentMonthIdx + 1) % 12;
+  const nextMonthName = MONTH_NAMES[nextMonthIdx];
+  const nextYear = (nextMonthIdx === 0) ? (parseInt(currentYear, 10) + 1).toString() : currentYear.toString();
+  const cleanBlok = normalizeBlok(blokNo);
+  const nextBill = appState.tagihan.find(
+    (nb) => normalizeBlok(nb.blokNo) === cleanBlok && nb.bulan === nextMonthName && (nb.tahun || "").toString() === nextYear
+  );
+  if (nextBill) {
+    if (nextBill.potonganDeposit && nextBill.potonganDeposit > 0) {
+      const revertAmt = Math.min(nextBill.potonganDeposit, kelebihan);
+      nextBill.nominal = (parseFloat(nextBill.nominal) || 0) + revertAmt;
+      nextBill.potonganDeposit = Math.max(0, nextBill.potonganDeposit - revertAmt);
+      if (Array.isArray(nextBill.rincianItems)) {
+        nextBill.rincianItems = nextBill.rincianItems.filter((item) => !item.nama.includes(currentMonth));
+      }
+      if (nextBill.metode === "Saldo Lebih Bayar") {
+        nextBill.status = "Menunggu Pembayaran";
+        nextBill.tglBayar = "-";
+        nextBill.metode = "-";
+      }
+    }
   }
 }
 
@@ -4857,23 +5048,43 @@ function resetTagihanMenungguPembayaran(id) {
   }
 
   const t = appState.tagihan.find((item) => item.id === id);
-  if (!t) return;
+  if (!t) {
+    alert("Data tagihan tidak ditemukan.");
+    return;
+  }
 
   if (confirm(`Reset tagihan rumah ${t.blokNo} - ${t.pemilik} (${t.bulan || ""} ${t.tahun || ""}) kembali ke 'Menunggu Pembayaran' dan bersihkan bukti transfer?`)) {
+    // Revert overpayment from subsequent month if applicable
+    if (parseFloat(t.jumlahDibayar) > parseFloat(t.nominal)) {
+      const kelebihan = parseFloat(t.jumlahDibayar) - parseFloat(t.nominal);
+      revertOverpaymentFromNextMonth(t.blokNo, t.bulan, t.tahun, kelebihan);
+    }
+
     t.status = "Menunggu Pembayaran";
     t.buktiTransfer = "";
     t.tglBayar = "-";
     t.metode = "-";
     t.jumlahDibayar = 0;
 
+    // Recalculate Cash Balance
+    getCalculatedKasBalance();
     saveState();
-    autoSyncToGoogleSheet(true);
+
+    // Sync to Google Sheet with adminAction & skipPreMerge to prevent rollback
+    autoSyncToGoogleSheet(true, { adminAction: true, forceReplace: true, skipPreMerge: true });
     addAuditLog("Reset Tagihan", `Tagihan ${t.blokNo} (${t.pemilik}) direset ke Menunggu Pembayaran oleh Admin.`);
     
     renderDaftarTagihan();
     renderDashboard();
+    renderKasArusKasTable();
     updateAdminNotifications();
     closeModal("modal-edit-tagihan");
+    closeModal("modal-verifikasi-tagihan");
+
+    if (typeof currentDetailTagihanId !== "undefined" && currentDetailTagihanId === id) {
+      viewDetailTagihan(id);
+    }
+
     alert(`Tagihan rumah ${t.blokNo} (${t.pemilik}) berhasil direset ke 'Menunggu Pembayaran'!`);
   }
 }

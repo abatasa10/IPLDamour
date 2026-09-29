@@ -1,4 +1,4 @@
-const CACHE_NAME = 'damour-ipl-v1.3.0'; // bumped for WhatsApp group report feature
+const CACHE_NAME = 'damour-ipl-v1.3.1'; // bumped for reset tagihan & modal verifikasi pembayaran
 
 const PRECACHE_ASSETS = [
   './',

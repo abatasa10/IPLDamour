@@ -80,7 +80,9 @@ function doPost(e) {
     // sehingga server hanya melakukan UPSERT:
     //   - tidak pernah menghapus baris yang tidak dikirim
     //   - status tagihan TIDAK bisa mundur (Lunas/Verifikasi tidak bisa jadi Belum Bayar)
+    // KECUALI jika adminAction / forceReplace dikirim oleh aksi eksplisit admin.
     var forceReplace = contents.forceReplace === true;
+    var adminAction = contents.adminAction === true || forceReplace;
     var ss = SpreadsheetApp.getActiveSpreadsheet();
 
     // FCM: Simpan token warga jika ada di payload
@@ -89,7 +91,7 @@ function doPost(e) {
     }
 
     function sheetOpts() {
-      return { replaceAllowed: forceReplace, statusForwardOnly: !forceReplace };
+      return { replaceAllowed: forceReplace, statusForwardOnly: !adminAction };
     }
 
     if (contents.rumah && Array.isArray(contents.rumah) && contents.rumah.length > 0) {
