@@ -1,4 +1,4 @@
-const CACHE_NAME = 'damour-ipl-v1.3.1'; // bumped for reset tagihan & modal verifikasi pembayaran
+const CACHE_NAME = 'damour-ipl-v1.3.2'; // bumped for C12 reset & live Google Sheet sync
 
 const PRECACHE_ASSETS = [
   './',

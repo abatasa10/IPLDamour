@@ -1027,7 +1027,7 @@ function autoUpdateMenunggakStatus() {
     let billYear = parseInt(t.tahun, 10) || currentYear;
     let billMonthIdx = MONTH_NAMES.indexOf(t.bulan);
 
-    if (t.periode && t.periode.includes("-")) {
+    if (billMonthIdx === -1 && t.periode && t.periode.includes("-") && !t.periode.includes("T")) {
       const parts = t.periode.split("-");
       const pYear = parseInt(parts[0], 10);
       if (!isNaN(pYear)) billYear = pYear;
@@ -1496,7 +1496,7 @@ function autoEnsureCurrentMonthBills() {
     const cleanBlok = normalizeBlok(r.blokNo);
     const tagihanId = `TAG-${currentYear}${currentMonth}-${cleanBlok}`;
     
-    let existingBill = appState.tagihan.find((t) => normalizeBlok(t.blokNo) === cleanBlok && t.bulan === currentMonth && t.tahun === currentYear);
+    let existingBill = appState.tagihan.find((t) => normalizeBlok(t.blokNo) === cleanBlok && t.bulan === currentMonth && String(t.tahun) === currentYear);
 
     if (existingBill) {
       existingBill.blokNo = cleanBlok;
