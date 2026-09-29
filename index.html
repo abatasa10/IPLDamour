@@ -455,8 +455,11 @@
           <div class="dashboard-grid">
             <div>
               <div class="card">
-                <div class="card-header">
+                <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
                   <div class="card-title" id="dash-summary-title">Ringkasan Bulan Ini</div>
+                  <button class="btn btn-success btn-sm role-admin-only" onclick="openWhatsAppGroupReportModal()" style="display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.78rem; padding: 0.28rem 0.65rem;" title="Kirim Laporan Rekap Tunggakan ke Grup WhatsApp">
+                    <i class="ri-whatsapp-line"></i> Rekap WA
+                  </button>
                 </div>
                 <div class="summary-highlight-box">
                   <div class="summary-item">
@@ -1336,6 +1339,9 @@
             <div class="card-header mt-card-header">
               <div class="card-title"><i class="ri-alarm-warning-line"></i> Monitoring Tunggakan IPL Per Blok</div>
               <div class="mt-header-actions">
+                <button class="btn btn-success btn-sm" onclick="openWhatsAppGroupReportModal()" title="Kirim Laporan Rekap ke Grup WhatsApp" style="display: inline-flex; align-items: center; gap: 0.35rem; font-weight: 600;">
+                  <i class="ri-whatsapp-line"></i> Rekap Grup WA
+                </button>
                 <div class="btn-group" style="display: flex; gap: 0.35rem;">
                   <button class="btn btn-outline btn-sm" id="mt-view-grid" onclick="setMonitoringView('grid')" title="Tampilan Kotak">
                     <i class="ri-layout-grid-line"></i> Kotak
@@ -1421,6 +1427,7 @@
                   <i class="ri-search-line"></i>
                   <input type="text" id="filter-piutang-search" class="form-control" placeholder="Cari rumah / pemilik" oninput="renderLaporanPiutangWarga()">
                 </div>
+                <button class="btn btn-success" onclick="openWhatsAppGroupReportModal()" style="display: inline-flex; align-items: center; gap: 0.35rem; font-weight: 600;"><i class="ri-whatsapp-line"></i> Rekap Grup WA</button>
                 <button class="btn btn-outline" onclick="window.print()"><i class="ri-printer-line"></i> Cetak Daftar Piutang</button>
               </div>
             </div>
@@ -2259,7 +2266,94 @@
     </div>
   </div>
 
-  <script src="app.js?v=20260925_01"></script>
+  <!-- MODAL REKAP TUNGGAKAN KE GRUP WHATSAPP -->
+  <div class="modal-overlay" id="modal-wa-group-report" style="z-index: 10005;">
+    <div class="modal-box" style="max-width: 620px;">
+      <div class="modal-header" style="background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);">
+        <div class="modal-title" style="display: flex; align-items: center; gap: 0.5rem; color: #166534; font-weight: 700;">
+          <i class="ri-whatsapp-line" style="font-size: 1.4rem; color: #16a34a;"></i>
+          <span>Rekap Laporan ke Grup WhatsApp</span>
+        </div>
+        <button class="close-modal-btn" onclick="closeModal('modal-wa-group-report')">&times;</button>
+      </div>
+      <div class="modal-body" style="display: flex; flex-direction: column; gap: 1rem;">
+        <!-- Penjelasan Singkat Cara Kerja -->
+        <div style="background: #f8fafc; border-left: 4px solid #16a34a; border-radius: 6px; padding: 0.65rem 0.85rem; font-size: 0.8rem; color: #334155; line-height: 1.45;">
+          💡 <strong>Cara Kerja:</strong> Teks laporan di bawah ini otomatis terangkum dari data tagihan. Saat Anda klik <strong>Buka WhatsApp & Pilih Grup</strong>, WhatsApp akan langsung membuka menu kontak/grup sehingga Anda tinggal memilih grup warga/pengurus. Anda juga bisa menyalin teks langsung.
+        </div>
+
+        <!-- Bar Kontrol Filter & Template -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 0.75rem;">
+          <div>
+            <label style="font-size: 0.8rem; font-weight: 600; color: var(--text-main); margin-bottom: 0.25rem; display: block;">
+              <i class="ri-calendar-line"></i> Periode Tagihan:
+            </label>
+            <select id="wa-report-periode" class="form-control" onchange="updateWhatsAppReportPreview()"></select>
+          </div>
+          <div>
+            <label style="font-size: 0.8rem; font-weight: 600; color: var(--text-main); margin-bottom: 0.25rem; display: block;">
+              <i class="ri-timer-line"></i> Template Pengingat:
+            </label>
+            <select id="wa-report-tipe" class="form-control" onchange="updateWhatsAppReportPreview()">
+              <option value="tgl25">Pengingat Tgl 25 (H-5 Jatuh Tempo)</option>
+              <option value="tgl30">Peringatan Tgl 30 (Hari Terakhir)</option>
+              <option value="umum">Rekapitulasi Bulanan Standar</option>
+              <option value="rapel">Peringatan Menunggak > 1 Bulan</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Opsi Privasi & Tambahan -->
+        <div style="display: flex; flex-wrap: wrap; gap: 1rem; padding: 0.6rem 0.85rem; background: #fff; border: 1px solid var(--border-color); border-radius: 8px; font-size: 0.82rem;">
+          <label style="display: inline-flex; align-items: center; gap: 0.4rem; cursor: pointer;">
+            <input type="checkbox" id="wa-report-opt-nominal" checked onchange="updateWhatsAppReportPreview()">
+            <span>Sertakan Nominal Tunggakan</span>
+          </label>
+          <label style="display: inline-flex; align-items: center; gap: 0.4rem; cursor: pointer;">
+            <input type="checkbox" id="wa-report-opt-rekening" checked onchange="updateWhatsAppReportPreview()">
+            <span>Sertakan Info Rekening</span>
+          </label>
+        </div>
+
+        <!-- Input Info Rekening (Tersimpan di LocalStorage) -->
+        <div id="wa-report-rekening-wrapper" style="font-size: 0.82rem;">
+          <label style="font-size: 0.78rem; font-weight: 600; color: var(--text-muted); display: block; margin-bottom: 0.2rem;">
+            <i class="ri-bank-card-line"></i> Rekening Pembayaran (otomatis tersimpan):
+          </label>
+          <input type="text" id="wa-report-rekening-input" class="form-control" placeholder="Contoh: BCA 1234567890 a.n. Kas IPL D'Amour" oninput="saveAndRefreshWAReportRekening()">
+        </div>
+
+        <!-- Statistik Ringkas Badge -->
+        <div id="wa-report-stats-badge" style="display: flex; gap: 0.5rem; flex-wrap: wrap; font-size: 0.78rem;">
+          <!-- Dinamis diisi JS -->
+        </div>
+
+        <!-- Preview Textarea -->
+        <div>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
+            <label style="font-size: 0.8rem; font-weight: 600; color: var(--text-main);">
+              <i class="ri-file-text-line"></i> Pratinjau Teks (Dapat diedit langsung sebelum dikirim):
+            </label>
+            <small style="color: var(--text-muted); font-size: 0.72rem;">Bisa edit tambahan pesan di bawah</small>
+          </div>
+          <textarea id="wa-report-textarea" class="form-control" rows="11" style="font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 0.83rem; line-height: 1.45; background: #fafafa; border: 1px solid #cbd5e1; border-radius: 8px; resize: vertical;"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+        <button class="btn btn-outline btn-sm" onclick="closeModal('modal-wa-group-report')">Tutup</button>
+        <div style="display: flex; gap: 0.5rem;">
+          <button class="btn btn-outline btn-sm" id="btn-copy-wa-report" onclick="copyWhatsAppReport()">
+            <i class="ri-file-copy-line"></i> Salin Teks
+          </button>
+          <button class="btn btn-success btn-sm" onclick="sendWhatsAppGroupReport()" style="display: inline-flex; align-items: center; gap: 0.35rem; font-weight: 600;">
+            <i class="ri-whatsapp-line"></i> Buka WhatsApp & Pilih Grup
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js?v=20260929_wa_rekap"></script>
   <script>
     function togglePasswordVisibility() {
       const pwdInp = document.getElementById("login-password");

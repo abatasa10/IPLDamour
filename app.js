@@ -5119,6 +5119,311 @@ function sendWhatsAppReminder(blokNo, pemilik, phone, jumlahBulan, bulanStr, tot
   addAuditLog("Remind WA", `Pengirim Pengingat WA tunggakan ke ${pemilik} (${blokNo}) sebesar ${formatRp(totalNominal)}`);
 }
 
+/* ==========================================================================
+   REKAP LAPORAN KE GRUP WHATSAPP (OPSI 2: 1-KLIK)
+   ========================================================================== */
+
+function openWhatsAppGroupReportModal() {
+  if (!appState) return;
+
+  const periodeSelect = document.getElementById("wa-report-periode");
+  const tipeSelect = document.getElementById("wa-report-tipe");
+  const rekeningInput = document.getElementById("wa-report-rekening-input");
+
+  // Isi periode secara dinamis dari tagihan
+  if (periodeSelect) {
+    const rawPeriods = [...new Set(
+      (appState.tagihan || []).map(t => {
+        if (t.bulan && t.tahun) return `${t.bulan} ${t.tahun}`;
+        if (t.bulan) return t.bulan;
+        if (t.periode) return t.periode;
+        return null;
+      }).filter(Boolean)
+    )];
+
+    // Urutkan periode terbaru lebih dulu
+    rawPeriods.sort((a, b) => {
+      const partsA = a.split(" ");
+      const partsB = b.split(" ");
+      const monthA = partsA[0];
+      const yearA = parseInt(partsA[1]) || 0;
+      const monthB = partsB[0];
+      const yearB = parseInt(partsB[1]) || 0;
+      if (yearA !== yearB) return yearB - yearA;
+      return MONTH_NAMES.indexOf(monthB) - MONTH_NAMES.indexOf(monthA);
+    });
+
+    const now = new Date();
+    const curMonthName = MONTH_NAMES[now.getMonth()];
+    const curYear = now.getFullYear();
+    const curPeriodName = `${curMonthName} ${curYear}`;
+
+    let html = `<option value="${curPeriodName}">Bulan Berjalan (${curPeriodName})</option>`;
+    rawPeriods.forEach(p => {
+      if (p !== curPeriodName) {
+        html += `<option value="${p}">${p}</option>`;
+      }
+    });
+    html += `<option value="semua">Semua Periode (Akumulasi Tunggakan)</option>`;
+    periodeSelect.innerHTML = html;
+    periodeSelect.value = curPeriodName;
+  }
+
+  // Deteksi otomatis template berdasarkan tanggal hari ini (25 atau 30)
+  if (tipeSelect) {
+    const today = new Date().getDate();
+    if (today >= 23 && today <= 27) {
+      tipeSelect.value = "tgl25";
+    } else if (today >= 28 || today <= 2) {
+      tipeSelect.value = "tgl30";
+    } else {
+      tipeSelect.value = "umum";
+    }
+  }
+
+  // Load rekening tersimpan dari localStorage
+  if (rekeningInput) {
+    const savedRek = localStorage.getItem("damour_wa_rekening_info");
+    rekeningInput.value = savedRek !== null ? savedRek : "Bank BCA: 1234-567-890 a.n. Kas IPL Perumahan D'Amour";
+  }
+
+  updateWhatsAppReportPreview();
+  openModal("modal-wa-group-report");
+}
+
+function saveAndRefreshWAReportRekening() {
+  const inp = document.getElementById("wa-report-rekening-input");
+  if (inp) {
+    localStorage.setItem("damour_wa_rekening_info", inp.value);
+  }
+  updateWhatsAppReportPreview();
+}
+
+function updateWhatsAppReportPreview() {
+  if (!appState) return;
+
+  const periode = document.getElementById("wa-report-periode")?.value || "semua";
+  const tipe = document.getElementById("wa-report-tipe")?.value || "tgl25";
+  const showNominal = document.getElementById("wa-report-opt-nominal")?.checked !== false;
+  const showRekening = document.getElementById("wa-report-opt-rekening")?.checked !== false;
+  const rekeningInfo = (document.getElementById("wa-report-rekening-input")?.value || "").trim();
+  const textarea = document.getElementById("wa-report-textarea");
+  const statsBadge = document.getElementById("wa-report-stats-badge");
+
+  // Tampilkan/sembunyikan wrapper rekening input sesuai opsi
+  const rekWrapper = document.getElementById("wa-report-rekening-wrapper");
+  if (rekWrapper) {
+    rekWrapper.style.display = showRekening ? "block" : "none";
+  }
+
+  const rumahList = appState.rumah || [];
+  const tagihanList = appState.tagihan || [];
+  const totalRumah = rumahList.length;
+
+  let unpaidList = [];
+  let lunasCount = 0;
+
+  rumahList.forEach(r => {
+    const blok = normalizeBlok(r.blokNo);
+    const houseBills = tagihanList.filter(t => normalizeBlok(t.blokNo) === blok);
+
+    let unpaidBills = [];
+    let lunasBills = [];
+
+    if (periode === "semua") {
+      unpaidBills = houseBills.filter(t => t.status !== "Lunas");
+      lunasBills = houseBills.filter(t => t.status === "Lunas");
+    } else {
+      const parts = periode.split(" ");
+      const filterBulan = parts[0];
+      const filterTahun = parts[1];
+
+      const periodBills = houseBills.filter(t => {
+        const matchesBulan = t.bulan === filterBulan || (t.periode && t.periode.includes(filterBulan));
+        const matchesTahun = !filterTahun || t.tahun == filterTahun || (t.periode && t.periode.includes(filterTahun));
+        return matchesBulan && matchesTahun;
+      });
+
+      unpaidBills = periodBills.filter(t => t.status !== "Lunas");
+      lunasBills = periodBills.filter(t => t.status === "Lunas");
+    }
+
+    if (unpaidBills.length > 0) {
+      const totalTunggakan = unpaidBills.reduce((sum, t) => {
+        const nom = parseFloat(t.nominal) || 0;
+        const dibayar = parseFloat(t.jumlahDibayar) || 0;
+        return sum + Math.max(0, nom - dibayar);
+      }, 0);
+
+      const bulanList = unpaidBills.map(t => `${t.bulan}${t.tahun ? ' ' + t.tahun : ''}`);
+
+      unpaidList.push({
+        blokNo: r.blokNo,
+        pemilik: r.pemilik,
+        totalTunggakan: totalTunggakan,
+        jumlahBulan: unpaidBills.length,
+        bulanStr: bulanList.join(", ")
+      });
+    } else if (lunasBills.length > 0) {
+      lunasCount++;
+    }
+  });
+
+  // Urutkan daftar yang belum bayar berdasarkan BlokNo
+  unpaidList.sort((a, b) => {
+    return normalizeBlok(a.blokNo).localeCompare(normalizeBlok(b.blokNo), undefined, { numeric: true, sensitivity: 'base' });
+  });
+
+  const totalUnpaidNominal = unpaidList.reduce((sum, u) => sum + u.totalTunggakan, 0);
+  const totalUnpaidRumah = unpaidList.length;
+  const pctLunas = totalRumah > 0 ? Math.round((lunasCount / totalRumah) * 100) : 0;
+
+  // Format Header & Judul
+  let titleHeader = "";
+  let subHeader = "";
+  const now = new Date();
+  const dateStr = `${now.getDate()} ${MONTH_NAMES[now.getMonth()]} ${now.getFullYear()}`;
+  const periodeDisplay = periode === "semua" ? "Akumulasi Seluruh Periode" : periode;
+
+  if (tipe === "tgl25") {
+    titleHeader = `📢 *PENGINGAT PEMBAYARAN IPL D'AMOUR (H-5 JATUH TEMPO)*`;
+    subHeader = `Mengingatkan kembali bahwa jatuh tempo pembayaran IPL periode *${periodeDisplay}* adalah tanggal *30* ini.`;
+  } else if (tipe === "tgl30") {
+    titleHeader = `⚠️ *PERINGATAN JATUH TEMPO HARI INI — IPL D'AMOUR*`;
+    subHeader = `Hari ini adalah *HARI TERAKHIR (Jatuh Tempo)* pembayaran IPL periode *${periodeDisplay}*.`;
+  } else if (tipe === "rapel") {
+    titleHeader = `🚨 *REKAP TUNGGAKAN WARGA MENUNGGAK (>1 BULAN)*`;
+    subHeader = `Berikut adalah daftar unit dengan tunggakan lebih dari 1 bulan berjalan.`;
+  } else {
+    titleHeader = `📊 *REKAPITULASI PEMBAYARAN IPL D'AMOUR*`;
+    subHeader = `Berikut kami sampaikan update rekapitulasi status iuran IPL untuk periode *${periodeDisplay}*.`;
+  }
+
+  let textLines = [];
+  textLines.push(titleHeader);
+  textLines.push(`📅 *Update per:* ${dateStr}`);
+  textLines.push(``);
+  textLines.push(`Yth. Bapak/Ibu Warga Perumahan D'AMOUR,`);
+  textLines.push(subHeader);
+  textLines.push(``);
+  textLines.push(`📊 *Ringkasan Status:*`);
+  textLines.push(`• Total Unit: ${totalRumah} Rumah`);
+  textLines.push(`• Sudah Lunas: ${lunasCount} Rumah (${pctLunas}%) ✅`);
+  textLines.push(`• Belum Terkonfirmasi: ${totalUnpaidRumah} Rumah`);
+  if (showNominal) {
+    textLines.push(`• Total Dana Belum Masuk: *${formatRp(totalUnpaidNominal)}*`);
+  }
+  textLines.push(``);
+
+  if (totalUnpaidRumah === 0) {
+    textLines.push(`🎉 *Luar biasa! Seluruh unit warga sudah LUNAS untuk periode ini.* Terima kasih banyak atas partisipasi seluruh warga! 🙏`);
+  } else {
+    textLines.push(`⚠️ *Daftar Unit Belum Terkonfirmasi Lunas:*`);
+    unpaidList.forEach((u, idx) => {
+      let itemLine = `${idx + 1}. *${u.blokNo}* - ${u.pemilik}`;
+      if (showNominal) {
+        if (periode === "semua" && u.jumlahBulan > 1) {
+          itemLine += ` (${u.jumlahBulan} bln: ${formatRp(u.totalTunggakan)})`;
+        } else {
+          itemLine += ` (${formatRp(u.totalTunggakan)})`;
+        }
+      }
+      textLines.push(itemLine);
+    });
+  }
+
+  if (showRekening && rekeningInfo) {
+    textLines.push(``);
+    textLines.push(`💳 *Informasi Pembayaran:*`);
+    textLines.push(`${rekeningInfo}`);
+    textLines.push(`🔗 Web Konfirmasi / Cek Tagihan:`);
+    textLines.push(`https://abatasa10.github.io/IPLDamour/`);
+  }
+
+  textLines.push(``);
+  textLines.push(`Mohon kerjasamanya bagi Bapak/Ibu yang belum menyelesaikan tagihan agar operasional perumahan (keamanan, kebersihan, & fasilitas bersama) dapat berjalan lancar.`);
+  textLines.push(`_Bagi yang sudah transfer namun namanya masih tercantum, mohon segera kirimkan bukti transfer ke Pengurus/Admin agar langsung diverifikasi di sistem._ 🙏`);
+  textLines.push(``);
+  textLines.push(`Terima kasih atas perhatian dan kerjasamanya! 🏡✨`);
+
+  const fullReportText = textLines.join("\n");
+  if (textarea) {
+    textarea.value = fullReportText;
+  }
+
+  if (statsBadge) {
+    statsBadge.innerHTML = `
+      <span class="badge" style="background: #fee2e2; color: #b91c1c; padding: 4px 10px; border-radius: 6px; font-weight: 600;">Belum Lunas: ${totalUnpaidRumah} Unit (${formatRp(totalUnpaidNominal)})</span>
+      <span class="badge" style="background: #dcfce7; color: #15803d; padding: 4px 10px; border-radius: 6px; font-weight: 600;">Lunas: ${lunasCount} Unit (${pctLunas}%)</span>
+      <span class="badge" style="background: #eff6ff; color: #1d4ed8; padding: 4px 10px; border-radius: 6px; font-weight: 600;">Total: ${totalRumah} Rumah</span>
+    `;
+  }
+}
+
+function copyWhatsAppReport() {
+  const textarea = document.getElementById("wa-report-textarea");
+  if (!textarea) return;
+
+  const text = textarea.value;
+  if (!text) return;
+
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(() => {
+      const btn = document.getElementById("btn-copy-wa-report");
+      if (btn) {
+        const origHtml = btn.innerHTML;
+        btn.innerHTML = `<i class="ri-check-line" style="color: #16a34a;"></i> Tersalin!`;
+        setTimeout(() => { btn.innerHTML = origHtml; }, 2000);
+      }
+      if (typeof window.showIPLToast === "function") {
+        window.showIPLToast("📋 Laporan rekap berhasil disalin ke clipboard!");
+      }
+    }).catch(() => {
+      fallbackCopyText(textarea);
+    });
+  } else {
+    fallbackCopyText(textarea);
+  }
+}
+
+function fallbackCopyText(textarea) {
+  textarea.select();
+  document.execCommand("copy");
+  if (typeof window.showIPLToast === "function") {
+    window.showIPLToast("📋 Laporan rekap berhasil disalin ke clipboard!");
+  } else {
+    alert("Teks rekap berhasil disalin ke clipboard!");
+  }
+}
+
+function sendWhatsAppGroupReport() {
+  const textarea = document.getElementById("wa-report-textarea");
+  if (!textarea) return;
+
+  const text = textarea.value;
+  if (!text) return;
+
+  // Catat ke Audit Log
+  if (typeof addAuditLog === "function") {
+    addAuditLog("Rekap WA Grup", "Membuka draft kirim rekapitulasi tunggakan ke grup WhatsApp");
+  }
+
+  // Jika di perangkat mobile, coba Web Share API agar pengalaman share sangat natural
+  const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+  if (isMobile && navigator.share) {
+    navigator.share({
+      title: "Rekap Pembayaran IPL D'Amour",
+      text: text
+    }).catch((err) => {
+      // Jika user cancel atau browser tidak mendukung share text ke WA, fallback ke URL WA
+      window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`, "_blank");
+    });
+  } else {
+    // Di Desktop/PC: Buka dialog picker WA Web / Desktop
+    window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`, "_blank");
+  }
+}
+
 function generateReportPDF() {
   window.print();
 }

@@ -488,6 +488,15 @@ button {
   background: #dc2626;
 }
 
+.btn-success {
+  background: #16a34a;
+  color: #ffffff;
+}
+
+.btn-success:hover {
+  background: #15803d;
+}
+
 .form-control {
   width: 100%;
   padding: 0.5rem 0.75rem;

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'damour-ipl-v1.2.0'; // bumped for iOS PWA notification activation button
+const CACHE_NAME = 'damour-ipl-v1.3.0'; // bumped for WhatsApp group report feature
 
 const PRECACHE_ASSETS = [
   './',

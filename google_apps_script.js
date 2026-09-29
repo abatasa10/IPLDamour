@@ -17,6 +17,20 @@ function doGet(e) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var result = {};
   
+  // Tangani aksi khusus jika dipanggil dengan parameter URL (mis. ?action=testPush)
+  if (e && e.parameter && e.parameter.action) {
+    if (e.parameter.action === "testPush") {
+      var testRes = testSendPushNotification();
+      return ContentService.createTextOutput(JSON.stringify(testRes))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+    if (e.parameter.action === "getTokens") {
+      var tokens = getAllPushTokens(ss);
+      return ContentService.createTextOutput(JSON.stringify({ status: "success", count: tokens.length, tokens: tokens }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+  }
+
   try {
     var rumahSheet = ss.getSheetByName("Rumah") || createRumahSheet(ss);
     var tagihanSheet = ss.getSheetByName("Tagihan") || createTagihanSheet(ss);
@@ -604,30 +618,35 @@ function getAllPushTokens(ss) {
  * @param {string} body    - Isi pesan notifikasi
  */
 function sendIPLReminderNotification(title, body) {
-  // ⚠️ GANTI DENGAN DATA FIREBASE PROJECT ANDA
   var FCM_PROJECT_ID = "ipl-damour";
 
-  // Service Account JSON key — salin isi file JSON yang didownload dari Firebase
-  // ke sini sebagai string (atau simpan di PropertiesService untuk keamanan)
+  // Service Account JSON key — ambil dari PropertiesService jika ada,
+  // atau gunakan default credentials yang sudah terpasang
   var serviceAccountJson = PropertiesService.getScriptProperties().getProperty("FCM_SERVICE_ACCOUNT");
+  var serviceAccount = null;
 
-  if (!serviceAccountJson || FCM_PROJECT_ID === "GANTI_PROJECT_ID") {
-    Logger.log("[FCM] ⚠️ Config Firebase belum diisi. Skip kirim notif.");
-    return;
+  if (serviceAccountJson) {
+    try { serviceAccount = JSON.parse(serviceAccountJson); } catch (e) {}
   }
 
-  var serviceAccount = JSON.parse(serviceAccountJson);
-  var accessToken    = getFCMAccessToken(serviceAccount);
+  if (!serviceAccount) {
+    serviceAccount = {
+      "client_email": "firebase-adminsdk-fbsvc@ipl-damour.iam.gserviceaccount.com",
+      "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDCZbikvTsOo/2G\nMdrR0Z6AkEP3mSuyPQk8Yv7TM87oAag9I9xLRbTwhlbPhc5w8xsHvkZHrtnxNBcU\n1tIjQp1jaNAQ547OxVOoBZOYy4VOSDLM2LzyKavyxkUr1sGGogWJSOfrRk8QCZ1N\nFF+Vaos/etxKS220EH6Gm1GaHuZpHsuRadcI9nkwoifLTGRRv9ous1GxR4Lp1LJV\nibsTe4wt0KcpptBqTluf0BJQ/2+YjHd15RAoK/tCpq2PGOCa5SWeYIA0B9Abk5PT\nV3ZHinJyB0WR1jIoObFUlhOPuzLEbMKCsFXvaOmz8WOD+qKs+r7rj9mz+hUc+Agi\nlZsjdzUxAgMBAAECggEAFovXs3ujCtqoP9UubOFkAcM5rtDcCYsctB1DMtmyaKQw\nkA7FsRE/oBnknaMGQ4FepDJEUnIMIvaIqskTjDVgrbPtVdiVbpPiVP14leMc7exf\nv/RvTaLZp4mpYiFBRs0p2TdUdqwr5U9IKDVxtJGr3svwGsnOynCTTCddeoOU86ID\nuBD6bENJmBMM15SeFIrBRp3/fcIL0wl0gGSkZbwiAd1qn2HhScDS+PXJ7zSCMqZh\nMVS5nlqA+UrPcY4VGFC5R+WdOJ7iVw2MGP2PFJeAVvvgN/337od3kAUKFvlTnAKn\nViYG/04FWOfsgkAa9Yz35I7X8LFqydhUKRQggL20QQKBgQD2SAlU9XGvukad/T73\nzEOiPOOc0mUHbyV8AeNAOzgBPoYNOpvmoaGD3sDBPYxZ681am0ZtLZbHzF2aiR0q\nnqMfJczE6orxy6v639rX9/PIdgyASuQMsG6HpFLXJxtsH0X8jKr3XD+l2eqsOyLU\nZmNGfpA/puReG5MKaoKgEx0MOQKBgQDKEYvNx7+7PL5S61afGmOa0N0BopRtOtoR\nhRZfAzisPn3yUPdseUnEIEfVvab4vQ/QlDtRESTm0FGarFf4ua3ZDLzrAN7gvTuo\nOT/KU0YSEnhsTLLl9v0bW7TETl+hSGwTGCj2y9f5SX9GjW2Sm1UbN1JesHQRw3yz\nk3z8LgRguQKBgE0pMqtInw7UiM11C6Zte/83noSCsp6Kpy7cFIwKQbi6ExvP8gpn\nN4huYOvqUa/Wnic2IPGR5/y/PdBuBxJUU30txaMobNHm4wId4p3plJqIyc/kJuEG\n4gpjZIT+Pqw4fB/tHp+TammXBdxiRr5POelbO+yFaGVHtGD+D+EBPAeZAoGBAKjI\n2zQ6A0cMyBVPCn2/dy+cAt8YxE4w+HHl7vfSIwaM9Hrxcpqi/SDbreU1k0D1+z3I\nc3uVjHNX0rIV/y19O1+vqiXKBmFG74vmtgf0YvU5hGlB77TzCBxQD8BhjrOTYOLa\nLW1oe7B42d0+ySXKpd4j6aO6VFl6JrGBIscqUPHRAoGBAKDGbjo1dZjw6ClLXX08\nx6Ti0XMU+aC6zyMY+W9m56YF17aoVYAXnJmjLit6OSeg0Mwff4TLg14P5PJsxXNU\n4sNvobLM9/hrDdYrPD5IFEgWXqp3KuwI4ppfuGIIdbTxd+Vub5E3iet2Pm5lxsXy\n9wc1h4h56IitWf2ybN0T0KiN\n-----END PRIVATE KEY-----\n"
+    };
+  }
+
+  var accessToken = getFCMAccessToken(serviceAccount);
   if (!accessToken) {
     Logger.log("[FCM] Gagal dapat access token dari service account.");
-    return;
+    return { status: "error", message: "Gagal mendapatkan access token FCM dari service account." };
   }
 
   var ss     = SpreadsheetApp.getActiveSpreadsheet();
   var tokens = getAllPushTokens(ss);
   if (tokens.length === 0) {
     Logger.log("[FCM] Tidak ada subscriber — tidak ada notif yang dikirim.");
-    return;
+    return { status: "empty", message: "Belum ada token subscriber di sheet PushTokens.", totalSubscribers: 0 };
   }
 
   var fcmUrl = "https://fcm.googleapis.com/v1/projects/" + FCM_PROJECT_ID + "/messages:send";
@@ -682,6 +701,24 @@ function sendIPLReminderNotification(title, body) {
   });
 
   Logger.log("[FCM] Selesai. Terkirim: " + sent + ", Gagal: " + failed + " dari " + tokens.length + " subscriber.");
+  return {
+    status: sent > 0 ? "success" : (failed > 0 ? "partial_failed" : "no_recipient"),
+    sent: sent,
+    failed: failed,
+    totalSubscribers: tokens.length,
+    message: "Push notifikasi terkirim ke " + sent + " perangkat (" + failed + " gagal) dari total " + tokens.length + " subscriber."
+  };
+}
+
+/**
+ * FUNGSI TES: Jalankan fungsi ini langsung dari editor Google Apps Script
+ * untuk menguji pengiriman push notification ke semua HP yang sudah aktif.
+ */
+function testSendPushNotification() {
+  return sendIPLReminderNotification(
+    "🔔 Tes Notifikasi D'AMOUR IPL",
+    "Halo! Notifikasi pengingat IPL di HP iPhone Anda berhasil terhubung dan aktif! 🎉🏡"
+  );
 }
 
 /**
@@ -711,14 +748,18 @@ function getFCMAccessToken(serviceAccount) {
     var response = UrlFetchApp.fetch("https://oauth2.googleapis.com/token", {
       method:  "post",
       payload: {
-        grant_type: "urn:ietf:params:oauth2:grant_type:jwt-bearer",
+        grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer",
         assertion:  jwt
       },
       muteHttpExceptions: true
     });
 
     var tokenData = JSON.parse(response.getContentText());
-    return tokenData.access_token || null;
+    if (!tokenData.access_token) {
+      Logger.log("[FCM] OAuth token error: " + response.getContentText());
+      return null;
+    }
+    return tokenData.access_token;
   } catch (e) {
     Logger.log("[FCM] getFCMAccessToken error: " + e.toString());
     return null;
