@@ -1,4 +1,4 @@
-const CACHE_NAME = 'damour-ipl-v1.3.6'; // masuk halaman utama hanya saat sinkron HIJAU (connected)
+const CACHE_NAME = 'damour-ipl-v1.3.7'; // loading sinkron saat verifikasi/unggah bukti + refresh monitoring
 
 const PRECACHE_ASSETS = [
   './',

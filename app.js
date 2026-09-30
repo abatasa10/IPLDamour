@@ -1210,6 +1210,10 @@ async function waitForSyncConnected(maxWaitMs = 10000) {
 
   const started = Date.now();
   while (cloudSyncStatus !== "connected") {
+    if (cloudSyncStatus === "offline") {
+      setBootStatus("Tidak terhubung", "Data tersimpan di perangkat. Akan tersinkron otomatis saat online kembali.");
+      break;
+    }
     if (Date.now() - started > maxWaitMs) break;
     await new Promise((r) => setTimeout(r, 250));
   }
@@ -2229,6 +2233,7 @@ async function pullCloudAndNotify() {
       else if (viewId === "daftar-tagihan") renderDaftarTagihan();
       else if (viewId === "kas") renderKasArusKasTable();
       else if (viewId === "tagihan-saya" && typeof renderTagihanSaya === "function") renderTagihanSaya();
+      else if (viewId === "monitoring-tunggakan") renderMonitoringTunggakan();
     }
 
     const now = new Date();
@@ -3739,8 +3744,13 @@ async function simpanFormPembayaran() {
 
     t.status = "Menunggu Verifikasi";
     saveState();
-    autoSyncToGoogleSheet(true);
     addAuditLog("Upload Pembayaran", `Warga rumah ${t.blokNo} (${t.pemilik}) mengunggah pembayaran sebesar ${formatRp(inputNominal)} (Tagihan: ${formatRp(t.nominal)})`);
+
+    // Loading: tunggu bukti bayar benar-benar tersinkron ke Google Sheet
+    // agar warga tidak bingung (kalau langsung pindah halaman, datanya beda sendiri).
+    showBootLoading("Menyinkronkan pembayaran...", "Mengirim bukti bayar ke Google Sheet");
+    await waitForSyncConnected();
+
     alert("Bukti pembayaran berhasil dikompresi & dikirim! Status telah diubah menjadi 'Menunggu Verifikasi'. Silakan tunggu verifikasi admin.");
 
     showView("daftar-tagihan");
@@ -3988,7 +3998,7 @@ function onVerifNominalInput(val) {
   }
 }
 
-function submitVerifikasiTagihan() {
+async function submitVerifikasiTagihan() {
   const id = document.getElementById("verif-tagihan-id")?.value;
   const t = appState.tagihan.find((item) => item.id === id);
   if (!t) return;
@@ -4020,14 +4030,20 @@ function submitVerifikasiTagihan() {
 
   getCalculatedKasBalance();
   saveState();
-  autoSyncToGoogleSheet(true, { adminAction: true, forceReplace: true, skipPreMerge: true });
   addAuditLog("Verifikasi Pembayaran", `Pembayaran rumah ${t.blokNo} (${t.pemilik}) diverifikasi LUNAS (Tagihan: ${formatRp(t.nominal)}, Dibayar: ${formatRp(actualPaid)})`);
+  closeModal("modal-verifikasi-tagihan");
+
+  // Tampilkan loading: tunggu verifikasi benar-benar tersinkron ke Google Sheet
+  // supaya semua halaman (Dashboard, Kas, Monitoring Tunggakan) konsisten & tidak beda-beda.
+  showBootLoading("Menyinkronkan verifikasi...", "Mengirim & menyimpan ke Google Sheet");
+  await waitForSyncConnected();
+  updateStorageBadge("connected", "Verifikasi tersimpan");
 
   renderDaftarTagihan();
   renderDashboard();
   renderKasArusKasTable();
+  renderMonitoringTunggakan();
   updateAdminNotifications();
-  closeModal("modal-verifikasi-tagihan");
 
   if (typeof currentDetailTagihanId !== "undefined" && currentDetailTagihanId === id) {
     viewDetailTagihan(id);
