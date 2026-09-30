@@ -1,4 +1,4 @@
-const CACHE_NAME = 'damour-ipl-v1.3.3'; // bumped for Ridwan C16 user blok mapping fix
+const CACHE_NAME = 'damour-ipl-v1.3.4'; // load instan (tanpa tunggu sheet) + realtime poll untuk semua user
 
 const PRECACHE_ASSETS = [
   './',

@@ -142,8 +142,11 @@ document.addEventListener("DOMContentLoaded", async () => {
   } catch (e) {}
 
   setupEventListeners();
-  await loadAppData();
   initDynamicDatesAndYears();
+
+  // FASE 1 (CEPAT): muat cache lokal → render & login LANGSUNG, tanpa menunggu Google Sheet.
+  // Ini menghilangkan delay saat orang baru login / membuka PWA.
+  await loadLocalState();
   checkAuthSession();
   updateHouseGroupCounts();
   renderDashboard();
@@ -159,6 +162,10 @@ document.addEventListener("DOMContentLoaded", async () => {
   renderSimulasiInputs();
   renderGenerateTagihanForm();
   runSimulasiIPL();
+
+  // FASE 2 (LATAR BELAKANG): ambil data terbaru dari Google Sheet, merge, lalu segarkan tampilan
+  // tanpa memblokir pengguna. Jika cloud lambat/offline, aplikasi tetap jalan dari cache lokal.
+  loadAppData();
 });
 
 // Authentication & Role Management
@@ -1149,7 +1156,9 @@ function getWargaTunggakanSummary() {
 }
 
 // Load App Data with GOOGLE SPREADSHEET as PRIMARY STORAGE
-async function loadAppData() {
+// Muat state dari cache lokal (data.json + localStorage) dengan CEPAT, tanpa menyentuh cloud.
+// Dipanggil saat boot agar UI langsung tampil; Google Sheet di-fetch belakangan (latar belakang).
+async function loadLocalState() {
   let jsonBackup = null;
   try {
     const res = await fetch("data.json");
@@ -1191,6 +1200,19 @@ async function loadAppData() {
       appState.auditLog = preservedAudit;
     }
   }
+
+  if (!appState) appState = {};
+  if (!appState.rumah) appState.rumah = [];
+  if (!appState.tagihan) appState.tagihan = [];
+  if (!appState.pengeluaran) appState.pengeluaran = [];
+  if (!appState.pemasukanLain) appState.pemasukanLain = [];
+  if (!appState.ringkasanKas) appState.ringkasanKas = { kasSaatIni: 0, masuk: 0, keluar: 0, selisih: 0 };
+
+  parseNestedJsonFields();
+}
+
+async function loadAppData() {
+  await loadLocalState();
 
   // 2. PRIMARY DATA SOURCE: FETCH LIVE FROM GOOGLE SPREADSHEET API FIRST
   const activeUrl = getGoogleSheetUrl();
@@ -1357,6 +1379,26 @@ async function loadAppData() {
     localStorage.setItem("damour_ipl_user", JSON.stringify(currentUser));
     updateNavbarProfile();
   }
+
+  // Setelah data cloud selesai di-merge, segarkan tampilan yang sedang aktif
+  // agar pengguna langsung melihat data terbaru tanpa reload manual.
+  renderActiveViewAfterSync();
+}
+
+// Render ulang hanya bagian layar yang sedang terbuka (dipanggil setelah data latar belakang selesai).
+function renderActiveViewAfterSync() {
+  updateHouseGroupCounts();
+  getCalculatedKasBalance();
+  const activeSection = document.querySelector(".view-section.active");
+  if (!activeSection) return;
+  const viewId = activeSection.id.replace(/^view-/, "");
+  if (viewId === "dashboard") renderDashboard();
+  else if (viewId === "daftar-tagihan") renderDaftarTagihan();
+  else if (viewId === "kas") renderKasArusKasTable();
+  else if (viewId === "monitoring-tunggakan") renderMonitoringTunggakan();
+  else if (viewId === "perhitungan") renderPerhitunganIPL();
+  else if (viewId === "simulasi") runSimulasiIPL();
+  else if (viewId === "tagihan-saya" && typeof renderTagihanSaya === "function") renderTagihanSaya();
 }
 
 function syncTagihanWithMasterRumah() {
@@ -2059,7 +2101,9 @@ function mergeCloudTagihanIntoLocal(cloudTagihan) {
 }
 
 async function pullCloudAndNotify() {
-  if (!appState || !currentUser || !isSuperAdmin()) return;
+  // Real-time polling berlaku untuk SEMUA user yang login (admin maupun warga),
+  // agar data terbaru (verifikasi pembayaran, dsb.) sampai tanpa perlu login ulang.
+  if (!appState || !currentUser) return;
   const activeUrl = getGoogleSheetUrl();
   if (!activeUrl) return;
 
