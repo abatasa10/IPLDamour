@@ -1,4 +1,4 @@
-const CACHE_NAME = 'damour-ipl-v1.3.5'; // splash loading saat sinkron + timeout fallback cache lokal
+const CACHE_NAME = 'damour-ipl-v1.3.6'; // masuk halaman utama hanya saat sinkron HIJAU (connected)
 
 const PRECACHE_ASSETS = [
   './',

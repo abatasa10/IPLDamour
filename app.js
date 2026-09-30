@@ -11,6 +11,7 @@ let currentDetailTagihanId = null;
 const itemsPerPage = 5;
 let donutChartInstance = null;
 let barChartInstance = null;
+let cloudSyncStatus = "connected";
 
 const DEFAULT_USERS = [
   { username: "admin", password: "admin123", name: "Admin Pengurus IPL", blokNo: "C16", role: "admin", avatar: "A", mustChangePassword: false },
@@ -358,9 +359,16 @@ async function handleLoginSubmit(e) {
     startRealTimeCloudPolling();
     // FCM Push Notification: daftarkan token setelah login sukses
     if (window.initFCMAfterLogin) window.initFCMAfterLogin(found);
+
+    // Catat aktivitas login (memicu sinkronisasi ke Google Sheet)
+    addAuditLog("Login System", `User ${found.name} (${found.username}) berhasil login`);
+
+    // TUNGGU sinkron selesai (badge HIJAU) sebelum masuk halaman utama,
+    // sehingga user masuk dalam kondisi "Terhubung", bukan "Menyinkronkan...".
+    await waitForSyncConnected();
+
     const savedView = localStorage.getItem("damour_last_view") || "dashboard";
     showView(savedView);
-    addAuditLog("Login System", `User ${found.name} (${found.username}) berhasil login`);
 
     const isDefaultPass =
       found.password === "damour123" ||
@@ -993,17 +1001,20 @@ function updateStorageBadge(status, text) {
   const timeStr = now.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
 
   if (status === "connected") {
+    cloudSyncStatus = "connected";
     lastSyncTimeString = timeStr;
     badge.style.background = "#dcfce7";
     badge.style.color = "#15803d";
     badge.style.borderColor = "#86efac";
     badgeText.textContent = text || `Terakhir sinkron: ${timeStr}`;
   } else if (status === "syncing") {
+    cloudSyncStatus = "syncing";
     badge.style.background = "#e0f2fe";
     badge.style.color = "#0369a1";
     badge.style.borderColor = "#bae6fd";
     badgeText.textContent = text || "Syncing ke Google Sheet...";
   } else {
+    cloudSyncStatus = "offline";
     badge.style.background = "#fef9c3";
     badge.style.color = "#a16207";
     badge.style.borderColor = "#fde047";
@@ -1181,6 +1192,28 @@ function hideBootLoading() {
   if (!el) return;
   el.classList.add("hidden");
   setTimeout(() => { el.style.display = "none"; }, 400);
+}
+
+// Tunggu sinkronisasi selesai menuju status HIJAU (connected) sebelum masuk halaman utama.
+// Jika Google Sheet offline/lambat lebih dari maxWaitMs, tetap lanjut (dari cache lokal).
+async function waitForSyncConnected(maxWaitMs = 10000) {
+  showBootLoading("Menyinkronkan data...", "Menunggu koneksi Google Sheet selesai");
+  updateStorageBadge("syncing", "Menyinkronkan data terbaru...");
+
+  // Pastikan ada sinkron yang sedang berjalan:
+  // ambil alih kiriman tertunda (audit login dll.) menjadi POST langsung, tanpa duplikat.
+  if (autoSyncDebounceTimer) {
+    clearTimeout(autoSyncDebounceTimer);
+    autoSyncDebounceTimer = null;
+  }
+  autoSyncToGoogleSheet(true, { skipPreMerge: true });
+
+  const started = Date.now();
+  while (cloudSyncStatus !== "connected") {
+    if (Date.now() - started > maxWaitMs) break;
+    await new Promise((r) => setTimeout(r, 250));
+  }
+  hideBootLoading();
 }
 
 // Jalankan sinkron cloud, tapi batasi waktu tunggu.
