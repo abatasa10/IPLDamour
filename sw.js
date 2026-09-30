@@ -1,4 +1,4 @@
-const CACHE_NAME = 'damour-ipl-v1.3.7'; // loading sinkron saat verifikasi/unggah bukti + refresh monitoring
+const CACHE_NAME = 'damour-ipl-v1.3.8'; // urutan boot: login dulu, splash setelah login; splash saat sync data
 
 const PRECACHE_ASSETS = [
   './',

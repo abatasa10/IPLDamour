@@ -145,15 +145,23 @@ document.addEventListener("DOMContentLoaded", async () => {
   setupEventListeners();
   initDynamicDatesAndYears();
 
-  // Tampilkan loading splash selama persiapan data → user tahu kalau ada delay sinkron.
-  showBootLoading();
-
-  // Muat cache lokal dulu (cepat), lalu sinkron dari Google Sheet.
-  // Jika cloud lambat/macet > timeout, app tetap masuk dari cache lokal (tidak menunggu selamanya).
+  // Muat cache lokal dulu (cepat, tanpa internet) supaya UI langsung siap.
   await loadLocalState();
-  await loadAppDataWithTimeout();
 
-  checkAuthSession();
+  // KEBUTUHAN: login DULU, splash menyusul. Cek apakah sudah punya sesi login.
+  const hasSession = checkAuthSession();
+
+  if (hasSession) {
+    // Sudah login sebelumnya → tampilkan splash saat sinkron data terbaru dari Google Sheet, lalu masuk.
+    showBootLoading("Menyinkronkan data...", "Mengambil data terbaru dari Google Sheet");
+    await loadAppDataWithTimeout();
+  } else {
+    // BELUM LOGIN → biarkan layar LOGIN tampil dulu (tidak menunggu cloud).
+    // Data Google Sheet tetap di-fetch diam-diam di latar belakang (tanpa splash) supaya
+    // begitu login berhasil, data sudah siap. Splash sync muncul di handleLoginSubmit.
+    loadAppData();
+  }
+
   updateHouseGroupCounts();
   renderDashboard();
   renderMasterUsers();
@@ -240,13 +248,14 @@ function checkAuthSession() {
       if (typeof updateNotificationUI === "function") {
         updateNotificationUI();
       }
-      return;
+      return true;
     } catch (e) {
       console.error("Failed to parse user session", e);
     }
   }
 
   if (loginOverlay) loginOverlay.classList.add("active");
+  return false;
 }
 
 async function handleLoginSubmit(e) {
