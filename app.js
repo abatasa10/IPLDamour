@@ -144,9 +144,14 @@ document.addEventListener("DOMContentLoaded", async () => {
   setupEventListeners();
   initDynamicDatesAndYears();
 
-  // FASE 1 (CEPAT): muat cache lokal → render & login LANGSUNG, tanpa menunggu Google Sheet.
-  // Ini menghilangkan delay saat orang baru login / membuka PWA.
+  // Tampilkan loading splash selama persiapan data → user tahu kalau ada delay sinkron.
+  showBootLoading();
+
+  // Muat cache lokal dulu (cepat), lalu sinkron dari Google Sheet.
+  // Jika cloud lambat/macet > timeout, app tetap masuk dari cache lokal (tidak menunggu selamanya).
   await loadLocalState();
+  await loadAppDataWithTimeout();
+
   checkAuthSession();
   updateHouseGroupCounts();
   renderDashboard();
@@ -163,9 +168,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   renderGenerateTagihanForm();
   runSimulasiIPL();
 
-  // FASE 2 (LATAR BELAKANG): ambil data terbaru dari Google Sheet, merge, lalu segarkan tampilan
-  // tanpa memblokir pengguna. Jika cloud lambat/offline, aplikasi tetap jalan dari cache lokal.
-  loadAppData();
+  hideBootLoading();
 });
 
 // Authentication & Role Management
@@ -1156,6 +1159,51 @@ function getWargaTunggakanSummary() {
 }
 
 // Load App Data with GOOGLE SPREADSHEET as PRIMARY STORAGE
+// ==================== BOOT LOADING SPLASH ====================
+function setBootStatus(text, sub) {
+  const st = document.getElementById("boot-status");
+  const sb = document.getElementById("boot-sub");
+  if (st && text) st.textContent = text;
+  if (sb && sub !== undefined) sb.textContent = sub;
+}
+
+function showBootLoading(text) {
+  const el = document.getElementById("boot-loading");
+  if (text) setBootStatus(text);
+  if (el) {
+    el.style.display = "flex";
+    el.classList.remove("hidden");
+  }
+}
+
+function hideBootLoading() {
+  const el = document.getElementById("boot-loading");
+  if (!el) return;
+  el.classList.add("hidden");
+  setTimeout(() => { el.style.display = "none"; }, 400);
+}
+
+// Jalankan sinkron cloud, tapi batasi waktu tunggu.
+// Kalau Google Sheet terlalu lambat/gagal, lanjut dari cache lokal setelah timeoutMs.
+async function loadAppDataWithTimeout(timeoutMs = 10000) {
+  let done = false;
+  const finish = loadAppData()
+    .then(() => { done = true; })
+    .catch((e) => { console.error("loadAppData error:", e); done = true; });
+
+  await Promise.race([
+    finish,
+    new Promise((resolve) => setTimeout(() => {
+      if (!done) {
+        console.warn("Google Sheet lambat/tidak terjangkau → lanjut dari cache lokal.");
+        updateStorageBadge("offline", "Cache Lokal (Google Sheet lambat)");
+        setBootStatus("Memakai data tersimpan", "Google Sheet lambat, data terakhir yang tersimpan dipakai");
+      }
+      resolve();
+    }, timeoutMs))
+  ]);
+}
+
 // Muat state dari cache lokal (data.json + localStorage) dengan CEPAT, tanpa menyentuh cloud.
 // Dipanggil saat boot agar UI langsung tampil; Google Sheet di-fetch belakangan (latar belakang).
 async function loadLocalState() {
@@ -1218,6 +1266,7 @@ async function loadAppData() {
   const activeUrl = getGoogleSheetUrl();
   if (activeUrl) {
     updateStorageBadge("syncing", "Memuat data Google Sheet...");
+    setBootStatus("Menyinkronkan data...", "Mengambil data terbaru dari Google Sheet");
     try {
       const cloudRes = await fetch(activeUrl);
       const cloudData = await cloudRes.json();
@@ -1382,6 +1431,7 @@ async function loadAppData() {
 
   // Setelah data cloud selesai di-merge, segarkan tampilan yang sedang aktif
   // agar pengguna langsung melihat data terbaru tanpa reload manual.
+  setBootStatus("Siap ✓", "Data terbaru sudah termuat");
   renderActiveViewAfterSync();
 }
 

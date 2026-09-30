@@ -135,6 +135,17 @@
 </head>
 <body>
 
+  <!-- BOOT SPLASH: loading saat aplikasi menyiapkan data dari Google Sheet -->
+  <div class="boot-splash" id="boot-loading">
+    <div class="boot-splash-inner">
+      <div class="boot-logo"><i class="ri-home-4-line"></i></div>
+      <h3>D'AMOUR IPL</h3>
+      <div class="boot-spinner"></div>
+      <p class="boot-status" id="boot-status">Menyiapkan data...</p>
+      <p class="boot-sub" id="boot-sub">Menghubungkan ke Google Sheet</p>
+    </div>
+  </div>
+
   <!-- LOGIN OVERLAY -->
   <div class="modal-overlay active" id="login-overlay" style="z-index: 9999; background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(8px);">
     <div class="modal-box" style="max-width: 420px; border-radius: 16px; padding: 2rem; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);">

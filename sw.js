@@ -1,4 +1,4 @@
-const CACHE_NAME = 'damour-ipl-v1.3.4'; // load instan (tanpa tunggu sheet) + realtime poll untuk semua user
+const CACHE_NAME = 'damour-ipl-v1.3.5'; // splash loading saat sinkron + timeout fallback cache lokal
 
 const PRECACHE_ASSETS = [
   './',
